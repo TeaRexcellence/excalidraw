@@ -17,6 +17,9 @@ import {
   updateObject,
 } from "@excalidraw/common";
 
+const MIN_SIDEBAR_WIDTH = 200;
+const DEFAULT_SIDEBAR_WIDTH = 256;
+
 import { useUIAppState } from "../../context/ui-appState";
 import { atom, useSetAtom } from "../../editor-jotai";
 import { useOutsideClick } from "../../hooks/useOutsideClick";
@@ -44,6 +47,7 @@ import type { SidebarProps, SidebarPropsContextValue } from "./common";
  * Since we can only render one Sidebar at a time, we can use a simple flag.
  */
 export const isSidebarDockedAtom = atom(false);
+export const sidebarWidthAtom = atom(DEFAULT_SIDEBAR_WIDTH);
 
 export const SidebarInner = forwardRef(
   (
@@ -66,6 +70,7 @@ export const SidebarInner = forwardRef(
     const setAppState = useExcalidrawSetAppState();
 
     const setIsSidebarDockedAtom = useSetAtom(isSidebarDockedAtom);
+    const setSidebarWidthAtom = useSetAtom(sidebarWidthAtom);
 
     useLayoutEffect(() => {
       setIsSidebarDockedAtom(!!docked);
@@ -140,16 +145,74 @@ export const SidebarInner = forwardRef(
       };
     }, [closeLibrary, docked, editorInterface.canFitSidebar]);
 
+    const [sidebarWidth, setSidebarWidthState] = useState(() => {
+      const saved = localStorage.getItem("excalidraw-sidebar-width");
+      return saved ? parseInt(saved, 10) : DEFAULT_SIDEBAR_WIDTH;
+    });
+    const [isResizing, setIsResizing] = useState(false);
+
+    // Sync width to atom on mount and when it changes
+    useLayoutEffect(() => {
+      setSidebarWidthAtom(sidebarWidth);
+    }, [sidebarWidth, setSidebarWidthAtom]);
+
+    const setSidebarWidth = useCallback((width: number) => {
+      setSidebarWidthState(width);
+      setSidebarWidthAtom(width);
+    }, [setSidebarWidthAtom]);
+
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      setIsResizing(true);
+    }, []);
+
+    useEffect(() => {
+      if (!isResizing) {
+        return;
+      }
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const isRTL = document.documentElement.getAttribute("dir") === "rtl";
+        let newWidth: number;
+        if (isRTL) {
+          newWidth = e.clientX;
+        } else {
+          newWidth = window.innerWidth - e.clientX;
+        }
+        const maxWidth = window.innerWidth - 100;
+        newWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(maxWidth, newWidth));
+        setSidebarWidth(newWidth);
+      };
+
+      const handleMouseUp = () => {
+        setIsResizing(false);
+        localStorage.setItem("excalidraw-sidebar-width", sidebarWidth.toString());
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }, [isResizing, sidebarWidth, setSidebarWidth]);
+
     return (
       <Island
         {...rest}
         className={clsx(
           CLASSES.SIDEBAR,
-          { "sidebar--docked": docked },
+          { "sidebar--docked": docked, "sidebar--resizing": isResizing },
           className,
         )}
         ref={islandRef}
+        style={{ width: sidebarWidth }}
       >
+        <div
+          className="sidebar__resize-handle"
+          onMouseDown={handleMouseDown}
+        />
         <SidebarPropsContext.Provider value={headerPropsRef.current}>
           {children}
         </SidebarPropsContext.Provider>

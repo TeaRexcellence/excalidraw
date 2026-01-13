@@ -100,4 +100,18 @@
     border: none;
     border-top: 1px solid $color-gray-5;
   }
+
+  .context-menu-item-custom {
+    padding: 0;
+    min-width: 9.5rem;
+
+    .control-label {
+      margin: 0;
+      font-size: 0.875rem;
+    }
+
+    .range-wrapper {
+      margin-top: 0.25rem;
+    }
+  }
 }

@@ -65,6 +65,8 @@ const strokeGrid = (
   theme: StaticCanvasRenderConfig["theme"],
   width: number,
   height: number,
+  /** grid opacity 0-100 */
+  opacity: number = 100,
 ) => {
   const offsetX = (scrollX % gridSize) - gridSize;
   const offsetY = (scrollY % gridSize) - gridSize;
@@ -74,6 +76,7 @@ const strokeGrid = (
   const spaceWidth = 1 / zoom.value;
 
   context.save();
+  context.globalAlpha = opacity / 100;
 
   // Offset rendering by 0.5 to ensure that 1px wide lines are crisp.
   // We only do this when zoomed to 100% because otherwise the offset is
@@ -271,6 +274,7 @@ const _renderStaticScene = ({
       renderConfig.theme,
       normalizedWidth / appState.zoom.value,
       normalizedHeight / appState.zoom.value,
+      appState.gridOpacity,
     );
   }
 

@@ -42,7 +42,7 @@ import Stack from "./Stack";
 import { UserList } from "./UserList";
 import { PenModeButton } from "./PenModeButton";
 import Footer from "./footer/Footer";
-import { isSidebarDockedAtom } from "./Sidebar/Sidebar";
+import { isSidebarDockedAtom, sidebarWidthAtom } from "./Sidebar/Sidebar";
 import MainMenu from "./main-menu/MainMenu";
 import { ActiveConfirmDialog } from "./ActiveConfirmDialog";
 import { useEditorInterface, useStylesPanelMode } from "./App";
@@ -460,6 +460,7 @@ const LayerUI = ({
   };
 
   const isSidebarDocked = useAtomValue(isSidebarDockedAtom);
+  const sidebarWidth = useAtomValue(sidebarWidthAtom);
 
   const layerUIJSX = (
     <>
@@ -610,7 +611,7 @@ const LayerUI = ({
               appState.openSidebar &&
               isSidebarDocked &&
               editorInterface.canFitSidebar
-                ? { width: `calc(100% - var(--right-sidebar-width))` }
+                ? { width: `calc(100% - ${sidebarWidth}px)` }
                 : {}
             }
           >

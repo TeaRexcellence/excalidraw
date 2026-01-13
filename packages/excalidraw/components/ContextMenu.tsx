@@ -13,10 +13,18 @@ import "./ContextMenu.scss";
 import type { ActionManager } from "../actions/manager";
 import type { ShortcutName } from "../actions/shortcuts";
 import type { Action } from "../actions/types";
+import type { AppState } from "../types";
 
 import type { TranslationKeys } from "../i18n";
 
-export type ContextMenuItem = typeof CONTEXT_MENU_SEPARATOR | Action;
+export type ContextMenuItemCustom = {
+  name: string;
+  contextItemType: "custom";
+  Component: React.FC<{ appState: AppState }>;
+  predicate?: (appState: AppState) => boolean;
+};
+
+export type ContextMenuItem = typeof CONTEXT_MENU_SEPARATOR | Action | ContextMenuItemCustom;
 
 export type ContextMenuItems = (ContextMenuItem | false | null | undefined)[];
 
@@ -36,17 +44,26 @@ export const ContextMenu = React.memo(
     const elements = useExcalidrawElements();
 
     const filteredItems = items.reduce((acc: ContextMenuItem[], item) => {
-      if (
-        item &&
-        (item === CONTEXT_MENU_SEPARATOR ||
-          !item.predicate ||
-          item.predicate(
+      if (item && item !== CONTEXT_MENU_SEPARATOR && "contextItemType" in item && item.contextItemType === "custom") {
+        // Custom component item
+        if (!item.predicate || item.predicate(appState)) {
+          acc.push(item);
+        }
+      } else if (item && item !== CONTEXT_MENU_SEPARATOR) {
+        // Action item
+        const action = item as Action;
+        if (
+          !action.predicate ||
+          action.predicate(
             elements,
             appState,
             actionManager.app.props,
             actionManager.app,
-          ))
-      ) {
+          )
+        ) {
+          acc.push(item);
+        }
+      } else if (item === CONTEXT_MENU_SEPARATOR) {
         acc.push(item);
       }
       return acc;
@@ -81,19 +98,31 @@ export const ContextMenu = React.memo(
               return <hr key={idx} className="context-menu-item-separator" />;
             }
 
-            const actionName = item.name;
+            // Handle custom component items
+            if ("contextItemType" in item && item.contextItemType === "custom") {
+              const CustomComponent = item.Component;
+              return (
+                <li key={idx} className="context-menu-item-custom" data-testid={item.name}>
+                  <CustomComponent appState={appState} />
+                </li>
+              );
+            }
+
+            // At this point, item is an Action (not custom, not separator)
+            const action = item as Action;
+            const actionName = action.name;
             let label = "";
-            if (item.label) {
-              if (typeof item.label === "function") {
+            if (action.label) {
+              if (typeof action.label === "function") {
                 label = t(
-                  item.label(
+                  action.label(
                     elements,
                     appState,
                     actionManager.app,
                   ) as unknown as TranslationKeys,
                 );
               } else {
-                label = t(item.label as unknown as TranslationKeys);
+                label = t(action.label as unknown as TranslationKeys);
               }
             }
 
@@ -106,7 +135,7 @@ export const ContextMenu = React.memo(
                   // the action uses the appState it's being passed (that still
                   // contains a defined contextMenu) to return the next state.
                   onClose(() => {
-                    actionManager.executeAction(item, "contextMenu");
+                    actionManager.executeAction(action, "contextMenu");
                   });
                 }}
               >
@@ -114,7 +143,7 @@ export const ContextMenu = React.memo(
                   type="button"
                   className={clsx("context-menu-item", {
                     dangerous: actionName === "deleteSelectedElements",
-                    checkmark: item.checked?.(appState),
+                    checkmark: action.checked?.(appState),
                   })}
                 >
                   <div className="context-menu-item__label">{label}</div>

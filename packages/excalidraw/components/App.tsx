@@ -427,6 +427,9 @@ import ConvertElementTypePopup, {
 import { activeConfirmDialogAtom } from "./ActiveConfirmDialog";
 import BraveMeasureTextError from "./BraveMeasureTextError";
 import { ContextMenu, CONTEXT_MENU_SEPARATOR } from "./ContextMenu";
+import { GridOpacitySlider } from "./GridOpacitySlider";
+
+import type { ContextMenuItemCustom } from "./ContextMenu";
 import { activeEyeDropperAtom } from "./EyeDropper";
 import FollowMode from "./FollowMode/FollowMode";
 import LayerUI from "./LayerUI";
@@ -11925,6 +11928,13 @@ class App extends React.Component<AppProps, AppState> {
         ];
       }
 
+      const gridOpacitySliderItem: ContextMenuItemCustom = {
+        name: "gridOpacitySlider",
+        contextItemType: "custom",
+        Component: GridOpacitySlider,
+        predicate: (appState) => appState.gridModeEnabled,
+      };
+
       return [
         actionPaste,
         CONTEXT_MENU_SEPARATOR,
@@ -11936,6 +11946,7 @@ class App extends React.Component<AppProps, AppState> {
         actionUnlockAllElements,
         CONTEXT_MENU_SEPARATOR,
         actionToggleGridMode,
+        gridOpacitySliderItem,
         actionToggleObjectsSnapMode,
         actionToggleZenMode,
         actionToggleViewMode,

@@ -20,7 +20,6 @@
 
     overflow: hidden;
     border-radius: 0;
-    width: calc(var(--right-sidebar-width) - var(--space-factor) * 2);
 
     border-left: 1px solid var(--sidebar-border-color);
 
@@ -33,9 +32,35 @@
       box-shadow: none;
     }
 
+    &--resizing {
+      user-select: none;
+    }
+
     :root[dir="rtl"] & {
       border-right: 1px solid var(--sidebar-border-color);
       border-left: 0;
+    }
+  }
+
+  .sidebar__resize-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    cursor: ew-resize;
+    background: transparent;
+    z-index: 10;
+    transition: background-color 0.15s ease;
+
+    &:hover,
+    &:active {
+      background-color: var(--color-primary);
+    }
+
+    :root[dir="rtl"] & {
+      left: auto;
+      right: 0;
     }
   }
 

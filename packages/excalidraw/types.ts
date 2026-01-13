@@ -201,6 +201,7 @@ export type StaticCanvasAppState = Readonly<
     selectedElementsAreBeingDragged: AppState["selectedElementsAreBeingDragged"];
     gridSize: AppState["gridSize"];
     gridStep: AppState["gridStep"];
+    gridOpacity: AppState["gridOpacity"];
     frameRendering: AppState["frameRendering"];
     currentHoveredFontFamily: AppState["currentHoveredFontFamily"];
     hoveredElementIds: AppState["hoveredElementIds"];
@@ -398,6 +399,8 @@ export interface AppState {
   gridSize: number;
   gridStep: number;
   gridModeEnabled: boolean;
+  /** grid opacity 0-100 */
+  gridOpacity: number;
   viewModeEnabled: boolean;
 
   /** top-most selected groups (i.e. does not include nested groups) */
@@ -588,6 +591,7 @@ export interface ExcalidrawProps {
   viewModeEnabled?: boolean;
   zenModeEnabled?: boolean;
   gridModeEnabled?: boolean;
+  gridOpacity?: number;
   objectsSnapModeEnabled?: boolean;
   libraryReturnUrl?: string;
   theme?: Theme;
