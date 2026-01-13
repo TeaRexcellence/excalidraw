@@ -100,10 +100,7 @@ import Collab, {
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
-import {
-  ExportToExcalidrawPlus,
-  exportToExcalidrawPlus,
-} from "./components/ExportToExcalidrawPlus";
+import { SaveAsProject } from "./components/SaveAsProject";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
 
 import {
@@ -852,7 +849,7 @@ const ExcalidrawWrapper = () => {
               renderCustomUI: excalidrawAPI
                 ? (elements, appState, files) => {
                     return (
-                      <ExportToExcalidrawPlus
+                      <SaveAsProject
                         elements={elements}
                         appState={appState}
                         files={files}
@@ -869,6 +866,7 @@ const ExcalidrawWrapper = () => {
                             appState: { openDialog: null },
                           });
                         }}
+                        excalidrawAPI={excalidrawAPI}
                       />
                     );
                   }

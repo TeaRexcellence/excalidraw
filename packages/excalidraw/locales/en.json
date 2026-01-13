@@ -360,6 +360,18 @@
     "start": "Start",
     "end": "End"
   },
+  "projectManager": {
+    "title": "Projects",
+    "newProject": "New Project",
+    "newGroup": "New Group",
+    "empty": "No projects yet. Create your first project to get started.",
+    "createFirst": "Create First Project",
+    "openInNewTab": "Open in new tab",
+    "rename": "Rename",
+    "delete": "Delete",
+    "moveToGroup": "Move to group",
+    "ungrouped": "Ungrouped"
+  },
   "hints": {
     "dismissSearch": "{{shortcut}} to dismiss search",
     "canvasPanning": "To move canvas, hold {{shortcut_1}} or {{shortcut_2}} while dragging, or use the hand tool",
@@ -428,7 +440,11 @@
     "link_button": "Export to Link",
     "excalidrawplus_description": "Save the scene to your Excalidraw+ workspace.",
     "excalidrawplus_button": "Export",
-    "excalidrawplus_exportError": "Couldn't export to Excalidraw+ at this moment..."
+    "excalidrawplus_exportError": "Couldn't export to Excalidraw+ at this moment...",
+    "saveAsProject_title": "Save to Project Manager",
+    "saveAsProject_details": "Save to your local projects library for easy access later.",
+    "saveAsProject_button": "Save to Project Manager",
+    "saveAsProject_error": "Failed to save project. Please try again."
   },
   "helpDialog": {
     "blog": "Read our blog",

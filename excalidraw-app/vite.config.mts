@@ -11,6 +11,136 @@ import { createHtmlPlugin } from "vite-plugin-html";
 import Sitemap from "vite-plugin-sitemap";
 import { woff2BrowserPlugin } from "../scripts/woff2/woff2-vite-plugins";
 
+// Plugin to handle local project file management
+function projectFilePlugin(): Plugin {
+  const publicDir = path.resolve(__dirname, "../public");
+  const projectsDir = path.join(publicDir, "projects");
+  const indexPath = path.join(projectsDir, "projects.json");
+
+  // Ensure projects directory and index file exist
+  const ensureProjectsDir = () => {
+    if (!fs.existsSync(projectsDir)) {
+      fs.mkdirSync(projectsDir, { recursive: true });
+    }
+    if (!fs.existsSync(indexPath)) {
+      fs.writeFileSync(
+        indexPath,
+        JSON.stringify({ projects: [], groups: [], currentProjectId: null }, null, 2),
+      );
+    }
+  };
+
+  return {
+    name: "project-file-plugin",
+    configureServer(server) {
+      ensureProjectsDir();
+
+      server.middlewares.use(async (req, res, next) => {
+        // Get projects index
+        if (req.method === "GET" && req.url === "/api/projects/list") {
+          ensureProjectsDir();
+          const data = fs.readFileSync(indexPath, "utf-8");
+          res.setHeader("Content-Type", "application/json");
+          res.end(data);
+          return;
+        }
+
+        // Save projects index
+        if (req.method === "POST" && req.url === "/api/projects/save") {
+          const chunks: Buffer[] = [];
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", () => {
+            const data = Buffer.concat(chunks).toString();
+            fs.writeFileSync(indexPath, data);
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ success: true }));
+          });
+          return;
+        }
+
+        // Get project scene data
+        const sceneGetMatch = req.url?.match(/^\/api\/projects\/([^/]+)\/scene$/);
+        if (req.method === "GET" && sceneGetMatch) {
+          const projectId = sceneGetMatch[1];
+          const scenePath = path.join(projectsDir, projectId, "scene.excalidraw");
+
+          if (fs.existsSync(scenePath)) {
+            const data = fs.readFileSync(scenePath, "utf-8");
+            res.setHeader("Content-Type", "application/json");
+            res.end(data);
+          } else {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: "Project not found" }));
+          }
+          return;
+        }
+
+        // Save project scene data
+        const scenePostMatch = req.url?.match(/^\/api\/projects\/([^/]+)\/scene$/);
+        if (req.method === "POST" && scenePostMatch) {
+          const projectId = scenePostMatch[1];
+          const projectDir = path.join(projectsDir, projectId);
+
+          if (!fs.existsSync(projectDir)) {
+            fs.mkdirSync(projectDir, { recursive: true });
+          }
+
+          const scenePath = path.join(projectDir, "scene.excalidraw");
+          const chunks: Buffer[] = [];
+
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", () => {
+            const data = Buffer.concat(chunks).toString();
+            fs.writeFileSync(scenePath, data);
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ success: true }));
+          });
+          return;
+        }
+
+        // Save project preview image
+        const previewMatch = req.url?.match(/^\/api\/projects\/([^/]+)\/preview$/);
+        if (req.method === "POST" && previewMatch) {
+          const projectId = previewMatch[1];
+          const projectDir = path.join(projectsDir, projectId);
+
+          if (!fs.existsSync(projectDir)) {
+            fs.mkdirSync(projectDir, { recursive: true });
+          }
+
+          const previewPath = path.join(projectDir, "preview.png");
+          const chunks: Buffer[] = [];
+
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", () => {
+            const buffer = Buffer.concat(chunks);
+            fs.writeFileSync(previewPath, buffer);
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ url: `/projects/${projectId}/preview.png` }));
+          });
+          return;
+        }
+
+        // Delete project
+        const deleteMatch = req.url?.match(/^\/api\/projects\/([^/]+)$/);
+        if (req.method === "DELETE" && deleteMatch) {
+          const projectId = deleteMatch[1];
+          const projectDir = path.join(projectsDir, projectId);
+
+          if (fs.existsSync(projectDir)) {
+            fs.rmSync(projectDir, { recursive: true, force: true });
+          }
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ deleted: true }));
+          return;
+        }
+
+        next();
+      });
+    },
+  };
+}
+
 // Plugin to handle local video file management
 function videoFilePlugin(): Plugin {
   const publicDir = path.resolve(__dirname, "../public");
@@ -196,6 +326,7 @@ export default defineConfig(({ mode }) => {
       assetsInlineLimit: 0,
     },
     plugins: [
+      projectFilePlugin(),
       videoFilePlugin(),
       Sitemap({
         hostname: "https://excalidraw.com",

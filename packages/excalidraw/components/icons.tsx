@@ -96,6 +96,16 @@ export const LibraryIcon = createIcon(
   tablerIconProps,
 );
 
+// tabler-icons: folders
+export const ProjectsIcon = createIcon(
+  <g strokeWidth="1.25">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <path d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" />
+    <path d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2" />
+  </g>,
+  tablerIconProps,
+);
+
 // tabler-icons: plus
 export const PlusIcon = createIcon(
   <svg strokeWidth="1.5">
