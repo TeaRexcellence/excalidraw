@@ -62,6 +62,7 @@ import { ImageExportDialog } from "./ImageExportDialog";
 import { Island } from "./Island";
 import { JSONExportDialog } from "./JSONExportDialog";
 import { LaserPointerButton } from "./LaserPointerButton";
+import { VideoEmbedDialog } from "./VideoEmbedDialog";
 
 import "./LayerUI.scss";
 import "./Toolbar.scss";
@@ -543,6 +544,13 @@ const LayerUI = ({
       )}
       {appState.openDialog?.name === "help" && (
         <HelpDialog
+          onClose={() => {
+            setAppState({ openDialog: null });
+          }}
+        />
+      )}
+      {appState.openDialog?.name === "videoEmbed" && (
+        <VideoEmbedDialog
           onClose={() => {
             setAppState({ openDialog: null });
           }}

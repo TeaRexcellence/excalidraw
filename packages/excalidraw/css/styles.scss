@@ -794,4 +794,58 @@ body.excalidraw-cursor-resize * {
     letter-spacing: 0.6px;
     font-family: "Assistant";
   }
+
+  // HTML5 video player styles
+  .excalidraw__video-player {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
+    pointer-events: inherit;
+
+    // Hide the default controls flash during programmatic seeking
+    &::-webkit-media-controls {
+      transition: opacity 0.1s ease-out;
+    }
+  }
+
+  // Drag handle for videos
+  .excalidraw__embeddable-drag-handle {
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    background: var(--color-surface-high);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: grab;
+    pointer-events: auto;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      background: var(--color-surface-highest);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    &__grip {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+      justify-content: center;
+
+      span {
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--color-text-secondary);
+      }
+    }
+  }
 }

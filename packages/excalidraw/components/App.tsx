@@ -446,6 +446,7 @@ import { Toast } from "./Toast";
 import { findShapeByKey } from "./shapes";
 
 import UnlockPopup from "./UnlockPopup";
+import { VideoPlayer } from "./VideoPlayer";
 
 import type { ExcalidrawLibraryIds } from "../data/types";
 
@@ -1308,6 +1309,8 @@ class App extends React.Component<AppProps, AppState> {
   ) => {
     this.embedsValidationStatus.set(element.id, status);
     ShapeCache.delete(element);
+    // Trigger re-render so the embeddable shows up
+    this.scene.triggerUpdate();
   };
 
   private updateEmbeddables = () => {
@@ -1533,6 +1536,11 @@ class App extends React.Component<AppProps, AppState> {
             this.state.activeEmbeddable?.element === el &&
             this.state.activeEmbeddable?.state === "hover";
 
+          // Get z-index based on element order in scene
+          const allElements = this.scene.getNonDeletedElements();
+          const elementIndex = allElements.findIndex((e) => e.id === el.id);
+          const zIndex = elementIndex >= 0 ? elementIndex + 1 : 1;
+
           return (
             <div
               key={el.id}
@@ -1546,6 +1554,7 @@ class App extends React.Component<AppProps, AppState> {
                     }px) scale(${scale})`
                   : "none",
                 display: isVisible ? "block" : "none",
+                zIndex,
                 opacity: getRenderOpacity(
                   el,
                   getContainingFrame(el, this.scene.getNonDeletedElementsMap()),
@@ -1593,6 +1602,24 @@ class App extends React.Component<AppProps, AppState> {
                     {t("buttons.embeddableInteractionButton")}
                   </div>
                 )}
+                {/* Drag handle for video embeddables */}
+                {(src?.type === "html5video" || src?.type === "video") &&
+                  isActive && (
+                    <div
+                      className="excalidraw__embeddable-drag-handle"
+                      onPointerDown={(e) => {
+                        // Deactivate the embeddable to allow canvas to handle drag
+                        this.setState({ activeEmbeddable: null });
+                        e.stopPropagation();
+                      }}
+                    >
+                      <div className="excalidraw__embeddable-drag-handle__grip">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                    </div>
+                  )}
                 <div
                   className="excalidraw__embeddable__outer"
                   style={{
@@ -1601,29 +1628,38 @@ class App extends React.Component<AppProps, AppState> {
                 >
                   {(isEmbeddableElement(el)
                     ? this.props.renderEmbeddable?.(el, this.state)
-                    : null) ?? (
-                    <iframe
-                      ref={(ref) => this.cacheEmbeddableRef(el, ref)}
-                      className="excalidraw__embeddable"
-                      srcDoc={
-                        src?.type === "document"
-                          ? src.srcdoc(this.state.theme)
-                          : undefined
-                      }
-                      src={
-                        src?.type !== "document" ? src?.link ?? "" : undefined
-                      }
-                      // https://stackoverflow.com/q/18470015
-                      scrolling="no"
-                      referrerPolicy="no-referrer-when-downgrade"
-                      title="Excalidraw Embedded Content"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen={true}
-                      sandbox={`${
-                        src?.sandbox?.allowSameOrigin ? "allow-same-origin" : ""
-                      } allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-downloads`}
-                    />
-                  )}
+                    : null) ??
+                    (src?.type === "html5video" ? (
+                      <VideoPlayer
+                        key={el.id}
+                        src={src.link}
+                        videoOptions={src.videoOptions}
+                      />
+                    ) : (
+                      <iframe
+                        ref={(ref) => this.cacheEmbeddableRef(el, ref)}
+                        className="excalidraw__embeddable"
+                        srcDoc={
+                          src?.type === "document"
+                            ? src.srcdoc(this.state.theme)
+                            : undefined
+                        }
+                        src={
+                          src?.type !== "document" ? src?.link ?? "" : undefined
+                        }
+                        // https://stackoverflow.com/q/18470015
+                        scrolling="no"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        title="Excalidraw Embedded Content"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen={true}
+                        sandbox={`${
+                          src?.sandbox?.allowSameOrigin
+                            ? "allow-same-origin"
+                            : ""
+                        } allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-downloads`}
+                      />
+                    ))}
                 </div>
               </div>
             </div>
@@ -8339,7 +8375,10 @@ class App extends React.Component<AppProps, AppState> {
         : this.getEffectiveGridSize(),
     );
 
-    const embedLink = getEmbedLink(link);
+    // Normalize the link the same way it will be normalized during render
+    // so caching works correctly
+    const normalizedLink = toValidURL(link);
+    const embedLink = getEmbedLink(normalizedLink);
 
     if (!embedLink) {
       return;
@@ -8367,10 +8406,17 @@ class App extends React.Component<AppProps, AppState> {
       locked: false,
       width: embedLink.intrinsicSize.w,
       height: embedLink.intrinsicSize.h,
-      link,
+      link: normalizedLink,
     });
 
     this.scene.insertElement(element);
+
+    // Immediately validate the embeddable so it renders without waiting for componentDidUpdate
+    const validated = embeddableURLValidator(
+      element.link,
+      this.props.validateEmbeddable,
+    );
+    this.updateEmbedValidationStatus(element, validated);
 
     return element;
   };
@@ -11246,6 +11292,51 @@ class App extends React.Component<AppProps, AppState> {
 
     if (imageFiles.length > 0 && this.isToolSupported("image")) {
       return this.insertImages(imageFiles, sceneX, sceneY);
+    }
+
+    // Handle video files
+    const videoFiles = fileItems
+      .map((data) => data.file)
+      .filter((file): file is File => file?.type.startsWith("video/") ?? false);
+
+    if (videoFiles.length > 0) {
+      for (const file of videoFiles) {
+        try {
+          // Upload video to server
+          const projectId = window.location.hash?.slice(1).split("/")[0] || "default";
+          const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+          const response = await fetch(
+            `/api/videos/upload?projectId=${encodeURIComponent(projectId)}&filename=${encodeURIComponent(filename)}`,
+            { method: "POST", body: file },
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            // Get video dimensions
+            const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
+              const video = document.createElement("video");
+              video.preload = "metadata";
+              const blobUrl = URL.createObjectURL(file);
+              video.onloadedmetadata = () => {
+                resolve({ width: video.videoWidth, height: video.videoHeight });
+                URL.revokeObjectURL(blobUrl);
+              };
+              video.onerror = () => {
+                resolve({ width: 560, height: 315 });
+                URL.revokeObjectURL(blobUrl);
+              };
+              video.src = blobUrl;
+            });
+
+            const videoUrl = `${data.url}#excalidraw-video-dimensions=${dimensions.width}x${dimensions.height}`;
+            this.insertEmbeddableElement({ sceneX, sceneY, link: videoUrl });
+          }
+        } catch (err) {
+          console.error("Failed to upload video:", err);
+        }
+      }
+      return;
     }
     const excalidrawLibrary_ids = dataTransferList.getData(
       MIME_TYPES.excalidrawlibIds,

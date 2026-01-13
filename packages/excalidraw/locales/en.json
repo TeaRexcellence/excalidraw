@@ -309,6 +309,7 @@
     "frame": "Frame tool",
     "magicframe": "Wireframe to code",
     "embeddable": "Web Embed",
+    "video": "Insert video",
     "laser": "Laser pointer",
     "hand": "Hand (panning tool)",
     "extraTools": "More tools",
@@ -324,6 +325,7 @@
     "freedraw": "Freedraw",
     "text": "Text",
     "image": "Image",
+    "video": "Video",
     "group": "Group",
     "frame": "Frame",
     "magicframe": "Wireframe to code",
@@ -335,6 +337,27 @@
     "canvasActions": "Canvas actions",
     "selectedShapeActions": "Selected shape actions",
     "shapes": "Shapes"
+  },
+  "videoDialog": {
+    "title": "Insert Video",
+    "urlLabel": "Video URL",
+    "urlPlaceholder": "Paste YouTube URL or direct video file URL",
+    "hint": "Supports YouTube links and direct video URLs (.mp4, .webm, etc.)",
+    "or": "or",
+    "browseFiles": "Browse local files",
+    "insert": "Insert",
+    "errorEmptyUrl": "Please enter a video URL"
+  },
+  "videoControls": {
+    "play": "Play",
+    "pause": "Pause",
+    "loop": "Loop",
+    "autoplay": "Autoplay",
+    "autoplayLabel": "Auto-play",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "start": "Start",
+    "end": "End"
   },
   "hints": {
     "dismissSearch": "{{shortcut}} to dismiss search",

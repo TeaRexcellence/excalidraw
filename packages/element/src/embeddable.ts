@@ -56,6 +56,188 @@ const RE_REDDIT =
 const RE_REDDIT_EMBED =
   /^<blockquote[\s\S]*?\shref=["'](https?:\/\/(?:www\.)?reddit\.com\/[^"']*)/i;
 
+// Video file extensions
+const VIDEO_EXTENSIONS = [
+  ".mp4",
+  ".webm",
+  ".ogg",
+  ".mov",
+  ".avi",
+  ".mkv",
+  ".m4v",
+];
+
+// Video playback options parsed from URL hash
+export type VideoOptions = {
+  loop: boolean;
+  autoplay: boolean;
+  muted: boolean;
+  startTime: number; // in seconds
+  endTime: number | null; // in seconds, null means end of video
+  dimensions?: { w: number; h: number };
+};
+
+// Parse video options from URL hash
+// Format: #excalidraw-video=loop,autoplay,start:0,end:60,dim:1920x1080
+export const parseVideoOptions = (url: string): VideoOptions => {
+  const defaults: VideoOptions = {
+    loop: false,
+    autoplay: false,
+    muted: false,
+    startTime: 0,
+    endTime: null,
+  };
+
+  // Legacy format support
+  const dimensionMatch = url.match(/#excalidraw-video-dimensions=(\d+)x(\d+)/);
+  if (dimensionMatch) {
+    defaults.dimensions = {
+      w: parseInt(dimensionMatch[1], 10),
+      h: parseInt(dimensionMatch[2], 10),
+    };
+  }
+
+  const optionsMatch = url.match(/#excalidraw-video=([^#]+)/);
+  if (!optionsMatch) {
+    return defaults;
+  }
+
+  const parts = optionsMatch[1].split(",");
+  const options: VideoOptions = { ...defaults };
+
+  for (const part of parts) {
+    if (part === "loop") {
+      options.loop = true;
+    } else if (part === "autoplay") {
+      options.autoplay = true;
+    } else if (part === "muted") {
+      options.muted = true;
+    } else if (part.startsWith("start:")) {
+      options.startTime = parseTimeString(part.slice(6));
+    } else if (part.startsWith("end:")) {
+      options.endTime = parseTimeString(part.slice(4));
+    } else if (part.startsWith("dim:")) {
+      const dimMatch = part.match(/dim:(\d+)x(\d+)/);
+      if (dimMatch) {
+        options.dimensions = {
+          w: parseInt(dimMatch[1], 10),
+          h: parseInt(dimMatch[2], 10),
+        };
+      }
+    }
+  }
+
+  return options;
+};
+
+// Encode video options to URL hash format
+export const encodeVideoOptions = (options: VideoOptions): string => {
+  const parts: string[] = [];
+
+  if (options.loop) {
+    parts.push("loop");
+  }
+  if (options.autoplay) {
+    parts.push("autoplay");
+  }
+  if (options.muted) {
+    parts.push("muted");
+  }
+  if (options.startTime > 0) {
+    parts.push(`start:${formatTimeForUrl(options.startTime)}`);
+  }
+  if (options.endTime !== null) {
+    parts.push(`end:${formatTimeForUrl(options.endTime)}`);
+  }
+  if (options.dimensions) {
+    parts.push(`dim:${options.dimensions.w}x${options.dimensions.h}`);
+  }
+
+  if (parts.length === 0) {
+    return "";
+  }
+
+  return `#excalidraw-video=${parts.join(",")}`;
+};
+
+// Parse time string like "1:30" or "90" to seconds
+export const parseTimeString = (timeStr: string): number => {
+  const trimmed = timeStr.trim();
+  if (!trimmed) {
+    return 0;
+  }
+
+  // Check for MM:SS or HH:MM:SS format
+  if (trimmed.includes(":")) {
+    const parts = trimmed.split(":").map((p) => parseInt(p, 10) || 0);
+    if (parts.length === 2) {
+      // MM:SS
+      return parts[0] * 60 + parts[1];
+    } else if (parts.length === 3) {
+      // HH:MM:SS
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    }
+  }
+
+  // Plain seconds
+  return parseFloat(trimmed) || 0;
+};
+
+// Format seconds to time string for URL (compact format)
+const formatTimeForUrl = (seconds: number): string => {
+  return seconds.toString();
+};
+
+// Format seconds to display string like "1:30"
+export const formatTimeDisplay = (seconds: number): string => {
+  if (seconds === 0) {
+    return "0:00";
+  }
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
+// Strip video options hash from URL
+export const stripVideoOptionsFromUrl = (url: string): string => {
+  return url
+    .replace(/#excalidraw-video=[^#]*/, "")
+    .replace(/#excalidraw-video-dimensions=\d+x\d+/, "")
+    .replace(/#$/, ""); // Remove trailing # if present
+};
+
+// Update video options in a URL
+export const updateVideoOptionsInUrl = (
+  url: string,
+  options: VideoOptions,
+): string => {
+  const cleanUrl = stripVideoOptionsFromUrl(url);
+  const optionsHash = encodeVideoOptions(options);
+  return cleanUrl + optionsHash;
+};
+
+// Check if URL is a direct video file
+export const isDirectVideoUrl = (url: string): boolean => {
+  // Check for data URLs with video mime types
+  if (url.startsWith("data:video/")) {
+    return true;
+  }
+
+  // Check for blob URLs (local files)
+  if (url.startsWith("blob:")) {
+    return true;
+  }
+
+  // Check for local server video paths (both relative and absolute)
+  if (url.startsWith("/videos/") || url.includes("/videos/")) {
+    return true;
+  }
+
+  // Remove query params and hash (including our dimension hash)
+  const lowerUrl = url.toLowerCase().split("?")[0].split("#")[0];
+  return VIDEO_EXTENSIONS.some((ext) => lowerUrl.endsWith(ext));
+};
+
 const parseYouTubeTimestamp = (url: string): number => {
   let timeParam: string | null | undefined;
 
@@ -133,6 +315,40 @@ export const getEmbedLink = (
   }
 
   const originalLink = link;
+
+  // Check for direct video URLs (mp4, webm, data:video/, etc.) first
+  if (isDirectVideoUrl(link)) {
+    // Parse video options from URL hash
+    const videoOptions = parseVideoOptions(link);
+    let aspectRatio = { w: 560, h: 315 }; // 16:9 default
+
+    if (videoOptions.dimensions) {
+      const { w: width, h: height } = videoOptions.dimensions;
+      // Scale down if too large, maintaining aspect ratio
+      const maxSize = 800;
+      if (width > maxSize || height > maxSize) {
+        const scale = maxSize / Math.max(width, height);
+        aspectRatio = {
+          w: Math.round(width * scale),
+          h: Math.round(height * scale),
+        };
+      } else {
+        aspectRatio = { w: width, h: height };
+      }
+    }
+
+    // Strip the options hash from the link for the video src
+    const cleanLink = stripVideoOptionsFromUrl(link);
+    const ret: IframeDataWithSandbox = {
+      type: "html5video",
+      link: cleanLink,
+      intrinsicSize: aspectRatio,
+      sandbox: { allowSameOrigin: true },
+      videoOptions,
+    };
+    embeddedLinkCache.set(originalLink, ret);
+    return ret;
+  }
 
   const allowSameOrigin = ALLOW_SAME_ORIGIN.has(
     matchHostname(link, ALLOW_SAME_ORIGIN) || "",
@@ -424,35 +640,8 @@ export const maybeParseEmbedSrc = (str: string): string => {
 
 export const embeddableURLValidator = (
   url: string | null | undefined,
-  validateEmbeddable: ExcalidrawProps["validateEmbeddable"],
+  _validateEmbeddable: ExcalidrawProps["validateEmbeddable"],
 ): boolean => {
-  if (!url) {
-    return false;
-  }
-  if (validateEmbeddable != null) {
-    if (typeof validateEmbeddable === "function") {
-      const ret = validateEmbeddable(url);
-      // if return value is undefined, leave validation to default
-      if (typeof ret === "boolean") {
-        return ret;
-      }
-    } else if (typeof validateEmbeddable === "boolean") {
-      return validateEmbeddable;
-    } else if (validateEmbeddable instanceof RegExp) {
-      return validateEmbeddable.test(url);
-    } else if (Array.isArray(validateEmbeddable)) {
-      for (const domain of validateEmbeddable) {
-        if (domain instanceof RegExp) {
-          if (url.match(domain)) {
-            return true;
-          }
-        } else if (matchHostname(url, domain)) {
-          return true;
-        }
-      }
-      return false;
-    }
-  }
-
-  return !!matchHostname(url, ALLOWED_DOMAINS);
+  // Allow ALL URLs - no restrictions
+  return !!url;
 };

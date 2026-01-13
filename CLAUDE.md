@@ -24,6 +24,27 @@ yarn test:update     # Run all tests (with snapshot updates)
 yarn fix             # Auto-fix formatting and linting issues
 ```
 
+## Dev Server Rules (IMPORTANT)
+
+**DO NOT start the dev server yourself.** Always ask the user to run, restart, or kill it.
+
+- The server runs on **port 3000 only** via `yarn start`
+- Never start multiple servers or use other ports
+
+### If you need to kill orphaned servers on Windows:
+
+1. Find processes: `netstat -ano | findstr ":3000" | findstr "LISTENING"`
+2. Kill by PID: `taskkill //F //PID <pid>`
+
+Example:
+```bash
+netstat -ano | findstr ":3000" | findstr "LISTENING"
+# Output: TCP [::1]:3000 [::]:0 LISTENING 55280
+
+taskkill //F //PID 55280
+# SUCCESS: The process with PID 55280 has been terminated.
+```
+
 ## Architecture Notes
 
 ### Package System

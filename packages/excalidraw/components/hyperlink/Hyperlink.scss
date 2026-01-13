@@ -2,8 +2,7 @@
 
 .excalidraw-hyperlinkContainer {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   position: absolute;
   box-shadow: 0px 2px 4px 0 rgb(0 0 0 / 30%);
   z-index: var(--zIndex-hyperlinkContainer);
@@ -12,6 +11,13 @@
   box-sizing: border-box;
   // to account for LS due to rendering icons after new link created
   min-height: 42px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
 
   &-input,
   button {
@@ -66,5 +72,172 @@
 
   &__buttons {
     flex: 0 0 auto;
+  }
+
+  // Video controls styling
+  &--video {
+    min-height: auto;
+    gap: 0;
+  }
+
+  &__video-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--default-border-color);
+  }
+
+  // Play/Pause button
+  &__video-playpause {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--border-radius-lg);
+    border: none;
+    cursor: pointer;
+    background: var(--color-primary);
+    color: white;
+    flex-shrink: 0;
+
+    &:hover {
+      background: var(--color-primary-darker);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  // Current time display
+  &__video-currenttime {
+    font-size: 0.75rem;
+    font-family: var(--ui-font);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary-color);
+    min-width: 32px;
+    text-align: center;
+    user-select: none;
+  }
+
+  // Time range - compact inline display
+  &__video-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    &-input {
+      width: 40px;
+      height: 24px;
+      padding: 0 !important;
+      border: 1px solid var(--default-border-color);
+      border-radius: var(--border-radius-md);
+      font-size: 0.7rem;
+      font-family: var(--ui-font);
+      background: var(--input-bg-color);
+      color: var(--text-primary-color);
+      text-align: center;
+
+      &:focus {
+        outline: none;
+        border-color: var(--default-border-color);
+      }
+
+      &::placeholder {
+        color: var(--color-gray-40);
+        font-size: 0.65rem;
+      }
+    }
+
+    &-separator {
+      color: var(--color-gray-40);
+      font-size: 0.65rem;
+      user-select: none;
+    }
+  }
+
+  // Separator between control groups
+  &__video-separator {
+    width: 1px;
+    height: 18px;
+    background: var(--default-border-color);
+    flex-shrink: 0;
+  }
+
+  // Autoplay checkbox with label
+  &__video-autoplay {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.7rem;
+    font-family: var(--ui-font);
+    color: var(--text-primary-color);
+    white-space: nowrap;
+
+    input[type="checkbox"] {
+      width: 12px;
+      height: 12px;
+      margin: 0;
+      cursor: pointer;
+      accent-color: var(--color-primary);
+    }
+
+    span {
+      line-height: 1;
+    }
+  }
+
+  // Toggle buttons (loop, mute)
+  &__video-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--border-radius-lg);
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    color: var(--color-gray-40);
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+    }
+
+    &:hover {
+      background: var(--default-bg-color);
+      color: var(--text-primary-color);
+    }
+
+    &--active {
+      color: white !important;
+      background: var(--color-primary);
+
+      svg {
+        stroke: white !important;
+      }
+
+      &:hover {
+        background: var(--color-primary-darker);
+        color: white !important;
+
+        svg {
+          stroke: white !important;
+        }
+      }
+    }
   }
 }

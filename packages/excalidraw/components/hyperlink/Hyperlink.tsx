@@ -16,7 +16,15 @@ import { hitElementBoundingBox } from "@excalidraw/element";
 
 import { isElementLink } from "@excalidraw/element";
 
-import { getEmbedLink, embeddableURLValidator } from "@excalidraw/element";
+import {
+  getEmbedLink,
+  embeddableURLValidator,
+  isDirectVideoUrl,
+  parseVideoOptions,
+  updateVideoOptionsInUrl,
+  formatTimeDisplay,
+  parseTimeString,
+} from "@excalidraw/element";
 
 import {
   sceneCoordsToViewportCoords,
@@ -34,6 +42,7 @@ import type {
   ElementsMap,
   ExcalidrawEmbeddableElement,
   NonDeletedExcalidrawElement,
+  VideoOptions,
 } from "@excalidraw/element/types";
 
 import { trackEvent } from "../../analytics";
@@ -43,7 +52,7 @@ import { t } from "../../i18n";
 
 import { useAppProps, useEditorInterface, useExcalidrawAppState } from "../App";
 import { ToolButton } from "../ToolButton";
-import { FreedrawIcon, TrashIcon, elementLinkIcon } from "../icons";
+import { FreedrawIcon, TrashIcon, elementLinkIcon, LoopIcon, PlayIcon, PauseIcon, VolumeIcon, VolumeOffIcon } from "../icons";
 import { getSelectedElements } from "../../scene";
 
 import { getLinkHandleFromCoords } from "./helpers";
@@ -53,9 +62,12 @@ import "./Hyperlink.scss";
 import type { AppState, ExcalidrawProps, UIAppState } from "../../types";
 
 const POPUP_WIDTH = 380;
+const POPUP_WIDTH_VIDEO = 380;
 const POPUP_HEIGHT = 42;
+const POPUP_HEIGHT_VIDEO = 82;
 const POPUP_PADDING = 5;
 const SPACE_BOTTOM = 85;
+const SPACE_BOTTOM_VIDEO = 115;
 const AUTO_HIDE_TIMEOUT = 500;
 
 let IS_HYPERLINK_TOOLTIP_VISIBLE = false;
@@ -64,6 +76,34 @@ const embeddableLinkCache = new Map<
   ExcalidrawEmbeddableElement["id"],
   string
 >();
+
+// Helper to check if element is a video embeddable
+const isVideoElement = (element: NonDeletedExcalidrawElement): boolean => {
+  if (!isEmbeddableElement(element) || !element.link) {
+    return false;
+  }
+  return isDirectVideoUrl(element.link);
+};
+
+// Helper to get video duration from a URL
+const getVideoDuration = async (url: string): Promise<number | null> => {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+
+    video.onloadedmetadata = () => {
+      resolve(video.duration);
+    };
+
+    video.onerror = () => {
+      resolve(null);
+    };
+
+    // Strip any hash from URL for loading
+    const cleanUrl = url.split("#")[0];
+    video.src = cleanUrl;
+  });
+};
 
 export const Hyperlink = ({
   element,
@@ -91,10 +131,128 @@ export const Hyperlink = ({
   const editorInterface = useEditorInterface();
 
   const linkVal = element.link || "";
+  const isVideo = isVideoElement(element);
 
   const [inputVal, setInputVal] = useState(linkVal);
   const inputRef = useRef<HTMLInputElement>(null);
   const isEditing = appState.showHyperlinkPopup === "editor";
+
+  // Video options state
+  const [videoOptions, setVideoOptions] = useState<VideoOptions>(() =>
+    parseVideoOptions(linkVal),
+  );
+  const [videoDuration, setVideoDuration] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [startTimeInput, setStartTimeInput] = useState(() =>
+    formatTimeDisplay(videoOptions.startTime),
+  );
+  const [endTimeInput, setEndTimeInput] = useState(() =>
+    videoOptions.endTime !== null ? formatTimeDisplay(videoOptions.endTime) : "",
+  );
+
+  // Get video element from DOM
+  const getVideoElement = useCallback((): HTMLVideoElement | null => {
+    // Find video in the embeddable container
+    const container = document.querySelector(
+      `.excalidraw__embeddable-container [data-element-id="${element.id}"]`,
+    );
+    if (container) {
+      return container.querySelector("video");
+    }
+    // Fallback: find any video with matching src
+    const videos = document.querySelectorAll<HTMLVideoElement>(
+      ".excalidraw__video-player",
+    );
+    for (const video of videos) {
+      if (element.link && video.src.includes(element.link.split("#")[0])) {
+        return video;
+      }
+    }
+    return null;
+  }, [element.id, element.link]);
+
+  // Toggle play/pause
+  const togglePlayPause = useCallback(() => {
+    const video = getVideoElement();
+    if (!video) {
+      return;
+    }
+    if (video.paused) {
+      video.play();
+      setIsPlaying(true);
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  }, [getVideoElement]);
+
+  // Sync playing state and current time with actual video
+  useEffect(() => {
+    if (!isVideo) {
+      return;
+    }
+    const video = getVideoElement();
+    if (!video) {
+      return;
+    }
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+
+    // Initial state
+    setIsPlaying(!video.paused);
+    setCurrentTime(video.currentTime);
+
+    return () => {
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+    };
+  }, [isVideo, getVideoElement]);
+
+  // Fetch video duration when element changes
+  useEffect(() => {
+    if (isVideo && linkVal) {
+      const cleanUrl = linkVal.split("#")[0];
+      getVideoDuration(cleanUrl).then((duration) => {
+        if (duration !== null && isFinite(duration)) {
+          setVideoDuration(duration);
+          // Set end time input to duration if not already set
+          if (videoOptions.endTime === null) {
+            setEndTimeInput(formatTimeDisplay(duration));
+          }
+        }
+      });
+    }
+  }, [isVideo, linkVal, videoOptions.endTime]);
+
+  // Update video options when link changes
+  useEffect(() => {
+    const opts = parseVideoOptions(linkVal);
+    setVideoOptions(opts);
+    setStartTimeInput(formatTimeDisplay(opts.startTime));
+    setEndTimeInput(opts.endTime !== null ? formatTimeDisplay(opts.endTime) : "");
+  }, [linkVal]);
+
+  // Apply video options to element
+  const applyVideoOptions = useCallback(
+    (newOptions: Partial<VideoOptions>) => {
+      const updatedOptions = { ...videoOptions, ...newOptions };
+      setVideoOptions(updatedOptions);
+
+      if (element.link) {
+        const newLink = updateVideoOptionsInUrl(element.link, updatedOptions);
+        scene.mutateElement(element, { link: newLink });
+      }
+    },
+    [videoOptions, element, scene],
+  );
 
   const handleSubmit = useCallback(() => {
     if (!inputRef.current) {
@@ -210,6 +368,7 @@ export const Hyperlink = ({
         elementsMap,
         appState,
         pointFrom(event.clientX, event.clientY),
+        isVideo,
       ) as boolean;
       if (shouldHide) {
         timeoutId = window.setTimeout(() => {
@@ -224,7 +383,7 @@ export const Hyperlink = ({
         clearTimeout(timeoutId);
       }
     };
-  }, [appState, element, isEditing, setAppState, elementsMap]);
+  }, [appState, element, isEditing, setAppState, elementsMap, isVideo]);
 
   const handleRemove = useCallback(() => {
     trackEvent("hyperlink", "delete");
@@ -236,119 +395,261 @@ export const Hyperlink = ({
     trackEvent("hyperlink", "edit", "popup-ui");
     setAppState({ showHyperlinkPopup: "editor" });
   };
-  const { x, y } = getCoordsForPopover(element, appState, elementsMap);
+
+  const handleStartTimeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setStartTimeInput(e.target.value);
+    },
+    [],
+  );
+
+  const handleStartTimeBlur = useCallback(() => {
+    const seconds = parseTimeString(startTimeInput);
+    applyVideoOptions({ startTime: seconds });
+    setStartTimeInput(formatTimeDisplay(seconds));
+  }, [startTimeInput, applyVideoOptions]);
+
+  const handleEndTimeChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setEndTimeInput(e.target.value);
+    },
+    [],
+  );
+
+  const handleEndTimeBlur = useCallback(() => {
+    const value = endTimeInput.trim();
+    if (!value) {
+      applyVideoOptions({ endTime: null });
+      if (videoDuration !== null) {
+        setEndTimeInput(formatTimeDisplay(videoDuration));
+      }
+    } else {
+      const seconds = parseTimeString(value);
+      applyVideoOptions({ endTime: seconds });
+      setEndTimeInput(formatTimeDisplay(seconds));
+    }
+  }, [endTimeInput, applyVideoOptions, videoDuration]);
+
+  const { x, y } = getCoordsForPopover(element, appState, elementsMap, isVideo);
+
+  // Hide popup when embeddable is active (user clicked "click to interact")
+  // This allows the user to interact with native video controls
+  const isEmbeddableActive =
+    isEmbeddableElement(element) &&
+    appState.activeEmbeddable?.element === element &&
+    appState.activeEmbeddable?.state === "active";
+
   if (
     appState.contextMenu ||
     appState.selectedElementsAreBeingDragged ||
     appState.resizingElement ||
     appState.isRotating ||
     appState.openMenu ||
-    appState.viewModeEnabled
+    appState.viewModeEnabled ||
+    isEmbeddableActive
   ) {
     return null;
   }
 
+  const popupWidth = isVideo ? POPUP_WIDTH_VIDEO : POPUP_WIDTH;
+
   return (
     <div
-      className="excalidraw-hyperlinkContainer"
+      className={clsx("excalidraw-hyperlinkContainer", {
+        "excalidraw-hyperlinkContainer--video": isVideo,
+      })}
       style={{
         top: `${y}px`,
         left: `${x}px`,
-        width: POPUP_WIDTH,
+        width: popupWidth,
         padding: POPUP_PADDING,
       }}
     >
-      {isEditing ? (
-        <input
-          className={clsx("excalidraw-hyperlinkContainer-input")}
-          placeholder={t("labels.link.hint")}
-          ref={inputRef}
-          value={inputVal}
-          onChange={(event) => setInputVal(event.target.value)}
-          autoFocus
-          onKeyDown={(event) => {
-            event.stopPropagation();
-            // prevent cmd/ctrl+k shortcut when editing link
-            if (event[KEYS.CTRL_OR_CMD] && event.key === KEYS.K) {
-              event.preventDefault();
-            }
-            if (event.key === KEYS.ENTER || event.key === KEYS.ESCAPE) {
-              handleSubmit();
-              setAppState({ showHyperlinkPopup: "info" });
-            }
-          }}
-        />
-      ) : element.link ? (
-        <a
-          href={normalizeLink(element.link || "")}
-          className="excalidraw-hyperlinkContainer-link"
-          target={isLocalLink(element.link) ? "_self" : "_blank"}
-          onClick={(event) => {
-            if (element.link && onLinkOpen) {
-              const customEvent = wrapEvent(
-                EVENT.EXCALIDRAW_LINK,
-                event.nativeEvent,
-              );
-              onLinkOpen(
-                {
-                  ...element,
-                  link: normalizeLink(element.link),
-                },
-                customEvent,
-              );
-              if (customEvent.defaultPrevented) {
+      <div className="excalidraw-hyperlinkContainer__row">
+        {isEditing ? (
+          <input
+            className={clsx("excalidraw-hyperlinkContainer-input")}
+            placeholder={t("labels.link.hint")}
+            ref={inputRef}
+            value={inputVal}
+            onChange={(event) => setInputVal(event.target.value)}
+            autoFocus
+            onKeyDown={(event) => {
+              event.stopPropagation();
+              // prevent cmd/ctrl+k shortcut when editing link
+              if (event[KEYS.CTRL_OR_CMD] && event.key === KEYS.K) {
                 event.preventDefault();
               }
-            }
-          }}
-          rel="noopener noreferrer"
-        >
-          {element.link}
-        </a>
-      ) : (
-        <div className="excalidraw-hyperlinkContainer-link">
-          {t("labels.link.empty")}
+              if (event.key === KEYS.ENTER || event.key === KEYS.ESCAPE) {
+                handleSubmit();
+                setAppState({ showHyperlinkPopup: "info" });
+              }
+            }}
+          />
+        ) : element.link ? (
+          <a
+            href={normalizeLink(element.link || "")}
+            className="excalidraw-hyperlinkContainer-link"
+            target={isLocalLink(element.link) ? "_self" : "_blank"}
+            onClick={(event) => {
+              if (element.link && onLinkOpen) {
+                const customEvent = wrapEvent(
+                  EVENT.EXCALIDRAW_LINK,
+                  event.nativeEvent,
+                );
+                onLinkOpen(
+                  {
+                    ...element,
+                    link: normalizeLink(element.link),
+                  },
+                  customEvent,
+                );
+                if (customEvent.defaultPrevented) {
+                  event.preventDefault();
+                }
+              }
+            }}
+            rel="noopener noreferrer"
+          >
+            {element.link.split("#")[0]}
+          </a>
+        ) : (
+          <div className="excalidraw-hyperlinkContainer-link">
+            {t("labels.link.empty")}
+          </div>
+        )}
+        <div className="excalidraw-hyperlinkContainer__buttons">
+          {!isEditing && (
+            <ToolButton
+              type="button"
+              title={t("buttons.edit")}
+              aria-label={t("buttons.edit")}
+              label={t("buttons.edit")}
+              onClick={onEdit}
+              className="excalidraw-hyperlinkContainer--edit"
+              icon={FreedrawIcon}
+            />
+          )}
+          <ToolButton
+            type="button"
+            title={t("labels.linkToElement")}
+            aria-label={t("labels.linkToElement")}
+            label={t("labels.linkToElement")}
+            onClick={() => {
+              setAppState({
+                openDialog: {
+                  name: "elementLinkSelector",
+                  sourceElementId: element.id,
+                },
+              });
+            }}
+            icon={elementLinkIcon}
+          />
+          {linkVal && !isEmbeddableElement(element) && (
+            <ToolButton
+              type="button"
+              title={t("buttons.remove")}
+              aria-label={t("buttons.remove")}
+              label={t("buttons.remove")}
+              onClick={handleRemove}
+              className="excalidraw-hyperlinkContainer--remove"
+              icon={TrashIcon}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Video controls */}
+      {isVideo && !isEditing && (
+        <div className="excalidraw-hyperlinkContainer__video-controls">
+          {/* Play/Pause button */}
+          <button
+            type="button"
+            className="excalidraw-hyperlinkContainer__video-playpause"
+            onClick={togglePlayPause}
+            title={isPlaying ? t("videoControls.pause") : t("videoControls.play")}
+          >
+            {isPlaying ? PauseIcon : PlayIcon}
+          </button>
+
+          {/* Current time display */}
+          <span className="excalidraw-hyperlinkContainer__video-currenttime">
+            {formatTimeDisplay(currentTime)}
+          </span>
+
+          {/* Loop toggle */}
+          <button
+            type="button"
+            className={`excalidraw-hyperlinkContainer__video-toggle ${videoOptions.loop ? "excalidraw-hyperlinkContainer__video-toggle--active" : ""}`}
+            onClick={() => applyVideoOptions({ loop: !videoOptions.loop })}
+            title={t("videoControls.loop")}
+          >
+            {LoopIcon}
+          </button>
+
+          {/* Time range */}
+          <div className="excalidraw-hyperlinkContainer__video-time">
+            <input
+              type="text"
+              className="excalidraw-hyperlinkContainer__video-time-input"
+              value={startTimeInput}
+              onChange={handleStartTimeChange}
+              onBlur={handleStartTimeBlur}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === KEYS.ENTER) {
+                  handleStartTimeBlur();
+                }
+              }}
+              placeholder="0:00"
+              title={t("videoControls.start")}
+            />
+            <span className="excalidraw-hyperlinkContainer__video-time-separator">
+              –
+            </span>
+            <input
+              type="text"
+              className="excalidraw-hyperlinkContainer__video-time-input"
+              value={endTimeInput}
+              onChange={handleEndTimeChange}
+              onBlur={handleEndTimeBlur}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === KEYS.ENTER) {
+                  handleEndTimeBlur();
+                }
+              }}
+              placeholder={
+                videoDuration !== null ? formatTimeDisplay(videoDuration) : "end"
+              }
+              title={t("videoControls.end")}
+            />
+          </div>
+
+          {/* Separator */}
+          <span className="excalidraw-hyperlinkContainer__video-separator" />
+
+          {/* Autoplay switch */}
+          <label className="excalidraw-hyperlinkContainer__video-autoplay">
+            <input
+              type="checkbox"
+              checked={videoOptions.autoplay}
+              onChange={() => applyVideoOptions({ autoplay: !videoOptions.autoplay })}
+            />
+            <span>{t("videoControls.autoplayLabel")}</span>
+          </label>
+
+          {/* Mute toggle */}
+          <button
+            type="button"
+            className={`excalidraw-hyperlinkContainer__video-toggle ${videoOptions.muted ? "excalidraw-hyperlinkContainer__video-toggle--active" : ""}`}
+            onClick={() => applyVideoOptions({ muted: !videoOptions.muted })}
+            title={videoOptions.muted ? t("videoControls.unmute") : t("videoControls.mute")}
+          >
+            {videoOptions.muted ? VolumeOffIcon : VolumeIcon}
+          </button>
         </div>
       )}
-      <div className="excalidraw-hyperlinkContainer__buttons">
-        {!isEditing && (
-          <ToolButton
-            type="button"
-            title={t("buttons.edit")}
-            aria-label={t("buttons.edit")}
-            label={t("buttons.edit")}
-            onClick={onEdit}
-            className="excalidraw-hyperlinkContainer--edit"
-            icon={FreedrawIcon}
-          />
-        )}
-        <ToolButton
-          type="button"
-          title={t("labels.linkToElement")}
-          aria-label={t("labels.linkToElement")}
-          label={t("labels.linkToElement")}
-          onClick={() => {
-            setAppState({
-              openDialog: {
-                name: "elementLinkSelector",
-                sourceElementId: element.id,
-              },
-            });
-          }}
-          icon={elementLinkIcon}
-        />
-        {linkVal && !isEmbeddableElement(element) && (
-          <ToolButton
-            type="button"
-            title={t("buttons.remove")}
-            aria-label={t("buttons.remove")}
-            label={t("buttons.remove")}
-            onClick={handleRemove}
-            className="excalidraw-hyperlinkContainer--remove"
-            icon={TrashIcon}
-          />
-        )}
-      </div>
     </div>
   );
 };
@@ -357,14 +658,17 @@ const getCoordsForPopover = (
   element: NonDeletedExcalidrawElement,
   appState: AppState,
   elementsMap: ElementsMap,
+  isVideo = false,
 ) => {
   const [x1, y1] = getElementAbsoluteCoords(element, elementsMap);
   const { x: viewportX, y: viewportY } = sceneCoordsToViewportCoords(
     { sceneX: x1 + element.width / 2, sceneY: y1 },
     appState,
   );
-  const x = viewportX - appState.offsetLeft - POPUP_WIDTH / 2;
-  const y = viewportY - appState.offsetTop - SPACE_BOTTOM;
+  const popupWidth = isVideo ? POPUP_WIDTH_VIDEO : POPUP_WIDTH;
+  const spaceBottom = isVideo ? SPACE_BOTTOM_VIDEO : SPACE_BOTTOM;
+  const x = viewportX - appState.offsetLeft - popupWidth / 2;
+  const y = viewportY - appState.offsetTop - spaceBottom;
   return { x, y };
 };
 
@@ -455,6 +759,7 @@ const shouldHideLinkPopup = (
   elementsMap: ElementsMap,
   appState: AppState,
   [clientX, clientY]: GlobalPoint,
+  isVideo = false,
 ): Boolean => {
   const { x: sceneX, y: sceneY } = viewportCoordsToSceneCoords(
     { clientX, clientY },
@@ -462,6 +767,10 @@ const shouldHideLinkPopup = (
   );
 
   const threshold = 15 / appState.zoom.value;
+  const popupWidth = isVideo ? POPUP_WIDTH_VIDEO : POPUP_WIDTH;
+  const popupHeight = isVideo ? POPUP_HEIGHT_VIDEO : POPUP_HEIGHT;
+  const spaceBottom = isVideo ? SPACE_BOTTOM_VIDEO : SPACE_BOTTOM;
+
   // hitbox to prevent hiding when hovered in element bounding box
   if (hitElementBoundingBox(pointFrom(sceneX, sceneY), element, elementsMap)) {
     return false;
@@ -471,7 +780,7 @@ const shouldHideLinkPopup = (
   if (
     sceneX >= x1 &&
     sceneX <= x2 &&
-    sceneY >= y1 - SPACE_BOTTOM &&
+    sceneY >= y1 - spaceBottom &&
     sceneY <= y1
   ) {
     return false;
@@ -481,13 +790,14 @@ const shouldHideLinkPopup = (
     element,
     appState,
     elementsMap,
+    isVideo,
   );
 
   if (
     clientX >= popoverX - threshold &&
-    clientX <= popoverX + POPUP_WIDTH + POPUP_PADDING * 2 + threshold &&
+    clientX <= popoverX + popupWidth + POPUP_PADDING * 2 + threshold &&
     clientY >= popoverY - threshold &&
-    clientY <= popoverY + threshold + POPUP_PADDING * 2 + POPUP_HEIGHT
+    clientY <= popoverY + threshold + POPUP_PADDING * 2 + popupHeight
   ) {
     return false;
   }

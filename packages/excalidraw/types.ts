@@ -371,7 +371,7 @@ export interface AppState {
   openSidebar: { name: SidebarName; tab?: SidebarTabName } | null;
   openDialog:
     | null
-    | { name: "imageExport" | "help" | "jsonExport" }
+    | { name: "imageExport" | "help" | "jsonExport" | "videoEmbed" }
     | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
     | { name: "commandPalette" }
     | { name: "settings" }

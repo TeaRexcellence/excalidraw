@@ -124,14 +124,25 @@ export type ExcalidrawIframeLikeElement =
   | ExcalidrawIframeElement
   | ExcalidrawEmbeddableElement;
 
+export type VideoOptions = {
+  loop: boolean;
+  autoplay: boolean;
+  muted: boolean;
+  startTime: number;
+  endTime: number | null;
+  dimensions?: { w: number; h: number };
+};
+
 export type IframeData =
   | {
       intrinsicSize: { w: number; h: number };
       error?: Error;
       sandbox?: { allowSameOrigin?: boolean };
+      videoOptions?: VideoOptions;
     } & (
       | { type: "video" | "generic"; link: string }
       | { type: "document"; srcdoc: (theme: Theme) => string }
+      | { type: "html5video"; link: string }
     );
 
 export type ImageCrop = {

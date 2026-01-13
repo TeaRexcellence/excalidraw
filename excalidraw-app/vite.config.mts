@@ -1,5 +1,7 @@
 import path from "path";
+import fs from "fs";
 import { defineConfig, loadEnv } from "vite";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import svgrPlugin from "vite-plugin-svgr";
 import { ViteEjsPlugin } from "vite-plugin-ejs";
@@ -8,6 +10,90 @@ import checker from "vite-plugin-checker";
 import { createHtmlPlugin } from "vite-plugin-html";
 import Sitemap from "vite-plugin-sitemap";
 import { woff2BrowserPlugin } from "../scripts/woff2/woff2-vite-plugins";
+
+// Plugin to handle local video file management
+function videoFilePlugin(): Plugin {
+  const publicDir = path.resolve(__dirname, "../public");
+  const videosDir = path.join(publicDir, "videos");
+
+  return {
+    name: "video-file-plugin",
+    configureServer(server) {
+      // Ensure videos directory exists
+      if (!fs.existsSync(videosDir)) {
+        fs.mkdirSync(videosDir, { recursive: true });
+      }
+
+      server.middlewares.use(async (req, res, next) => {
+        // Handle video upload
+        if (req.method === "POST" && req.url?.startsWith("/api/videos/upload")) {
+          const urlParams = new URL(req.url, `http://${req.headers.host}`);
+          const projectId = urlParams.searchParams.get("projectId") || "default";
+          const filename = urlParams.searchParams.get("filename");
+
+          if (!filename) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: "filename required" }));
+            return;
+          }
+
+          const projectDir = path.join(videosDir, projectId);
+          if (!fs.existsSync(projectDir)) {
+            fs.mkdirSync(projectDir, { recursive: true });
+          }
+
+          const filePath = path.join(projectDir, filename);
+          const chunks: Buffer[] = [];
+
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", () => {
+            const buffer = Buffer.concat(chunks);
+            fs.writeFileSync(filePath, buffer);
+            const videoUrl = `/videos/${projectId}/${filename}`;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ url: videoUrl }));
+          });
+          return;
+        }
+
+        // Handle video deletion
+        if (req.method === "DELETE" && req.url?.startsWith("/api/videos/")) {
+          const urlPath = req.url.replace("/api/videos/", "");
+          const filePath = path.join(videosDir, urlPath);
+
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            // Clean up empty project directories
+            const dir = path.dirname(filePath);
+            if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) {
+              fs.rmdirSync(dir);
+            }
+          }
+          res.statusCode = 200;
+          res.end(JSON.stringify({ deleted: true }));
+          return;
+        }
+
+        // List videos for a project
+        if (req.method === "GET" && req.url?.startsWith("/api/videos/list")) {
+          const urlParams = new URL(req.url, `http://${req.headers.host}`);
+          const projectId = urlParams.searchParams.get("projectId") || "default";
+          const projectDir = path.join(videosDir, projectId);
+
+          let files: string[] = [];
+          if (fs.existsSync(projectDir)) {
+            files = fs.readdirSync(projectDir);
+          }
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ files }));
+          return;
+        }
+
+        next();
+      });
+    },
+  };
+}
 export default defineConfig(({ mode }) => {
   // To load .env variables
   const envVars = loadEnv(mode, `../`);
@@ -110,6 +196,7 @@ export default defineConfig(({ mode }) => {
       assetsInlineLimit: 0,
     },
     plugins: [
+      videoFilePlugin(),
       Sitemap({
         hostname: "https://excalidraw.com",
         outDir: "build",

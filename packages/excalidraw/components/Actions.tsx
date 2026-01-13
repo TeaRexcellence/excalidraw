@@ -68,6 +68,7 @@ import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import { PropertiesPopover } from "./PropertiesPopover";
 import {
   EmbedIcon,
+  VideoIcon,
   extraToolsIcon,
   frameToolIcon,
   mermaidLogoIcon,
@@ -1176,6 +1177,16 @@ export const ShapesSwitcher = ({
           );
         },
       )}
+      <ToolButton
+        className="Shape"
+        type="button"
+        icon={VideoIcon}
+        name="video"
+        title={t("toolBar.video")}
+        aria-label={t("toolBar.video")}
+        data-testid="toolbar-video"
+        onClick={() => app.setOpenDialog({ name: "videoEmbed" })}
+      />
       <div className="App-toolbar__divider" />
 
       <DropdownMenu open={isExtraToolsMenuOpen}>
