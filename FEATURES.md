@@ -8,16 +8,19 @@ This document provides comprehensive documentation for all custom features added
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [Video Player Support](#2-video-player-support)
-3. [Local Project Manager](#3-local-project-manager)
-4. [Grid Opacity Control](#4-grid-opacity-control)
-5. [UI Debloat](#5-ui-debloat)
-6. [Video Thumbnail Export](#6-video-thumbnail-export)
-7. [Main Menu](#7-main-menu)
-8. [File Structure](#8-file-structure)
-9. [API Reference](#9-api-reference)
-10. [State Management](#10-state-management)
-11. [Code Patterns & Gotchas](#11-code-patterns--gotchas)
-12. [Development](#12-development)
+3. [Video Controls Panel](#3-video-controls-panel)
+4. [Local Project Manager](#4-local-project-manager)
+5. [Grid Opacity Control](#5-grid-opacity-control)
+6. [UI Debloat](#6-ui-debloat)
+7. [Video Thumbnail Export](#7-video-thumbnail-export)
+8. [Main Menu](#8-main-menu)
+9. [File Structure](#9-file-structure)
+10. [API Reference](#10-api-reference)
+11. [State Management](#11-state-management)
+12. [Code Patterns & Gotchas](#12-code-patterns--gotchas)
+13. [Internationalization](#13-internationalization)
+14. [Development](#14-development)
+15. [Related Documentation](#15-related-documentation)
 
 ---
 
@@ -125,7 +128,61 @@ A multi-step dialog for inserting videos:
 
 ---
 
-## 3. Local Project Manager
+## 3. Video Controls Panel
+
+### Overview
+
+When hovering over a video embed element, an expanded hyperlink popup appears with comprehensive video playback controls. This allows fine-grained control over video behavior without needing to interact with the native video controls.
+
+**Location:** `packages/excalidraw/components/hyperlink/Hyperlink.tsx`
+
+### Features
+
+| Control | Description |
+|---------|-------------|
+| **Play/Pause** | Toggle video playback with real-time state sync |
+| **Current Time** | Live display of current playback position (M:SS format) |
+| **Loop Toggle** | Enable/disable video looping (respects custom start/end times) |
+| **Start Time** | Set custom start position (accepts "M:SS" or seconds) |
+| **End Time** | Set custom end position (auto-populated with video duration) |
+| **Autoplay** | Checkbox to enable auto-start on load |
+| **Mute Toggle** | Toggle audio on/off |
+
+### Time Input Format
+
+The start/end time inputs accept multiple formats:
+- `1:30` or `1:30:00` - Minutes:Seconds or Hours:Minutes:Seconds
+- `90` - Raw seconds
+- Empty end time - Uses full video duration
+
+### Video Duration Detection
+
+When a video is loaded, the system automatically:
+1. Detects the video duration via the `loadedmetadata` event
+2. Populates the end time placeholder with the full duration
+3. Handles CORS-blocked videos gracefully with a 10-second timeout
+
+### Key Functions
+
+**Location:** `packages/element/src/embeddable.ts`
+
+```typescript
+// Parse time string ("1:30" or "90") to seconds
+parseTimeString(timeStr: string): number
+
+// Format seconds to "M:SS" display
+formatTimeDisplay(seconds: number): string
+
+// Parse video options from URL hash
+parseVideoOptions(url: string): VideoOptions
+
+// Update video options in URL
+updateVideoOptionsInUrl(url: string, options: VideoOptions): string
+```
+
+---
+
+## 4. Local Project Manager
 
 ### Overview
 A complete project management system that replaces browser localStorage with file-based persistence. Projects are organized into categories and stored in the `public/projects/` directory.
@@ -220,7 +277,7 @@ The `ProjectManagerData` class provides:
 
 ---
 
-## 4. Grid Opacity Control
+## 5. Grid Opacity Control
 
 ### Overview
 Adjustable grid opacity (10% - 100%) accessible from the canvas context menu.
@@ -245,7 +302,7 @@ gridOpacity: 100  // 10-100, default 100
 
 ---
 
-## 5. UI Debloat
+## 6. UI Debloat
 
 ### Overview
 Removed unnecessary UI elements and simplified the interface for a cleaner experience.
@@ -270,7 +327,7 @@ Removed unnecessary UI elements and simplified the interface for a cleaner exper
 
 ---
 
-## 6. Video Thumbnail Export
+## 7. Video Thumbnail Export
 
 ### Overview
 Videos now display their thumbnails in PNG/SVG exports instead of black boxes or placeholder text.
@@ -324,7 +381,7 @@ prefetchVideoThumbnailsAsDataUrls(elements): Promise<Map<string, string>>
 
 ---
 
-## 7. Main Menu
+## 8. Main Menu
 
 **Location:** `excalidraw-app/components/AppMainMenu.tsx`
 
@@ -346,7 +403,7 @@ These two options are different:
 
 ---
 
-## 8. File Structure
+## 9. File Structure
 
 ### Project Storage Layout
 
@@ -397,7 +454,7 @@ public/projects/
 
 ---
 
-## 9. API Reference
+## 10. API Reference
 
 ### Server-Side APIs
 
@@ -448,7 +505,7 @@ ProjectManagerData.setCurrentProjectId(id): Promise<void>
 
 ---
 
-## 10. State Management
+## 11. State Management
 
 ### Key State Locations
 
@@ -478,7 +535,7 @@ useEffect(() => {
 
 ---
 
-## 11. Code Patterns & Gotchas
+## 12. Code Patterns & Gotchas
 
 ### Stale Closure Prevention
 
@@ -555,7 +612,70 @@ await saveCurrentProject();
 
 ---
 
-## 12. Development
+## 13. Internationalization
+
+### Overview
+
+The fork adds new translation keys for video and project manager features. All strings are localized in the standard Excalidraw i18n system.
+
+**Location:** `packages/excalidraw/locales/en.json`
+
+### New Translation Keys
+
+#### Video Dialog (`videoDialog.*`)
+```json
+{
+  "title": "Insert Video",
+  "urlLabel": "Video URL",
+  "urlPlaceholder": "Paste YouTube URL or direct video file URL",
+  "hint": "Supports YouTube links and direct video URLs (.mp4, .webm, etc.)",
+  "or": "or",
+  "browseFiles": "Browse local files",
+  "insert": "Insert",
+  "errorEmptyUrl": "Please enter a video URL"
+}
+```
+
+#### Video Controls (`videoControls.*`)
+```json
+{
+  "play": "Play",
+  "pause": "Pause",
+  "loop": "Loop",
+  "autoplay": "Autoplay",
+  "autoplayLabel": "Auto-play",
+  "mute": "Mute",
+  "unmute": "Unmute",
+  "start": "Start",
+  "end": "End"
+}
+```
+
+#### Project Manager (`projectManager.*`)
+```json
+{
+  "title": "Projects",
+  "newProject": "New Project",
+  "newGroup": "New Category",
+  "empty": "No projects yet. Create your first project to get started.",
+  "createFirst": "Create First Project",
+  "openInNewTab": "Open in new tab",
+  "rename": "Rename",
+  "delete": "Delete",
+  "moveToGroup": "Move to category",
+  "ungrouped": "Uncategorized"
+}
+```
+
+#### Other New Keys
+- `labels.gridOpacity` - "Grid opacity" label for context menu
+- `toolBar.video` - "Insert video" toolbar button
+- `buttons.startNewProject` - "Start new project" button
+- `alerts.startNewProject` - Confirmation message for starting new project
+
+---
+
+## 14. Development
 
 ### Commands
 
@@ -588,20 +708,48 @@ taskkill //F //PID <pid>
 
 ---
 
+### Visual Debug (Dev Mode Only)
+
+In development mode (`isDevEnv() === true`), a "Visual Debug" option appears in the main menu. This toggles `window.visualDebug` for debugging rendering and element visualization.
+
+**Location:** `excalidraw-app/components/AppMainMenu.tsx` (lines 81-99)
+
+### Random Project Name Generator
+
+When creating new projects or categories, the system generates creative placeholder names using adjective + noun combinations:
+
+```typescript
+// Example names: "Swift Canvas", "Bright Sketch", "Cool Design", etc.
+const adjectives = ["Swift", "Bright", "Cool", "Fresh", "Bold", "Calm", "Wild", "Neat", "Soft", "Sharp"];
+const nouns = ["Canvas", "Sketch", "Draft", "Design", "Board", "Space", "Flow", "Wave", "Spark", "Frame"];
+```
+
+**Location:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` (lines 172-178)
+
+---
+
+## 15. Related Documentation
+
+- **[BUG_TRACKER.md](./BUG_TRACKER.md)** - Comprehensive bug tracking with 19+ identified and fixed issues
+- **[CLAUDE.md](./CLAUDE.md)** - Development workflow and codebase structure guide
+
+---
+
 ## Commit History
 
 | Commit | Description |
 |--------|-------------|
-| `84316b0f` | Video Player Support - YouTube, video URL, local upload |
-| `c8ca318e` | Grid opacity slider and UI debloat |
-| `742dd1bb` | Local Project Manager initial implementation |
-| `177b3d31` | Working project manager, file explorer, create new project |
-| `f7750b12` | Custom video icon, untrack projects folder |
-| `4266a6d6` | Force project manager, video in project folder, project support |
-| `14a0639d` | Fix project manager bugs, add custom preview |
-| `88753953` | Add favorites, custom previews, tooltips, UI improvements |
-| `10bbf123` | Make project folders match project manager structure |
+| `958c078d` | Fix critical bugs (19 total) & add "Start New Project" menu option |
 | `e931a3c4` | Video thumbnail export & improved local video workflow |
+| `10bbf123` | Make project folders match project manager structure |
+| `88753953` | Add favorites, custom previews, tooltips, UI improvements |
+| `14a0639d` | Fix project manager bugs, add custom preview |
+| `4266a6d6` | Force project manager, video in project folder, project support |
+| `f7750b12` | Custom video icon, untrack projects folder |
+| `177b3d31` | Working project manager, file explorer, create new project |
+| `742dd1bb` | Local Project Manager initial implementation |
+| `c8ca318e` | Grid opacity slider and UI debloat |
+| `84316b0f` | Video Player Support - YouTube, video URL, local upload |
 
 ---
 
@@ -631,4 +779,4 @@ taskkill //F //PID <pid>
 
 ---
 
-*Documentation generated from commit analysis on 2026-01-13, updated 2026-01-14*
+*Documentation generated from commit analysis. Last comprehensive review: 2026-01-14*
