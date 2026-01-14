@@ -9,6 +9,7 @@ import { useApp } from "../App";
 import { exportToCanvas } from "../../scene/export";
 import { Dialog } from "../Dialog";
 import { FilledButton } from "../FilledButton";
+import { DotsIcon } from "../icons";
 import { triggerSaveProjectAtom, ProjectManagerData } from "../../../../excalidraw-app/data/ProjectManagerData";
 
 import { ProjectCard } from "./ProjectCard";
@@ -183,7 +184,8 @@ const generateRandomName = (prefix: string): string => {
 // "group" = creating new group
 // "confirm-save" = confirm dialog before creating new project when unsaved changes exist
 // "rename-project" = renaming existing project
-type ModalType = "project" | "save" | "group" | "confirm-save" | "rename-project" | null;
+// "import" = importing a project from zip
+type ModalType = "project" | "save" | "group" | "confirm-save" | "rename-project" | "import" | null;
 
 export const ProjectManager: React.FC = () => {
   const app = useApp();
@@ -206,6 +208,16 @@ export const ProjectManager: React.FC = () => {
   const [modalType, setModalType] = useState<ModalType>(null);
   const [modalName, setModalName] = useState("");
   const [renameProjectId, setRenameProjectId] = useState<string | null>(null);
+
+  // Settings dropdown state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
+
+  // Import/Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // Listen for external save trigger (from main menu)
   const saveTrigger = useAtomValue(triggerSaveProjectAtom);
@@ -968,6 +980,111 @@ export const ProjectManager: React.FC = () => {
     setCardSize((prev) => Math.max(prev - CARD_SIZE_STEP, MIN_CARD_SIZE));
   }, []);
 
+  // Close settings dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
+      }
+    };
+
+    if (settingsOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [settingsOpen]);
+
+  // Export current project as zip
+  const handleExportProject = useCallback(async () => {
+    if (!index.currentProjectId) {
+      return;
+    }
+
+    setSettingsOpen(false);
+    setIsExporting(true);
+
+    try {
+      const response = await fetch(`/api/projects/${index.currentProjectId}/export`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      // Get the blob and trigger download
+      const blob = await response.blob();
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch?.[1] || "project.zip";
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("[ProjectManager] Export failed:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [index.currentProjectId]);
+
+  // Open import modal
+  const handleImportClick = useCallback(() => {
+    setSettingsOpen(false);
+    setImportError(null);
+    setModalType("import");
+  }, []);
+
+  // Handle import file selection
+  const handleImportFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    // Reset input for re-selection
+    e.target.value = "";
+
+    if (!file.name.endsWith(".zip")) {
+      setImportError("Please select a .zip file");
+      return;
+    }
+
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      const response = await fetch("/api/projects/import", {
+        method: "POST",
+        body: file,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Import failed");
+      }
+
+      // Refresh the project list
+      const newIndex = await api.getIndex();
+      setIndex(newIndex);
+
+      // Close the modal
+      setModalType(null);
+    } catch (err) {
+      console.error("[ProjectManager] Import failed:", err);
+      setImportError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setIsImporting(false);
+    }
+  }, []);
+
   // Group projects
   const favoriteProjects = index.projects.filter((p) => p.isFavorite);
   const ungroupedProjects = index.projects.filter((p) => p.groupId === null);
@@ -985,23 +1102,47 @@ export const ProjectManager: React.FC = () => {
     <div className="ProjectManager">
       <div className="ProjectManager__header">
         <div className="ProjectManager__title">{t("projectManager.title")}</div>
-        <div className="ProjectManager__zoomControls">
-          <button
-            className="ProjectManager__zoomBtn"
-            onClick={handleZoomOut}
-            disabled={cardSize <= MIN_CARD_SIZE}
-            title="Zoom out"
-          >
-            −
-          </button>
-          <button
-            className="ProjectManager__zoomBtn"
-            onClick={handleZoomIn}
-            disabled={cardSize >= MAX_CARD_SIZE}
-            title="Zoom in"
-          >
-            +
-          </button>
+        <div className="ProjectManager__headerControls">
+          <div className="ProjectManager__zoomControls">
+            <button
+              className="ProjectManager__zoomBtn"
+              onClick={handleZoomOut}
+              disabled={cardSize <= MIN_CARD_SIZE}
+              title="Zoom out"
+            >
+              −
+            </button>
+            <button
+              className="ProjectManager__zoomBtn"
+              onClick={handleZoomIn}
+              disabled={cardSize >= MAX_CARD_SIZE}
+              title="Zoom in"
+            >
+              +
+            </button>
+          </div>
+          <div className="ProjectManager__settings" ref={settingsRef}>
+            <button
+              className="ProjectManager__settingsBtn"
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              title="Settings"
+            >
+              {DotsIcon}
+            </button>
+            {settingsOpen && (
+              <div className="ProjectManager__settingsDropdown">
+                <button
+                  onClick={handleExportProject}
+                  disabled={!index.currentProjectId || isExporting}
+                >
+                  {isExporting ? "Exporting..." : "Export Project"}
+                </button>
+                <button onClick={handleImportClick}>
+                  Import Project
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1097,6 +1238,47 @@ export const ProjectManager: React.FC = () => {
                 color="primary"
                 label={modalType === "save" ? "Save" : modalType === "rename-project" ? "Rename" : "Create"}
                 onClick={handleModalConfirm}
+              />
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Import Project Modal */}
+      {modalType === "import" && (
+        <Dialog
+          onCloseRequest={handleModalClose}
+          title="Import Project"
+          size="small"
+        >
+          <div className="ProjectManager__dialog">
+            <p style={{ marginBottom: "1rem", color: "var(--color-on-surface)" }}>
+              Select a project zip file to import. The project will be added to your Uncategorized folder.
+            </p>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".zip"
+              onChange={handleImportFileSelect}
+              style={{ display: "none" }}
+            />
+            {importError && (
+              <div className="ProjectManager__dialog__error">
+                {importError}
+              </div>
+            )}
+            <div className="ProjectManager__dialog__actions">
+              <FilledButton
+                variant="outlined"
+                color="primary"
+                label="Cancel"
+                onClick={handleModalClose}
+              />
+              <FilledButton
+                variant="filled"
+                color="primary"
+                label={isImporting ? "Importing..." : "Choose File"}
+                onClick={isImporting ? undefined : () => importInputRef.current?.click()}
               />
             </div>
           </div>

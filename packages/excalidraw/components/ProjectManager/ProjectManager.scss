@@ -30,9 +30,78 @@
     color: var(--color-on-surface);
   }
 
+  &__headerControls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
   &__zoomControls {
     display: flex;
     gap: 0.25rem;
+  }
+
+  &__settings {
+    position: relative;
+  }
+
+  &__settingsBtn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #5c5c5c;
+    border-radius: 4px;
+    background: var(--color-surface-low);
+    color: var(--color-on-surface);
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+      background: var(--color-surface-mid);
+      border-color: #7a7a7a;
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__settingsDropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 160px;
+    padding: 0.375rem 0;
+    background: var(--color-surface-high);
+    border: 1px solid #5c5c5c;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: none;
+      background: transparent;
+      color: var(--color-on-surface);
+      font-size: 0.8125rem;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.1s ease;
+
+      &:hover:not(:disabled) {
+        background: var(--color-surface-mid);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
   }
 
   &__zoomBtn {
@@ -163,6 +232,15 @@
       gap: 0.75rem;
       padding-top: 0.5rem;
       border-top: 1px solid #5c5c5c;
+    }
+
+    &__error {
+      padding: 0.75rem;
+      background: rgba(220, 53, 69, 0.1);
+      border: 1px solid rgba(220, 53, 69, 0.4);
+      border-radius: 6px;
+      color: #dc3545;
+      font-size: 0.875rem;
     }
   }
 

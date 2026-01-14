@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import { exec } from "child_process";
+import archiver from "archiver";
 import { defineConfig, loadEnv } from "vite";
 import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
@@ -372,6 +373,156 @@ function projectFilePlugin(): Plugin {
               console.error("Failed to rename category:", err);
               res.statusCode = 500;
               res.end(JSON.stringify({ error: "Failed to rename category" }));
+            }
+          });
+          return;
+        }
+
+        // Export project as zip - creates zip and opens save dialog
+        const exportMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/export$/);
+        if (req.method === "POST" && exportMatch) {
+          const projectId = exportMatch[1];
+          const projectDir = getProjectPath(projectId);
+
+          if (!projectDir || !fs.existsSync(projectDir)) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: "Project not found" }));
+            return;
+          }
+
+          // Get project name for zip filename
+          const index = getIndex();
+          const project = index.projects.find((p: any) => p.id === projectId);
+          const projectName = project?.title || "project";
+          const safeZipName = sanitizeFolderName(projectName);
+
+          try {
+            // Create zip in memory and stream to response
+            res.setHeader("Content-Type", "application/zip");
+            res.setHeader("Content-Disposition", `attachment; filename="${safeZipName}.zip"`);
+
+            const archive = archiver("zip", { zlib: { level: 5 } });
+
+            archive.on("error", (err: Error) => {
+              console.error("Archive error:", err);
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: "Failed to create zip" }));
+            });
+
+            archive.pipe(res);
+
+            // Add the entire project folder to the zip
+            archive.directory(projectDir, safeZipName);
+
+            archive.finalize();
+          } catch (err) {
+            console.error("Failed to export project:", err);
+            res.statusCode = 500;
+            res.end(JSON.stringify({ error: "Failed to export project" }));
+          }
+          return;
+        }
+
+        // Import project from zip
+        if (req.method === "POST" && urlPath === "/api/projects/import") {
+          const chunks: Buffer[] = [];
+
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", async () => {
+            try {
+              const buffer = Buffer.concat(chunks);
+
+              // Use dynamic import for extract-zip (ESM module)
+              const { default: extract } = await import("extract-zip");
+
+              // Create temp file for the zip
+              const tempDir = path.join(projectsDir, ".temp");
+              if (!fs.existsSync(tempDir)) {
+                fs.mkdirSync(tempDir, { recursive: true });
+              }
+
+              const tempZipPath = path.join(tempDir, `import-${Date.now()}.zip`);
+              fs.writeFileSync(tempZipPath, buffer);
+
+              // Extract to temp extraction folder
+              const extractDir = path.join(tempDir, `extract-${Date.now()}`);
+              fs.mkdirSync(extractDir, { recursive: true });
+
+              await extract(tempZipPath, { dir: extractDir });
+
+              // Find the project folder (should be the only folder in extractDir)
+              const extractedItems = fs.readdirSync(extractDir);
+              let projectFolder = extractDir;
+
+              // If there's a single folder, use that as the project folder
+              if (extractedItems.length === 1) {
+                const singleItem = path.join(extractDir, extractedItems[0]);
+                if (fs.statSync(singleItem).isDirectory()) {
+                  projectFolder = singleItem;
+                }
+              }
+
+              // Verify it has a scene.excalidraw file
+              const scenePath = path.join(projectFolder, "scene.excalidraw");
+              if (!fs.existsSync(scenePath)) {
+                // Clean up
+                fs.rmSync(tempDir, { recursive: true, force: true });
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: "Invalid project: missing scene.excalidraw" }));
+                return;
+              }
+
+              // Generate new project ID and determine name
+              const { nanoid } = await import("nanoid");
+              const newProjectId = nanoid(10);
+              const folderName = path.basename(projectFolder);
+              let projectTitle = folderName;
+
+              // Check if project with same name exists, append number if so
+              const index = getIndex();
+              let counter = 1;
+              let finalTitle = projectTitle;
+              while (index.projects.some((p: any) => p.title === finalTitle)) {
+                finalTitle = `${projectTitle} (${counter})`;
+                counter++;
+              }
+              projectTitle = finalTitle;
+
+              // Move to Uncategorized folder
+              const targetDir = path.join(projectsDir, "Uncategorized", sanitizeFolderName(projectTitle));
+              if (!fs.existsSync(path.join(projectsDir, "Uncategorized"))) {
+                fs.mkdirSync(path.join(projectsDir, "Uncategorized"), { recursive: true });
+              }
+
+              // Copy files to target (use copy instead of rename for cross-device compatibility)
+              fs.cpSync(projectFolder, targetDir, { recursive: true });
+
+              // Add to index
+              const newProject = {
+                id: newProjectId,
+                title: projectTitle,
+                groupId: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              };
+
+              index.projects.push(newProject);
+              fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
+
+              // Clean up temp files
+              fs.rmSync(tempDir, { recursive: true, force: true });
+
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ success: true, projectId: newProjectId, title: projectTitle }));
+            } catch (err) {
+              console.error("Failed to import project:", err);
+              // Clean up temp on error
+              const tempDir = path.join(projectsDir, ".temp");
+              if (fs.existsSync(tempDir)) {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+              }
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: "Failed to import project" }));
             }
           });
           return;
