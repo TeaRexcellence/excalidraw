@@ -203,24 +203,26 @@ function projectFilePlugin(): Plugin {
 }
 
 // Plugin to handle local video file management
+// Videos are stored in public/projects/{projectId}/videos/
 function videoFilePlugin(): Plugin {
   const publicDir = path.resolve(__dirname, "../public");
-  const videosDir = path.join(publicDir, "videos");
+  const projectsDir = path.join(publicDir, "projects");
 
   return {
     name: "video-file-plugin",
     configureServer(server) {
-      // Ensure videos directory exists
-      if (!fs.existsSync(videosDir)) {
-        fs.mkdirSync(videosDir, { recursive: true });
-      }
-
       server.middlewares.use(async (req, res, next) => {
-        // Handle video upload
+        // Handle video upload - stores in project folder
         if (req.method === "POST" && req.url?.startsWith("/api/videos/upload")) {
           const urlParams = new URL(req.url, `http://${req.headers.host}`);
-          const projectId = urlParams.searchParams.get("projectId") || "default";
+          const projectId = urlParams.searchParams.get("projectId");
           const filename = urlParams.searchParams.get("filename");
+
+          if (!projectId) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ error: "projectId required" }));
+            return;
+          }
 
           if (!filename) {
             res.statusCode = 400;
@@ -228,19 +230,21 @@ function videoFilePlugin(): Plugin {
             return;
           }
 
-          const projectDir = path.join(videosDir, projectId);
-          if (!fs.existsSync(projectDir)) {
-            fs.mkdirSync(projectDir, { recursive: true });
+          // Store videos in project's videos subfolder
+          const videosDir = path.join(projectsDir, projectId, "videos");
+          if (!fs.existsSync(videosDir)) {
+            fs.mkdirSync(videosDir, { recursive: true });
           }
 
-          const filePath = path.join(projectDir, filename);
+          const filePath = path.join(videosDir, filename);
           const chunks: Buffer[] = [];
 
           req.on("data", (chunk) => chunks.push(chunk));
           req.on("end", () => {
             const buffer = Buffer.concat(chunks);
             fs.writeFileSync(filePath, buffer);
-            const videoUrl = `/videos/${projectId}/${filename}`;
+            // URL path reflects new storage location
+            const videoUrl = `/projects/${projectId}/videos/${filename}`;
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ url: videoUrl }));
           });
@@ -250,11 +254,18 @@ function videoFilePlugin(): Plugin {
         // Handle video deletion
         if (req.method === "DELETE" && req.url?.startsWith("/api/videos/")) {
           const urlPath = req.url.replace("/api/videos/", "");
-          const filePath = path.join(videosDir, urlPath);
+          // Support both old format (videos/projectId/file) and new format (projects/projectId/videos/file)
+          let filePath: string;
+          if (urlPath.startsWith("projects/")) {
+            filePath = path.join(publicDir, urlPath);
+          } else {
+            // Legacy: old videos folder
+            filePath = path.join(publicDir, "videos", urlPath);
+          }
 
           if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
-            // Clean up empty project directories
+            // Clean up empty directories
             const dir = path.dirname(filePath);
             if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) {
               fs.rmdirSync(dir);
@@ -268,12 +279,19 @@ function videoFilePlugin(): Plugin {
         // List videos for a project
         if (req.method === "GET" && req.url?.startsWith("/api/videos/list")) {
           const urlParams = new URL(req.url, `http://${req.headers.host}`);
-          const projectId = urlParams.searchParams.get("projectId") || "default";
-          const projectDir = path.join(videosDir, projectId);
+          const projectId = urlParams.searchParams.get("projectId");
+
+          if (!projectId) {
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ files: [] }));
+            return;
+          }
+
+          const videosDir = path.join(projectsDir, projectId, "videos");
 
           let files: string[] = [];
-          if (fs.existsSync(projectDir)) {
-            files = fs.readdirSync(projectDir);
+          if (fs.existsSync(videosDir)) {
+            files = fs.readdirSync(videosDir);
           }
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ files }));

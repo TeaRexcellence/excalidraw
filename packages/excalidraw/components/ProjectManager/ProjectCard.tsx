@@ -4,12 +4,13 @@ import type { Project } from "./types";
 interface ProjectCardProps {
   project: Project;
   isActive: boolean;
+  justSaved: boolean;
   previewUrl: string | null;
   size: number;
   onSelect: (projectId: string) => void;
   onOpenInNewTab: (projectId: string) => void;
   onOpenFileLocation: (projectId: string) => void;
-  onRename: (projectId: string, newTitle: string) => void;
+  onRename: (projectId: string) => void;
   onDelete: (projectId: string) => void;
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
   availableGroups: Array<{ id: string; name: string }>;
@@ -18,6 +19,7 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
   isActive,
+  justSaved,
   previewUrl,
   size,
   onSelect,
@@ -28,16 +30,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onMoveToGroup,
   availableGroups,
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState(project.title);
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
 
   const handleClick = useCallback(() => {
-    if (!isEditing) {
-      onSelect(project.id);
-    }
-  }, [isEditing, onSelect, project.id]);
+    onSelect(project.id);
+  }, [onSelect, project.id]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -47,25 +45,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
       setShowContextMenu(true);
     },
     [],
-  );
-
-  const handleRenameSubmit = useCallback(() => {
-    if (editTitle.trim() && editTitle !== project.title) {
-      onRename(project.id, editTitle.trim());
-    }
-    setIsEditing(false);
-  }, [editTitle, onRename, project.id, project.title]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        handleRenameSubmit();
-      } else if (e.key === "Escape") {
-        setEditTitle(project.title);
-        setIsEditing(false);
-      }
-    },
-    [handleRenameSubmit, project.title],
   );
 
   const closeContextMenu = useCallback(() => {
@@ -84,11 +63,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   return (
     <>
       <div
-        className={`ProjectCard ${isActive ? "ProjectCard--active" : ""}`}
+        className={`ProjectCard ${isActive ? "ProjectCard--active" : ""} ${justSaved ? "ProjectCard--just-saved" : ""}`}
         style={{ width: size, height: size + 30 }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
       >
+        {justSaved && <div className="ProjectCard__savedBadge">Saved!</div>}
         <div
           className="ProjectCard__preview"
           style={{ width: size, height: size }}
@@ -110,19 +90,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           </div>
         </div>
         <div className="ProjectCard__title">
-          {isEditing ? (
-            <input
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={handleRenameSubmit}
-              onKeyDown={handleKeyDown}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <span title={project.title}>{project.title}</span>
-          )}
+          <span title={project.title}>{project.title}</span>
         </div>
       </div>
 
@@ -147,7 +115,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           </button>
           <button
             onClick={() => {
-              setIsEditing(true);
+              onRename(project.id);
               closeContextMenu();
             }}
           >
@@ -159,7 +127,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               closeContextMenu();
             }}
           >
-            Open file location
+            Open project folder
           </button>
           <div className="ProjectCard__contextMenu__divider" />
           <div className="ProjectCard__contextMenu__submenu">

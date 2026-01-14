@@ -9,21 +9,29 @@ import { useApp } from "./App";
 
 import "./VideoEmbedDialog.scss";
 
-// Get project ID from current URL or localStorage
-const getProjectId = (): string => {
-  // Try to get from URL hash or use default
-  const hash = window.location.hash;
-  if (hash && hash.length > 1) {
-    return hash.slice(1).split("/")[0] || "default";
+// Get current project ID from Project Manager API
+const getCurrentProjectId = async (): Promise<string | null> => {
+  try {
+    const res = await fetch("/api/projects/list");
+    if (!res.ok) {
+      return null;
+    }
+    const data = await res.json();
+    return data.currentProjectId || null;
+  } catch {
+    return null;
   }
-  return "default";
 };
 
 // Upload a video file to the server
 const uploadVideoFile = async (
   file: File,
 ): Promise<{ url: string; width: number; height: number }> => {
-  const projectId = getProjectId();
+  const projectId = await getCurrentProjectId();
+
+  if (!projectId) {
+    throw new Error("No project selected. Please save your canvas as a project first.");
+  }
   // Sanitize filename
   const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
@@ -265,7 +273,13 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
 
 // Export helper to delete a video file (for cleanup when element is deleted)
 export const deleteVideoFile = async (videoUrl: string): Promise<void> => {
-  if (videoUrl.startsWith("/videos/")) {
+  // Handle new format: /projects/{projectId}/videos/{filename}
+  if (videoUrl.startsWith("/projects/")) {
+    const path = videoUrl.replace(/^\//, "").split("#")[0];
+    await fetch(`/api/videos/${path}`, { method: "DELETE" });
+  }
+  // Handle legacy format: /videos/{projectId}/{filename}
+  else if (videoUrl.startsWith("/videos/")) {
     const path = videoUrl.replace(/^\/videos\//, "").split("#")[0];
     await fetch(`/api/videos/${path}`, { method: "DELETE" });
   }

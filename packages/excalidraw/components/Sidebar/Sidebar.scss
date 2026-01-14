@@ -124,13 +124,12 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
+    min-height: 0; // Required for flex child scrolling
     padding: 1rem 0;
 
     [role="tabpanel"] {
-      flex: 1;
-      outline: none;
-
       flex: 1 1 auto;
+      min-height: 0; // Required for flex child scrolling
       display: flex;
       flex-direction: column;
       outline: none;

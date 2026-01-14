@@ -6,6 +6,7 @@ interface ProjectGroupProps {
   group: ProjectGroupType | null; // null for "Ungrouped"
   projects: Project[];
   currentProjectId: string | null;
+  justSavedId: string | null;
   cardSize: number;
   onToggleExpand: (groupId: string) => void;
   onRenameGroup: (groupId: string, newName: string) => void;
@@ -13,7 +14,7 @@ interface ProjectGroupProps {
   onSelectProject: (projectId: string) => void;
   onOpenInNewTab: (projectId: string) => void;
   onOpenFileLocation: (projectId: string) => void;
-  onRenameProject: (projectId: string, newTitle: string) => void;
+  onRenameProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
   availableGroups: Array<{ id: string; name: string }>;
@@ -24,6 +25,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   group,
   projects,
   currentProjectId,
+  justSavedId,
   cardSize,
   onToggleExpand,
   onRenameGroup,
@@ -137,6 +139,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               key={project.id}
               project={project}
               isActive={project.id === currentProjectId}
+              justSaved={project.id === justSavedId}
               previewUrl={getPreviewUrl(project.id)}
               size={cardSize}
               onSelect={onSelectProject}

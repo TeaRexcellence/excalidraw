@@ -431,7 +431,7 @@ export const PROJECTS_SIDEBAR_TAB = "projects";
 
 export const DEFAULT_SIDEBAR = {
   name: "default",
-  defaultTab: LIBRARY_SIDEBAR_TAB,
+  defaultTab: PROJECTS_SIDEBAR_TAB,
 } as const;
 
 export const LIBRARY_DISABLED_TYPES = new Set([

@@ -100,7 +100,6 @@ import Collab, {
 import { AppFooter } from "./components/AppFooter";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
-import { SaveAsProject } from "./components/SaveAsProject";
 import { TopErrorBoundary } from "./components/TopErrorBoundary";
 
 import {
@@ -123,6 +122,7 @@ import {
   LocalData,
   localStorageQuotaExceededAtom,
 } from "./data/LocalData";
+import { ProjectManagerData } from "./data/ProjectManagerData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
 import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
@@ -223,7 +223,30 @@ const initializeScene = async (opts: {
   );
   const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 
-  const localDataState = importFromLocalStorage();
+  // Check for project=ID in hash (for opening specific project)
+  const projectHashMatch = window.location.hash.match(/^#project=([a-zA-Z0-9_-]+)$/);
+
+  // Try to load from Project Manager first
+  let projectData: {
+    elements: any[];
+    appState: Partial<AppState>;
+    files: any;
+  } | null = null;
+
+  if (projectHashMatch) {
+    // Load specific project from hash
+    await ProjectManagerData.setCurrentProjectId(projectHashMatch[1]);
+    projectData = await ProjectManagerData.loadCurrentProject();
+  } else if (!id && !jsonBackendMatch && !externalUrlMatch) {
+    // No external source, try to load current project from Project Manager
+    projectData = await ProjectManagerData.loadCurrentProject();
+  }
+
+  // Fall back to localStorage if no project data
+  const localDataState = projectData ? null : importFromLocalStorage();
+
+  // Use project data if available, otherwise use localStorage data
+  const dataSource = projectData || localDataState;
 
   let scene: Omit<
     RestoredDataState,
@@ -232,12 +255,14 @@ const initializeScene = async (opts: {
     "files"
   > & {
     scrollToContent?: boolean;
+    files?: any;
   } = {
-    elements: restoreElements(localDataState?.elements, null, {
+    elements: restoreElements(dataSource?.elements, null, {
       repairBindings: true,
       deleteInvisibleElements: true,
     }),
-    appState: restoreAppState(localDataState?.appState, null),
+    appState: restoreAppState(dataSource?.appState, null),
+    files: projectData?.files,
   };
 
   let roomLinkData = getCollaborationLinkData(window.location.href);
@@ -481,7 +506,16 @@ const ExcalidrawWrapper = () => {
             });
           });
         } else if (isInitialLoad) {
-          if (fileIds.length) {
+          // If scene has embedded files (from Project Manager), add them directly
+          if (data.scene.files && Object.keys(data.scene.files).length > 0) {
+            const filesArray = Object.entries(data.scene.files).map(
+              ([id, file]: [string, any]) => ({ ...file, id }),
+            );
+            if (filesArray.length > 0) {
+              excalidrawAPI.addFiles(filesArray);
+            }
+          } else if (fileIds.length) {
+            // Fall back to loading from LocalData storage
             LocalData.fileStorage
               .getFiles(fileIds)
               .then(({ loadedFiles, erroredFiles }) => {
@@ -595,11 +629,13 @@ const ExcalidrawWrapper = () => {
 
     const onUnload = () => {
       LocalData.flushSave();
+      ProjectManagerData.flushSave();
     };
 
     const visibilityChange = (event: FocusEvent | Event) => {
       if (event.type === EVENT.BLUR || document.hidden) {
         LocalData.flushSave();
+        ProjectManagerData.flushSave();
       }
       if (
         event.type === EVENT.VISIBILITY_CHANGE ||
@@ -630,6 +666,7 @@ const ExcalidrawWrapper = () => {
   useEffect(() => {
     const unloadHandler = (event: BeforeUnloadEvent) => {
       LocalData.flushSave();
+      ProjectManagerData.flushSave();
 
       if (
         excalidrawAPI &&
@@ -660,6 +697,9 @@ const ExcalidrawWrapper = () => {
     if (collabAPI?.isCollaborating()) {
       collabAPI.syncElements(elements);
     }
+
+    // Save to Project Manager (if there's a current project)
+    ProjectManagerData.save(elements, appState, files);
 
     // this check is redundant, but since this is a hot path, it's best
     // not to evaludate the nested expression every time
@@ -845,32 +885,7 @@ const ExcalidrawWrapper = () => {
           canvasActions: {
             toggleTheme: true,
             export: {
-              onExportToBackend,
-              renderCustomUI: excalidrawAPI
-                ? (elements, appState, files) => {
-                    return (
-                      <SaveAsProject
-                        elements={elements}
-                        appState={appState}
-                        files={files}
-                        name={excalidrawAPI.getName()}
-                        onError={(error) => {
-                          excalidrawAPI?.updateScene({
-                            appState: {
-                              errorMessage: error.message,
-                            },
-                          });
-                        }}
-                        onSuccess={() => {
-                          excalidrawAPI.updateScene({
-                            appState: { openDialog: null },
-                          });
-                        }}
-                        excalidrawAPI={excalidrawAPI}
-                      />
-                    );
-                  }
-                : undefined,
+              // Removed onExportToBackend and SaveAsProject - using Project Manager only
             },
           },
         }}
