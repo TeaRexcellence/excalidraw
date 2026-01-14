@@ -440,13 +440,15 @@ export const ImageIcon = createIcon(
   modifiedTablerIconProps,
 );
 
-// tabler-icons: video
+// custom video player icon
 export const VideoIcon = createIcon(
-  <g strokeWidth="1.25">
-    <path d="M4.91 3.542h7.847a2.284 2.284 0 0 1 2.284 2.284v8.348a2.284 2.284 0 0 1-2.284 2.284H4.909a2.284 2.284 0 0 1-2.284-2.284V5.826a2.284 2.284 0 0 1 2.284-2.284Z" />
-    <path d="m15.041 8.125 2.917-1.667v7.084l-2.917-1.667" />
+  <g stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+    <rect x="5" y="10" width="90" height="75" rx="8" ry="8" />
+    <line x1="5" y1="70" x2="95" y2="70" />
+    <polygon points="42,30 42,56 62,43" />
+    <line x1="20" y1="77.5" x2="40" y2="77.5" />
   </g>,
-  modifiedTablerIconProps,
+  { width: 100, height: 100 },
 );
 
 // tabler-icons: repeat (loop icon)
