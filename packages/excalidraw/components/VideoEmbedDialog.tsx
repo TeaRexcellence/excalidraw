@@ -74,14 +74,30 @@ const getVideoDimensions = (
 
     const blobUrl = URL.createObjectURL(file);
 
-    video.onloadedmetadata = () => {
-      resolve({ width: video.videoWidth, height: video.videoHeight });
+    const cleanup = () => {
       URL.revokeObjectURL(blobUrl);
+      video.src = "";
+      video.onloadedmetadata = null;
+      video.onerror = null;
+    };
+
+    // Timeout to prevent hanging if video never loads
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve({ width: 560, height: 315 });
+    }, 10000);
+
+    video.onloadedmetadata = () => {
+      clearTimeout(timeout);
+      const result = { width: video.videoWidth, height: video.videoHeight };
+      cleanup();
+      resolve(result);
     };
 
     video.onerror = () => {
+      clearTimeout(timeout);
+      cleanup();
       resolve({ width: 560, height: 315 });
-      URL.revokeObjectURL(blobUrl);
     };
 
     video.src = blobUrl;
@@ -96,11 +112,28 @@ const getVideoDimensionsFromUrl = (
     const video = document.createElement("video");
     video.preload = "metadata";
 
+    const cleanup = () => {
+      video.src = "";
+      video.onloadedmetadata = null;
+      video.onerror = null;
+    };
+
+    // Timeout to prevent hanging if video never loads
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve({ width: 560, height: 315 });
+    }, 10000);
+
     video.onloadedmetadata = () => {
-      resolve({ width: video.videoWidth, height: video.videoHeight });
+      clearTimeout(timeout);
+      const result = { width: video.videoWidth, height: video.videoHeight };
+      cleanup();
+      resolve(result);
     };
 
     video.onerror = () => {
+      clearTimeout(timeout);
+      cleanup();
       resolve({ width: 560, height: 315 });
     };
 
@@ -189,13 +222,26 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
 
   // Check if project is saved on mount
   useEffect(() => {
+    let aborted = false;
+
     getCurrentProjectId().then((projectId) => {
+      if (aborted) {
+        return;
+      }
       if (projectId) {
         setDialogState("video-dialog");
       } else {
         setDialogState("save-prompt");
       }
+    }).catch(() => {
+      if (!aborted) {
+        setDialogState("save-prompt");
+      }
     });
+
+    return () => {
+      aborted = true;
+    };
   }, []);
 
   const handleUrlChange = useCallback(

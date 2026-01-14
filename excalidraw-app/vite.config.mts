@@ -17,11 +17,19 @@ function sanitizeFolderName(name: string): string {
   // Replace invalid characters with underscore
   // Invalid on Windows: \ / : * ? " < > |
   // Also replace leading/trailing spaces and dots
-  return name
+  // Prevent path traversal attacks by replacing ..
+  let safe = name
+    .replace(/\.\./g, "_") // Prevent path traversal
     .replace(/[\\/:*?"<>|]/g, "_")
     .replace(/^[\s.]+|[\s.]+$/g, "")
-    .substring(0, 100) // Limit length
-    || "Untitled";
+    .substring(0, 100); // Limit length
+
+  // Double-check no path traversal remains
+  while (safe.includes("..")) {
+    safe = safe.replace(/\.\./g, "_");
+  }
+
+  return safe || "Untitled";
 }
 
 // Plugin to handle local project file management
@@ -111,10 +119,20 @@ function projectFilePlugin(): Plugin {
             if (!parsed || !Array.isArray(parsed.projects) || !Array.isArray(parsed.groups)) {
               throw new Error("Invalid projects index structure");
             }
+            // Validate individual project objects have required fields
+            const isValidProject = (p: any) =>
+              p && typeof p.id === "string" && typeof p.title === "string";
+            const isValidGroup = (g: any) =>
+              g && typeof g.id === "string" && typeof g.name === "string";
+
+            if (!parsed.projects.every(isValidProject) || !parsed.groups.every(isValidGroup)) {
+              throw new Error("Invalid project or group object structure");
+            }
             res.setHeader("Content-Type", "application/json");
             res.end(data);
-          } catch {
+          } catch (err) {
             // File is empty, corrupted, or invalid - return default and fix the file
+            console.error("[project-api] Invalid index file, resetting:", err);
             const defaultIndex = { projects: [], groups: [], currentProjectId: null };
             fs.writeFileSync(indexPath, JSON.stringify(defaultIndex, null, 2));
             res.setHeader("Content-Type", "application/json");
@@ -339,6 +357,12 @@ function projectFilePlugin(): Plugin {
               const newPath = path.join(projectsDir, safeNewName);
 
               if (oldPath !== newPath && fs.existsSync(oldPath)) {
+                // Check if new category name already exists
+                if (fs.existsSync(newPath)) {
+                  res.statusCode = 409;
+                  res.end(JSON.stringify({ error: "Category name already exists" }));
+                  return;
+                }
                 fs.renameSync(oldPath, newPath);
               }
 

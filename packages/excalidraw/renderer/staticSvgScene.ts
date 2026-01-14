@@ -185,6 +185,9 @@ const renderElementToSvg = (
         // Render video thumbnail as <image> element
         const image = svgRoot.ownerDocument.createElementNS(SVG_NS, "image");
         image.setAttribute("href", videoThumbnailDataUrl);
+        // Set x/y attributes for proper positioning (required for SVG image elements)
+        image.setAttribute("x", "0");
+        image.setAttribute("y", "0");
         image.setAttribute("width", `${element.width}`);
         image.setAttribute("height", `${element.height}`);
         image.setAttribute("preserveAspectRatio", "none");

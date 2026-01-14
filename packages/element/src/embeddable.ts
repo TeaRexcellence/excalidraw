@@ -679,7 +679,14 @@ export const captureVideoFrame = (
     video.muted = true;
     video.preload = "metadata";
 
+    let resolved = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
       video.removeEventListener("loadeddata", onLoaded);
       video.removeEventListener("error", onError);
       video.removeEventListener("seeked", onSeeked);
@@ -687,9 +694,16 @@ export const captureVideoFrame = (
       video.load();
     };
 
+    const safeResolve = (result: Blob | null) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(result);
+      }
+    };
+
     const onError = () => {
-      cleanup();
-      resolve(null);
+      safeResolve(null);
     };
 
     const onSeeked = () => {
@@ -699,22 +713,19 @@ export const captureVideoFrame = (
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          cleanup();
-          resolve(null);
+          safeResolve(null);
           return;
         }
         ctx.drawImage(video, 0, 0);
         canvas.toBlob(
           (blob) => {
-            cleanup();
-            resolve(blob);
+            safeResolve(blob);
           },
           "image/png",
           0.9,
         );
       } catch (err) {
-        cleanup();
-        resolve(null);
+        safeResolve(null);
       }
     };
 
@@ -728,11 +739,11 @@ export const captureVideoFrame = (
     video.addEventListener("error", onError);
     video.addEventListener("seeked", onSeeked);
 
-    // Set timeout for slow-loading videos
-    setTimeout(() => {
-      if (!video.readyState) {
-        cleanup();
-        resolve(null);
+    // Set timeout for slow-loading videos (checks if video has loaded enough data)
+    timeoutId = setTimeout(() => {
+      // readyState < 2 means we don't have enough data to play
+      if (video.readyState < 2) {
+        safeResolve(null);
       }
     }, 10000);
 

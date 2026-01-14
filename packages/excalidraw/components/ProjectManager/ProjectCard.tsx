@@ -128,12 +128,21 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     };
   }, []);
 
-  // Close context menu when clicking outside
+  // Close context menu when clicking outside or pressing Escape
   React.useEffect(() => {
     if (showContextMenu) {
       const handleClickOutside = () => setShowContextMenu(false);
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape") {
+          setShowContextMenu(false);
+        }
+      };
       document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
+      document.addEventListener("keydown", handleEscape);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+        document.removeEventListener("keydown", handleEscape);
+      };
     }
   }, [showContextMenu]);
 

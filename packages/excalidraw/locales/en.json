@@ -238,10 +238,12 @@
     "publishLibrary": "Rename or publish",
     "submit": "Submit",
     "confirm": "Confirm",
-    "embeddableInteractionButton": "Click to interact"
+    "embeddableInteractionButton": "Click to interact",
+    "startNewProject": "Start new project"
   },
   "alerts": {
     "clearReset": "This will clear the whole canvas. Are you sure?",
+    "startNewProject": "This will close the current project and start fresh. Are you sure?",
     "couldNotCreateShareableLink": "Couldn't create shareable link.",
     "couldNotCreateShareableLinkTooBig": "Couldn't create shareable link: the scene is too big",
     "couldNotLoadInvalidFile": "Couldn't load invalid file",

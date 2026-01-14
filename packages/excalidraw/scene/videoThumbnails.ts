@@ -45,19 +45,34 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
     const img = new Image();
     img.crossOrigin = "anonymous";
 
-    const timeout = setTimeout(() => {
-      if (!img.complete) {
-        resolve(null);
+    let resolved = false;
+
+    const cleanup = () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+
+    const safeResolve = (result: HTMLImageElement | null) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(result);
       }
+    };
+
+    const timeout = setTimeout(() => {
+      // Abort loading and resolve null
+      img.src = "";
+      safeResolve(null);
     }, 10000);
 
     img.onload = () => {
       clearTimeout(timeout);
-      resolve(img);
+      safeResolve(img);
     };
     img.onerror = () => {
       clearTimeout(timeout);
-      resolve(null);
+      safeResolve(null);
     };
 
     img.src = src;
@@ -109,8 +124,9 @@ export async function prefetchVideoThumbnails(
             thumbnails.set(element.id, img);
           }
         }
-      } catch {
-        // Silently fail - placeholder will be shown
+      } catch (err) {
+        console.warn(`[VideoThumbnails] Failed to get thumbnail for element ${element.id}:`, err);
+        // Placeholder will be shown
       }
     }),
   );
@@ -158,8 +174,9 @@ export async function prefetchVideoThumbnailsAsDataUrls(
         if (thumbnailDataUrl) {
           thumbnails.set(element.id, thumbnailDataUrl);
         }
-      } catch {
-        // Silently fail - placeholder will be shown
+      } catch (err) {
+        console.warn(`[VideoThumbnails] Failed to get thumbnail for element ${element.id}:`, err);
+        // Placeholder will be shown
       }
     }),
   );

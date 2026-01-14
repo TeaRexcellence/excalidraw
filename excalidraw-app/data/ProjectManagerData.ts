@@ -112,36 +112,46 @@ export class ProjectManagerData {
       appState: AppState,
       files: BinaryFiles,
     ) => {
-      const sceneData = {
-        type: "excalidraw",
-        version: 2,
-        elements,
-        appState: {
-          viewBackgroundColor: appState.viewBackgroundColor,
-          zoom: appState.zoom,
-          scrollX: appState.scrollX,
-          scrollY: appState.scrollY,
-          name: appState.name,
-        },
-        files,
-      };
-
-      await api.saveScene(projectId, sceneData);
-
-      // Generate preview if callback is registered
-      if (previewGenerator) {
-        await previewGenerator(projectId);
-      }
-
-      // Update the project's updatedAt timestamp
-      if (cachedIndex) {
-        cachedIndex = {
-          ...cachedIndex,
-          projects: cachedIndex.projects.map((p) =>
-            p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
-          ),
+      try {
+        const sceneData = {
+          type: "excalidraw",
+          version: 2,
+          elements,
+          appState: {
+            viewBackgroundColor: appState.viewBackgroundColor,
+            zoom: appState.zoom,
+            scrollX: appState.scrollX,
+            scrollY: appState.scrollY,
+            name: appState.name,
+          },
+          files,
         };
-        await api.saveIndex(cachedIndex);
+
+        await api.saveScene(projectId, sceneData);
+
+        // Generate preview if callback is registered
+        if (previewGenerator) {
+          try {
+            await previewGenerator(projectId);
+          } catch (previewErr) {
+            console.warn("[ProjectManagerData] Preview generation failed:", previewErr);
+            // Don't fail the whole save for preview issues
+          }
+        }
+
+        // Update the project's updatedAt timestamp
+        if (cachedIndex) {
+          cachedIndex = {
+            ...cachedIndex,
+            projects: cachedIndex.projects.map((p) =>
+              p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
+            ),
+          };
+          await api.saveIndex(cachedIndex);
+        }
+      } catch (err) {
+        console.error("[ProjectManagerData] Auto-save failed:", err);
+        // Don't throw - debounced functions shouldn't throw unhandled rejections
       }
     },
     1000, // 1 second debounce
@@ -224,6 +234,13 @@ export class ProjectManagerData {
    */
   static flushSave(): void {
     this.saveDebounced.flush();
+  }
+
+  /**
+   * Cancel any pending debounced save (e.g., before switching projects)
+   */
+  static cancelPendingSave(): void {
+    this.saveDebounced.cancel();
   }
 
   /**

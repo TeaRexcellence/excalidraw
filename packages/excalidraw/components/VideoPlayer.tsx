@@ -36,10 +36,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         // Mark that we're seeking to prevent re-triggering
         isSeekingRef.current = true;
         video.currentTime = startTime;
-        // Reset the flag after a brief delay
-        requestAnimationFrame(() => {
+        // Reset the flag after seeking completes (more reliable than RAF)
+        const onSeeked = () => {
           isSeekingRef.current = false;
-        });
+          video.removeEventListener("seeked", onSeeked);
+        };
+        video.addEventListener("seeked", onSeeked);
       } else {
         // Stop at end time
         video.pause();
@@ -58,10 +60,17 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (startTime > 0) {
       isSeekingRef.current = true;
       video.currentTime = startTime;
-      video.play().catch(() => {});
-      requestAnimationFrame(() => {
+      // Reset the flag after seeking completes
+      const onSeeked = () => {
         isSeekingRef.current = false;
-      });
+        video.removeEventListener("seeked", onSeeked);
+        video.play().catch(() => {
+          // Autoplay blocked, try muted
+          video.muted = true;
+          video.play().catch(() => {});
+        });
+      };
+      video.addEventListener("seeked", onSeeked);
     }
     // If no custom start time, native loop attribute handles it
   }, [loop, startTime, hasCustomEndTime]);

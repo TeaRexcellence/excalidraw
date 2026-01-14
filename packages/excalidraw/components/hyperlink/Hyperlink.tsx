@@ -91,12 +91,35 @@ const getVideoDuration = async (url: string): Promise<number | null> => {
     const video = document.createElement("video");
     video.preload = "metadata";
 
+    let resolved = false;
+
+    const cleanup = () => {
+      video.onloadedmetadata = null;
+      video.onerror = null;
+      video.src = "";
+    };
+
+    const safeResolve = (result: number | null) => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(result);
+      }
+    };
+
+    // Timeout to prevent hanging on CORS-blocked or slow videos
+    const timeout = setTimeout(() => {
+      safeResolve(null);
+    }, 10000);
+
     video.onloadedmetadata = () => {
-      resolve(video.duration);
+      clearTimeout(timeout);
+      safeResolve(video.duration);
     };
 
     video.onerror = () => {
-      resolve(null);
+      clearTimeout(timeout);
+      safeResolve(null);
     };
 
     // Strip any hash from URL for loading

@@ -37,15 +37,24 @@ const api = {
     }
   },
 
-  async saveIndex(index: ProjectsIndex): Promise<void> {
-    // IMPORTANT: Also update the cached index in ProjectManagerData to prevent
-    // race conditions where the debounced auto-save overwrites our changes
-    ProjectManagerData.updateCachedIndex(index);
-    await fetch("/api/projects/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(index),
-    });
+  async saveIndex(index: ProjectsIndex): Promise<boolean> {
+    try {
+      const res = await fetch("/api/projects/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(index),
+      });
+      if (!res.ok) {
+        console.error("[ProjectManager] Failed to save index:", res.status);
+        return false;
+      }
+      // Only update cache after successful save
+      ProjectManagerData.updateCachedIndex(index);
+      return true;
+    } catch (err) {
+      console.error("[ProjectManager] Network error saving index:", err);
+      return false;
+    }
   },
 
   async getScene(projectId: string): Promise<any | null> {
@@ -60,25 +69,54 @@ const api = {
     }
   },
 
-  async saveScene(projectId: string, sceneData: any): Promise<void> {
-    await fetch(`/api/projects/${projectId}/scene`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sceneData),
-    });
+  async saveScene(projectId: string, sceneData: any): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/scene`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sceneData),
+      });
+      if (!res.ok) {
+        console.error("[ProjectManager] Failed to save scene:", res.status);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("[ProjectManager] Network error saving scene:", err);
+      return false;
+    }
   },
 
-  async savePreview(projectId: string, blob: Blob): Promise<string> {
-    const res = await fetch(`/api/projects/${projectId}/preview`, {
-      method: "POST",
-      body: blob,
-    });
-    const data = await res.json();
-    return data.url;
+  async savePreview(projectId: string, blob: Blob): Promise<string | null> {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/preview`, {
+        method: "POST",
+        body: blob,
+      });
+      if (!res.ok) {
+        console.error("[ProjectManager] Failed to save preview:", res.status);
+        return null;
+      }
+      const data = await res.json();
+      return data.url;
+    } catch (err) {
+      console.error("[ProjectManager] Network error saving preview:", err);
+      return null;
+    }
   },
 
-  async deleteProject(projectId: string): Promise<void> {
-    await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+  async deleteProject(projectId: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+      if (!res.ok) {
+        console.error("[ProjectManager] Failed to delete project:", res.status);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("[ProjectManager] Network error deleting project:", err);
+      return false;
+    }
   },
 
   async moveProject(
@@ -87,25 +125,46 @@ const api = {
     oldTitle: string,
     newCategoryName: string | null,
     newTitle: string,
-  ): Promise<void> {
-    await fetch(`/api/projects/${projectId}/move`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        oldCategoryName: oldCategoryName || "Uncategorized",
-        oldTitle,
-        newCategoryName: newCategoryName || "Uncategorized",
-        newTitle,
-      }),
-    });
+  ): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/projects/${projectId}/move`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          oldCategoryName: oldCategoryName || "Uncategorized",
+          oldTitle,
+          newCategoryName: newCategoryName || "Uncategorized",
+          newTitle,
+        }),
+      });
+      if (!res.ok) {
+        console.error("[ProjectManager] Failed to move project:", res.status);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("[ProjectManager] Network error moving project:", err);
+      return false;
+    }
   },
 
-  async renameCategory(oldName: string, newName: string): Promise<void> {
-    await fetch("/api/projects/rename-category", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ oldName, newName }),
-    });
+  async renameCategory(oldName: string, newName: string): Promise<boolean> {
+    try {
+      const res = await fetch("/api/projects/rename-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldName, newName }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("[ProjectManager] Failed to rename category:", res.status, data.error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error("[ProjectManager] Network error renaming category:", err);
+      return false;
+    }
   },
 };
 
@@ -134,6 +193,15 @@ export const ProjectManager: React.FC = () => {
   const [previewCache, setPreviewCache] = useState<Record<string, string>>({});
   const contentRef = useRef<HTMLDivElement>(null);
 
+  // Ref to always have current index value (avoids stale closure issues)
+  const indexRef = useRef(index);
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
+
+  // Lock to prevent concurrent project operations
+  const operationInProgress = useRef(false);
+
   // Modal state
   const [modalType, setModalType] = useState<ModalType>(null);
   const [modalName, setModalName] = useState("");
@@ -152,6 +220,12 @@ export const ProjectManager: React.FC = () => {
       setIsLoading(false);
     });
   }, []);
+
+  // Keep ProjectManagerData cache in sync with local index
+  // This prevents divergence between auto-save and manual operations
+  useEffect(() => {
+    ProjectManagerData.updateCachedIndex(index);
+  }, [index]);
 
   // Track pending save trigger (if triggered before loading completes)
   const pendingSaveTriggerRef = useRef(0);
@@ -280,8 +354,10 @@ export const ProjectManager: React.FC = () => {
   // Skip if project has a custom preview set
   useEffect(() => {
     const generator = async (projectId: string) => {
+      // Use ref to get fresh index (avoids stale closure if project renamed)
+      const currentIndex = indexRef.current;
       // Check if project has custom preview - if so, skip auto-generation
-      const project = index.projects.find((p) => p.id === projectId);
+      const project = currentIndex.projects.find((p) => p.id === projectId);
       if (project?.hasCustomPreview) {
         return;
       }
@@ -301,7 +377,7 @@ export const ProjectManager: React.FC = () => {
     return () => {
       ProjectManagerData.setPreviewGenerator(null);
     };
-  }, [generatePreview, index.projects]);
+  }, [generatePreview]);
 
   // Open modal to create new project
   const handleNewProjectClick = useCallback(() => {
@@ -495,70 +571,91 @@ export const ProjectManager: React.FC = () => {
   // Select/switch to a project
   const handleSelectProject = useCallback(
     async (projectId: string) => {
-      console.log("[ProjectManager] Selecting project:", projectId, "current:", index.currentProjectId);
+      // Use ref to get current index value (avoids stale closure)
+      const currentIndex = indexRef.current;
 
-      if (projectId === index.currentProjectId) {
+      console.log("[ProjectManager] Selecting project:", projectId, "current:", currentIndex.currentProjectId);
+
+      // Prevent concurrent operations
+      if (operationInProgress.current) {
+        console.log("[ProjectManager] Operation in progress, ignoring click");
+        return;
+      }
+
+      if (projectId === currentIndex.currentProjectId) {
         console.log("[ProjectManager] Already on this project, skipping");
         return;
       }
 
-      // Auto-save current project first
-      if (index.currentProjectId) {
-        console.log("[ProjectManager] Saving current project:", index.currentProjectId);
-        await saveCurrentProject(index.currentProjectId);
-      }
+      operationInProgress.current = true;
 
-      // Load the new project
-      console.log("[ProjectManager] Loading scene for:", projectId);
-      const sceneData = await api.getScene(projectId);
-      console.log("[ProjectManager] Scene data:", sceneData);
+      try {
+        // Cancel any pending debounced save to prevent it from saving to old project
+        ProjectManagerData.cancelPendingSave();
 
-      if (sceneData) {
-        // Use syncActionResult to update the scene
-        console.log("[ProjectManager] Updating scene with elements:", sceneData.elements?.length || 0);
-        app.syncActionResult({
-          elements: sceneData.elements || [],
-          appState: {
-            ...sceneData.appState,
-            name: index.projects.find((p) => p.id === projectId)?.title,
-          },
-          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-        });
-
-        // Load files if present
-        if (sceneData.files) {
-          const filesArray = Object.entries(sceneData.files).map(
-            ([id, file]: [string, any]) => ({ ...file, id }),
-          );
-          if (filesArray.length > 0) {
-            console.log("[ProjectManager] Loading files:", filesArray.length);
-            app.addFiles(filesArray);
-          }
+        // Auto-save current project first
+        if (currentIndex.currentProjectId) {
+          console.log("[ProjectManager] Saving current project:", currentIndex.currentProjectId);
+          await saveCurrentProject(currentIndex.currentProjectId);
         }
-      } else {
-        console.log("[ProjectManager] No scene data found, creating empty scene");
-        // If no scene exists, create an empty canvas
-        app.syncActionResult({
-          elements: [],
-          appState: {
-            name: index.projects.find((p) => p.id === projectId)?.title,
-          },
-          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-        });
-      }
 
-      // Update current project ID
-      const newIndex: ProjectsIndex = {
-        ...index,
-        currentProjectId: projectId,
-        projects: index.projects.map((p) =>
-          p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
-        ),
-      };
-      setIndex(newIndex);
-      await api.saveIndex(newIndex);
+        // Load the new project
+        console.log("[ProjectManager] Loading scene for:", projectId);
+        const sceneData = await api.getScene(projectId);
+        console.log("[ProjectManager] Scene data:", sceneData);
+
+        // Get fresh index after async operations
+        const freshIndex = indexRef.current;
+
+        if (sceneData) {
+          // Use syncActionResult to update the scene
+          console.log("[ProjectManager] Updating scene with elements:", sceneData.elements?.length || 0);
+          app.syncActionResult({
+            elements: sceneData.elements || [],
+            appState: {
+              ...sceneData.appState,
+              name: freshIndex.projects.find((p) => p.id === projectId)?.title,
+            },
+            captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+          });
+
+          // Load files if present
+          if (sceneData.files) {
+            const filesArray = Object.entries(sceneData.files).map(
+              ([id, file]: [string, any]) => ({ ...file, id }),
+            );
+            if (filesArray.length > 0) {
+              console.log("[ProjectManager] Loading files:", filesArray.length);
+              app.addFiles(filesArray);
+            }
+          }
+        } else {
+          console.log("[ProjectManager] No scene data found, creating empty scene");
+          // If no scene exists, create an empty canvas
+          app.syncActionResult({
+            elements: [],
+            appState: {
+              name: freshIndex.projects.find((p) => p.id === projectId)?.title,
+            },
+            captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+          });
+        }
+
+        // Update current project ID using fresh index
+        const newIndex: ProjectsIndex = {
+          ...freshIndex,
+          currentProjectId: projectId,
+          projects: freshIndex.projects.map((p) =>
+            p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
+          ),
+        };
+        setIndex(newIndex);
+        await api.saveIndex(newIndex);
+      } finally {
+        operationInProgress.current = false;
+      }
     },
-    [app, index, saveCurrentProject],
+    [app, saveCurrentProject],
   );
 
   // Open project in new tab
