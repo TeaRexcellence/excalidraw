@@ -528,6 +528,40 @@ function projectFilePlugin(): Plugin {
           return;
         }
 
+        // Get projects directory path (for displaying to user before reset)
+        if (req.method === "GET" && urlPath === "/api/projects/path") {
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ path: projectsDir }));
+          return;
+        }
+
+        // Reset project manager - delete all projects and reset index
+        if (req.method === "POST" && urlPath === "/api/projects/reset") {
+          try {
+            // Get all items in projects directory
+            const items = fs.readdirSync(projectsDir);
+
+            // Delete everything except projects.json
+            for (const item of items) {
+              if (item === "projects.json") continue;
+              const itemPath = path.join(projectsDir, item);
+              fs.rmSync(itemPath, { recursive: true, force: true });
+            }
+
+            // Reset the index file
+            const emptyIndex = { projects: [], groups: [], currentProjectId: null };
+            fs.writeFileSync(indexPath, JSON.stringify(emptyIndex, null, 2));
+
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ success: true }));
+          } catch (err) {
+            console.error("Failed to reset project manager:", err);
+            res.statusCode = 500;
+            res.end(JSON.stringify({ error: "Failed to reset project manager" }));
+          }
+          return;
+        }
+
         next();
       });
     },

@@ -185,7 +185,8 @@ const generateRandomName = (prefix: string): string => {
 // "confirm-save" = confirm dialog before creating new project when unsaved changes exist
 // "rename-project" = renaming existing project
 // "import" = importing a project from zip
-type ModalType = "project" | "save" | "group" | "confirm-save" | "rename-project" | "import" | null;
+// "reset" = reset project manager (delete all projects)
+type ModalType = "project" | "save" | "group" | "confirm-save" | "rename-project" | "import" | "reset" | null;
 
 export const ProjectManager: React.FC = () => {
   const app = useApp();
@@ -218,6 +219,11 @@ export const ProjectManager: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset state
+  const [projectsPath, setProjectsPath] = useState<string>("");
+  const [resetConfirmText, setResetConfirmText] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
 
   // Listen for external save trigger (from main menu)
   const saveTrigger = useAtomValue(triggerSaveProjectAtom);
@@ -1085,6 +1091,64 @@ export const ProjectManager: React.FC = () => {
     }
   }, []);
 
+  // Open reset modal
+  const handleResetClick = useCallback(async () => {
+    setSettingsOpen(false);
+    setResetConfirmText("");
+
+    // Fetch the projects directory path
+    try {
+      const response = await fetch("/api/projects/path");
+      const data = await response.json();
+      setProjectsPath(data.path || "");
+    } catch {
+      setProjectsPath("");
+    }
+
+    setModalType("reset");
+  }, []);
+
+  // Handle reset confirmation
+  const handleResetConfirm = useCallback(async () => {
+    if (resetConfirmText !== "CONFIRM") {
+      return;
+    }
+
+    setIsResetting(true);
+
+    try {
+      const response = await fetch("/api/projects/reset", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Reset failed");
+      }
+
+      // Clear the canvas
+      app.syncActionResult({
+        elements: [],
+        appState: {
+          name: "",
+          viewBackgroundColor: app.state.viewBackgroundColor,
+        },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+
+      // Refresh the project list (should be empty now)
+      const newIndex = await api.getIndex();
+      setIndex(newIndex);
+      setPreviewCache({});
+
+      // Close the modal
+      setModalType(null);
+    } catch (err) {
+      console.error("[ProjectManager] Reset failed:", err);
+    } finally {
+      setIsResetting(false);
+    }
+  }, [app, resetConfirmText]);
+
   // Group projects
   const favoriteProjects = index.projects.filter((p) => p.isFavorite);
   const ungroupedProjects = index.projects.filter((p) => p.groupId === null);
@@ -1139,6 +1203,13 @@ export const ProjectManager: React.FC = () => {
                 </button>
                 <button onClick={handleImportClick}>
                   Import Project
+                </button>
+                <div className="ProjectManager__settingsDropdown__divider" />
+                <button
+                  className="ProjectManager__settingsDropdown__danger"
+                  onClick={handleResetClick}
+                >
+                  Reset Project Manager
                 </button>
               </div>
             )}
@@ -1279,6 +1350,66 @@ export const ProjectManager: React.FC = () => {
                 color="primary"
                 label={isImporting ? "Importing..." : "Choose File"}
                 onClick={isImporting ? undefined : () => importInputRef.current?.click()}
+              />
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Reset Project Manager Modal */}
+      {modalType === "reset" && (
+        <Dialog
+          onCloseRequest={handleModalClose}
+          title="Reset Project Manager"
+          size="small"
+        >
+          <div className="ProjectManager__dialog ProjectManager__dialog--danger">
+            <div className="ProjectManager__dialog__warning">
+              ⚠️ This action cannot be undone!
+            </div>
+            <p style={{ color: "var(--color-on-surface)", marginBottom: "0.5rem" }}>
+              This will permanently delete <strong>all projects</strong> and their assets (including videos).
+            </p>
+            {projectsPath && (
+              <div className="ProjectManager__dialog__path">
+                <span>Projects location:</span>
+                <code>{projectsPath}</code>
+              </div>
+            )}
+            <div className="ProjectManager__dialog__inputGroup">
+              <label htmlFor="reset-confirm-input" className="ProjectManager__dialog__label">
+                Type <strong>CONFIRM</strong> to proceed
+              </label>
+              <input
+                id="reset-confirm-input"
+                type="text"
+                className="ProjectManager__dialog__input"
+                value={resetConfirmText}
+                onChange={(e) => setResetConfirmText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && resetConfirmText === "CONFIRM") {
+                    handleResetConfirm();
+                  } else if (e.key === "Escape") {
+                    handleModalClose();
+                  }
+                }}
+                placeholder="CONFIRM"
+                autoFocus
+                autoComplete="off"
+              />
+            </div>
+            <div className="ProjectManager__dialog__actions">
+              <FilledButton
+                variant="outlined"
+                color="primary"
+                label="Cancel"
+                onClick={handleModalClose}
+              />
+              <FilledButton
+                variant="filled"
+                color="danger"
+                label={isResetting ? "Resetting..." : "Delete All Projects"}
+                onClick={isResetting || resetConfirmText !== "CONFIRM" ? undefined : handleResetConfirm}
               />
             </div>
           </div>
