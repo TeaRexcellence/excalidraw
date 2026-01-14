@@ -6,17 +6,57 @@ This document provides comprehensive documentation for all custom features added
 
 ## Table of Contents
 
-1. [Video Player Support](#1-video-player-support)
-2. [Local Project Manager](#2-local-project-manager)
-3. [Grid Opacity Control](#3-grid-opacity-control)
-4. [UI Debloat](#4-ui-debloat)
-5. [Video Thumbnail Export](#5-video-thumbnail-export)
-6. [File Structure](#6-file-structure)
-7. [API Reference](#7-api-reference)
+1. [Architecture Overview](#1-architecture-overview)
+2. [Video Player Support](#2-video-player-support)
+3. [Local Project Manager](#3-local-project-manager)
+4. [Grid Opacity Control](#4-grid-opacity-control)
+5. [UI Debloat](#5-ui-debloat)
+6. [Video Thumbnail Export](#6-video-thumbnail-export)
+7. [Main Menu](#7-main-menu)
+8. [File Structure](#8-file-structure)
+9. [API Reference](#9-api-reference)
+10. [State Management](#10-state-management)
+11. [Code Patterns & Gotchas](#11-code-patterns--gotchas)
+12. [Development](#12-development)
 
 ---
 
-## 1. Video Player Support
+## 1. Architecture Overview
+
+### Monorepo Structure
+
+```
+excalidraw/
+├── packages/                    # Core library (reusable, published to npm)
+│   ├── excalidraw/             # Main React component library
+│   │   ├── components/         # UI components (VideoPlayer, ProjectManager, etc.)
+│   │   ├── actions/            # Redux-like actions (clearCanvas, etc.)
+│   │   ├── renderer/           # Canvas/SVG rendering
+│   │   └── scene/              # Scene management, export
+│   ├── element/                # Element types and utilities
+│   ├── common/                 # Shared constants and utilities
+│   └── math/                   # Math utilities
+│
+├── excalidraw-app/             # THIS APP (custom fork)
+│   ├── components/             # App-specific components (AppMainMenu, etc.)
+│   ├── data/                   # Data layer (ProjectManagerData)
+│   └── vite.config.mts         # Dev server with custom APIs
+│
+└── public/projects/            # Project storage (created at runtime)
+```
+
+### Key Principle
+
+- **`packages/excalidraw/`** = Generic, reusable library code
+- **`excalidraw-app/`** = App-specific customizations (menus, project management, APIs)
+
+When adding features:
+- UI components that could be reused → `packages/excalidraw/components/`
+- App-specific glue code, menus, APIs → `excalidraw-app/`
+
+---
+
+## 2. Video Player Support
 
 ### Overview
 Full video embedding support including YouTube videos, direct video URLs, and local video file uploads. Videos are persisted to disk within the project folder structure.
@@ -85,7 +125,7 @@ A multi-step dialog for inserting videos:
 
 ---
 
-## 2. Local Project Manager
+## 3. Local Project Manager
 
 ### Overview
 A complete project management system that replaces browser localStorage with file-based persistence. Projects are organized into categories and stored in the `public/projects/` directory.
@@ -106,6 +146,7 @@ A complete project management system that replaces browser localStorage with fil
 - Move projects between categories
 - Open project folder in file explorer
 - Open project in new browser tab
+- **Start New Project** - Close current project and start fresh (via main menu)
 
 #### UI Features
 - **Zoom Controls** - Adjust project card size (100px - 300px)
@@ -162,6 +203,8 @@ The `ProjectManagerData` class provides:
 - **Automatic preview generation** on save
 - **Cached index** to prevent race conditions
 - **Flush on unload** for data safety
+- **Cancel pending saves** on project switch to prevent data corruption
+- **Error handling** with console logging for debugging
 
 ### Key Files
 
@@ -177,7 +220,7 @@ The `ProjectManagerData` class provides:
 
 ---
 
-## 3. Grid Opacity Control
+## 4. Grid Opacity Control
 
 ### Overview
 Adjustable grid opacity (10% - 100%) accessible from the canvas context menu.
@@ -202,7 +245,7 @@ gridOpacity: 100  // 10-100, default 100
 
 ---
 
-## 4. UI Debloat
+## 5. UI Debloat
 
 ### Overview
 Removed unnecessary UI elements and simplified the interface for a cleaner experience.
@@ -227,7 +270,7 @@ Removed unnecessary UI elements and simplified the interface for a cleaner exper
 
 ---
 
-## 5. Video Thumbnail Export
+## 6. Video Thumbnail Export
 
 ### Overview
 Videos now display their thumbnails in PNG/SVG exports instead of black boxes or placeholder text.
@@ -281,7 +324,29 @@ prefetchVideoThumbnailsAsDataUrls(elements): Promise<Map<string, string>>
 
 ---
 
-## 6. File Structure
+## 7. Main Menu
+
+**Location:** `excalidraw-app/components/AppMainMenu.tsx`
+
+Custom menu items added to the hamburger menu:
+
+| Menu Item | Description |
+|-----------|-------------|
+| **Save Project** | Opens sidebar to Projects tab, triggers save modal |
+| **Open Project Folder** | Opens current project's folder in system file explorer |
+| **Start New Project** | Closes current project, clears canvas, starts fresh (with confirmation) |
+| **Reset the canvas** | Clears canvas content but keeps current project selected |
+
+### Start New Project vs Reset Canvas
+
+These two options are different:
+
+- **Start New Project** → Deselects project + clears canvas = blank slate, no auto-save
+- **Reset the canvas** → Keeps project selected + clears canvas = empty project (will auto-save empty)
+
+---
+
+## 8. File Structure
 
 ### Project Storage Layout
 
@@ -332,7 +397,7 @@ public/projects/
 
 ---
 
-## 7. API Reference
+## 9. API Reference
 
 ### Server-Side APIs
 
@@ -377,7 +442,148 @@ ProjectManagerData.getCurrentProjectId(): Promise<string | null>
 ProjectManagerData.loadCurrentProject(): Promise<SceneData | null>
 ProjectManagerData.save(elements, appState, files): void
 ProjectManagerData.flushSave(): void
+ProjectManagerData.cancelPendingSave(): void
 ProjectManagerData.setCurrentProjectId(id): Promise<void>
+```
+
+---
+
+## 10. State Management
+
+### Key State Locations
+
+| State | Location | Purpose |
+|-------|----------|---------|
+| `appState.gridOpacity` | Excalidraw appState | Grid transparency (10-100) |
+| `cachedIndex` | `ProjectManagerData.ts` | Cached project index for auto-save |
+| `index` state | `ProjectManager.tsx` | UI state for project list |
+| `indexRef` | `ProjectManager.tsx` | Ref to avoid stale closures |
+| `operationInProgress` | `ProjectManager.tsx` | Lock to prevent concurrent operations |
+| `currentProjectId` | In `projects.json` | Which project is currently open |
+
+### State Sync Pattern
+
+The `ProjectManager` component maintains local `index` state that must stay in sync with `ProjectManagerData.cachedIndex`:
+
+```typescript
+// In ProjectManager.tsx
+const indexRef = useRef(index);
+useEffect(() => { indexRef.current = index; }, [index]);
+
+// Keep cache in sync
+useEffect(() => {
+  ProjectManagerData.updateCachedIndex(index);
+}, [index]);
+```
+
+---
+
+## 11. Code Patterns & Gotchas
+
+### Stale Closure Prevention
+
+When using `useCallback` with async operations, the callback captures state at creation time. Use refs to always get fresh values:
+
+```typescript
+// ❌ BAD - stale closure
+const handleClick = useCallback(async () => {
+  if (projectId === index.currentProjectId) return; // index may be stale!
+}, [index]);
+
+// ✅ GOOD - use ref
+const indexRef = useRef(index);
+useEffect(() => { indexRef.current = index; }, [index]);
+
+const handleClick = useCallback(async () => {
+  const currentIndex = indexRef.current; // always fresh
+  if (projectId === currentIndex.currentProjectId) return;
+}, []); // no index dependency needed
+```
+
+### Async Operation Timeouts
+
+Always add timeouts to video/image loading operations to prevent hanging:
+
+```typescript
+// ✅ GOOD - with timeout and cleanup
+const loadVideo = () => new Promise((resolve) => {
+  const video = document.createElement("video");
+  let resolved = false;
+
+  const cleanup = () => { video.src = ""; };
+  const safeResolve = (result) => {
+    if (!resolved) { resolved = true; cleanup(); resolve(result); }
+  };
+
+  const timeout = setTimeout(() => safeResolve(null), 10000);
+
+  video.onloadedmetadata = () => { clearTimeout(timeout); safeResolve(video); };
+  video.onerror = () => { clearTimeout(timeout); safeResolve(null); };
+  video.src = url;
+});
+```
+
+### Operation Locking
+
+Prevent concurrent async operations with a ref-based lock:
+
+```typescript
+const operationInProgress = useRef(false);
+
+const handleOperation = useCallback(async () => {
+  if (operationInProgress.current) return;
+  operationInProgress.current = true;
+
+  try {
+    await doAsyncWork();
+  } finally {
+    operationInProgress.current = false;
+  }
+}, []);
+```
+
+### Debounce Cancellation
+
+Cancel pending debounced saves before switching contexts:
+
+```typescript
+// Before switching projects
+ProjectManagerData.cancelPendingSave();
+await saveCurrentProject();
+// Now safe to load new project
+```
+
+---
+
+## 12. Development
+
+### Commands
+
+```bash
+yarn start              # Start dev server on port 3000
+yarn test:typecheck     # TypeScript type checking (run before commits)
+yarn test:update        # Run tests with snapshot updates
+yarn fix                # Auto-fix formatting and linting
+```
+
+### Before Committing
+
+Always run:
+```bash
+yarn test:typecheck
+```
+
+### Dev Server Notes
+
+- Server runs on **port 3000 only**
+- Custom APIs defined in `excalidraw-app/vite.config.mts`
+- Project files stored in `public/projects/`
+
+### Killing Orphaned Servers (Windows)
+
+```bash
+netstat -ano | findstr ":3000" | findstr "LISTENING"
+taskkill //F //PID <pid>
 ```
 
 ---
@@ -425,4 +631,4 @@ ProjectManagerData.setCurrentProjectId(id): Promise<void>
 
 ---
 
-*Documentation generated from commit analysis on 2026-01-13*
+*Documentation generated from commit analysis on 2026-01-13, updated 2026-01-14*
