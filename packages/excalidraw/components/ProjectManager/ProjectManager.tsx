@@ -8,7 +8,7 @@ import { t } from "../../i18n";
 import { useApp } from "../App";
 import { Dialog } from "../Dialog";
 import { FilledButton } from "../FilledButton";
-import { triggerSaveProjectAtom } from "../../../../excalidraw-app/data/ProjectManagerData";
+import { triggerSaveProjectAtom, ProjectManagerData } from "../../../../excalidraw-app/data/ProjectManagerData";
 
 import { ProjectGroup } from "./ProjectGroup";
 import type { Project, ProjectGroup as ProjectGroupType, ProjectsIndex } from "./types";
@@ -36,6 +36,9 @@ const api = {
   },
 
   async saveIndex(index: ProjectsIndex): Promise<void> {
+    // IMPORTANT: Also update the cached index in ProjectManagerData to prevent
+    // race conditions where the debounced auto-save overwrites our changes
+    ProjectManagerData.updateCachedIndex(index);
     await fetch("/api/projects/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -142,15 +145,23 @@ export const ProjectManager: React.FC = () => {
   const generatePreview = useCallback(async (): Promise<Blob | null> => {
     try {
       const elements = app.scene.getNonDeletedElements();
+      console.log("[Preview] Generating preview, elements:", elements.length);
       if (elements.length === 0) {
+        console.log("[Preview] No elements, skipping preview");
         return null;
       }
+
+      // Small delay to ensure canvas is fully rendered
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Use the existing canvas and create a scaled preview
       const canvas = app.canvas;
       if (!canvas) {
+        console.log("[Preview] No canvas available");
         return null;
       }
+
+      console.log("[Preview] Canvas size:", canvas.width, "x", canvas.height);
 
       // Create a smaller canvas for the preview
       const previewCanvas = document.createElement("canvas");
@@ -161,6 +172,7 @@ export const ProjectManager: React.FC = () => {
 
       const ctx = previewCanvas.getContext("2d");
       if (!ctx) {
+        console.log("[Preview] Failed to get 2d context");
         return null;
       }
 
@@ -168,10 +180,13 @@ export const ProjectManager: React.FC = () => {
       ctx.drawImage(canvas, 0, 0);
 
       return new Promise((resolve) => {
-        previewCanvas.toBlob((blob) => resolve(blob), "image/png", 0.8);
+        previewCanvas.toBlob((blob) => {
+          console.log("[Preview] Generated blob:", blob?.size, "bytes");
+          resolve(blob);
+        }, "image/png", 0.8);
       });
     } catch (err) {
-      console.error("Failed to generate preview:", err);
+      console.error("[Preview] Failed to generate preview:", err);
       return null;
     }
   }, [app]);
@@ -221,6 +236,33 @@ export const ProjectManager: React.FC = () => {
     },
     [saveProjectData, generatePreview],
   );
+
+  // Register preview generator for auto-save (updates preview on every debounced save)
+  // Skip if project has a custom preview set
+  useEffect(() => {
+    const generator = async (projectId: string) => {
+      // Check if project has custom preview - if so, skip auto-generation
+      const project = index.projects.find((p) => p.id === projectId);
+      if (project?.hasCustomPreview) {
+        return;
+      }
+
+      const previewBlob = await generatePreview();
+      if (previewBlob) {
+        const previewUrl = await api.savePreview(projectId, previewBlob);
+        setPreviewCache((prev) => ({
+          ...prev,
+          [projectId]: previewUrl + "?t=" + Date.now(),
+        }));
+      }
+    };
+
+    ProjectManagerData.setPreviewGenerator(generator);
+
+    return () => {
+      ProjectManagerData.setPreviewGenerator(null);
+    };
+  }, [generatePreview, index.projects]);
 
   // Open modal to create new project
   const handleNewProjectClick = useCallback(() => {
@@ -635,6 +677,61 @@ export const ProjectManager: React.FC = () => {
     [index],
   );
 
+  // Set custom preview for a project
+  const handleSetCustomPreview = useCallback(
+    async (projectId: string, file: File) => {
+      try {
+        // Upload the custom preview image
+        const previewUrl = await api.savePreview(projectId, file);
+
+        // Mark project as having custom preview
+        const newIndex: ProjectsIndex = {
+          ...index,
+          projects: index.projects.map((p) =>
+            p.id === projectId ? { ...p, hasCustomPreview: true, updatedAt: Date.now() } : p,
+          ),
+        };
+        setIndex(newIndex);
+        await api.saveIndex(newIndex);
+
+        // Update preview cache to show the new image
+        setPreviewCache((prev) => ({
+          ...prev,
+          [projectId]: previewUrl + "?t=" + Date.now(),
+        }));
+      } catch (err) {
+        console.error("Failed to set custom preview:", err);
+      }
+    },
+    [index],
+  );
+
+  // Remove custom preview from a project
+  const handleRemoveCustomPreview = useCallback(
+    async (projectId: string) => {
+      // Mark project as not having custom preview
+      const newIndex: ProjectsIndex = {
+        ...index,
+        projects: index.projects.map((p) =>
+          p.id === projectId ? { ...p, hasCustomPreview: false, updatedAt: Date.now() } : p,
+        ),
+      };
+      setIndex(newIndex);
+      await api.saveIndex(newIndex);
+
+      // Regenerate preview from canvas
+      const previewBlob = await generatePreview();
+      if (previewBlob) {
+        const previewUrl = await api.savePreview(projectId, previewBlob);
+        setPreviewCache((prev) => ({
+          ...prev,
+          [projectId]: previewUrl + "?t=" + Date.now(),
+        }));
+      }
+    },
+    [index, generatePreview],
+  );
+
   // Zoom controls
   const handleZoomIn = useCallback(() => {
     setCardSize((prev) => Math.min(prev + CARD_SIZE_STEP, MAX_CARD_SIZE));
@@ -803,6 +900,8 @@ export const ProjectManager: React.FC = () => {
                 onRenameProject={handleRenameProject}
                 onDeleteProject={handleDeleteProject}
                 onMoveToGroup={handleMoveToGroup}
+                onSetCustomPreview={handleSetCustomPreview}
+                onRemoveCustomPreview={handleRemoveCustomPreview}
                 availableGroups={availableGroups}
                 getPreviewUrl={getPreviewUrl}
               />
@@ -825,6 +924,8 @@ export const ProjectManager: React.FC = () => {
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onMoveToGroup={handleMoveToGroup}
+          onSetCustomPreview={handleSetCustomPreview}
+          onRemoveCustomPreview={handleRemoveCustomPreview}
           availableGroups={availableGroups}
           getPreviewUrl={getPreviewUrl}
         />

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import type { Project } from "./types";
 
 interface ProjectCardProps {
@@ -13,6 +13,8 @@ interface ProjectCardProps {
   onRename: (projectId: string) => void;
   onDelete: (projectId: string) => void;
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
+  onSetCustomPreview: (projectId: string, file: File) => void;
+  onRemoveCustomPreview: (projectId: string) => void;
   availableGroups: Array<{ id: string; name: string }>;
 }
 
@@ -28,10 +30,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onRename,
   onDelete,
   onMoveToGroup,
+  onSetCustomPreview,
+  onRemoveCustomPreview,
   availableGroups,
 }) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = useCallback(() => {
     onSelect(project.id);
@@ -51,6 +56,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     setShowContextMenu(false);
   }, []);
 
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        onSetCustomPreview(project.id, file);
+      }
+      // Reset input so same file can be selected again
+      e.target.value = "";
+    },
+    [onSetCustomPreview, project.id],
+  );
+
   // Close context menu when clicking outside
   React.useEffect(() => {
     if (showContextMenu) {
@@ -62,6 +79,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 
   return (
     <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleFileSelect}
+      />
       <div
         className={`ProjectCard ${isActive ? "ProjectCard--active" : ""} ${justSaved ? "ProjectCard--just-saved" : ""}`}
         style={{ width: size, height: size + 30 }}
@@ -129,6 +153,25 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           >
             Open project folder
           </button>
+          <div className="ProjectCard__contextMenu__divider" />
+          <button
+            onClick={() => {
+              fileInputRef.current?.click();
+              closeContextMenu();
+            }}
+          >
+            Set custom preview
+          </button>
+          {project.hasCustomPreview && (
+            <button
+              onClick={() => {
+                onRemoveCustomPreview(project.id);
+                closeContextMenu();
+              }}
+            >
+              Remove custom preview
+            </button>
+          )}
           <div className="ProjectCard__contextMenu__divider" />
           <div className="ProjectCard__contextMenu__submenu">
             <span>Move to group</span>

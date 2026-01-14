@@ -4,6 +4,7 @@ export interface Project {
   groupId: string | null; // null = ungrouped
   createdAt: number;
   updatedAt: number;
+  hasCustomPreview?: boolean; // true if user set a custom cover image
 }
 
 export interface ProjectGroup {

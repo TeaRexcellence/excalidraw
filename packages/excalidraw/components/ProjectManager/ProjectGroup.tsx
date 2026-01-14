@@ -17,6 +17,8 @@ interface ProjectGroupProps {
   onRenameProject: (projectId: string) => void;
   onDeleteProject: (projectId: string) => void;
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
+  onSetCustomPreview: (projectId: string, file: File) => void;
+  onRemoveCustomPreview: (projectId: string) => void;
   availableGroups: Array<{ id: string; name: string }>;
   getPreviewUrl: (projectId: string) => string | null;
 }
@@ -36,6 +38,8 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   onRenameProject,
   onDeleteProject,
   onMoveToGroup,
+  onSetCustomPreview,
+  onRemoveCustomPreview,
   availableGroups,
   getPreviewUrl,
 }) => {
@@ -148,6 +152,8 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               onRename={onRenameProject}
               onDelete={onDeleteProject}
               onMoveToGroup={onMoveToGroup}
+              onSetCustomPreview={onSetCustomPreview}
+              onRemoveCustomPreview={onRemoveCustomPreview}
               availableGroups={availableGroups}
             />
           ))}

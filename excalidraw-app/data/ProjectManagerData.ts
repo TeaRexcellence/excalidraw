@@ -101,6 +101,9 @@ const api = {
 // Cache for current project state
 let cachedIndex: ProjectsIndex | null = null;
 
+// Callback for generating preview (set by ProjectManager component)
+let previewGenerator: ((projectId: string) => Promise<void>) | null = null;
+
 export class ProjectManagerData {
   private static saveDebounced = debounce(
     async (
@@ -125,6 +128,11 @@ export class ProjectManagerData {
 
       await api.saveScene(projectId, sceneData);
 
+      // Generate preview if callback is registered
+      if (previewGenerator) {
+        await previewGenerator(projectId);
+      }
+
       // Update the project's updatedAt timestamp
       if (cachedIndex) {
         cachedIndex = {
@@ -138,6 +146,13 @@ export class ProjectManagerData {
     },
     1000, // 1 second debounce
   );
+
+  /**
+   * Register a preview generator callback (called by ProjectManager component)
+   */
+  static setPreviewGenerator(generator: ((projectId: string) => Promise<void>) | null): void {
+    previewGenerator = generator;
+  }
 
   /**
    * Get the current projects index
