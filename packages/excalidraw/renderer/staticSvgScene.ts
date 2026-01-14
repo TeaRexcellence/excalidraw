@@ -177,6 +177,42 @@ const renderElementToSvg = (
     }
     case "iframe":
     case "embeddable": {
+      // Check for video thumbnail first
+      const videoThumbnailDataUrl = renderConfig.videoThumbnails?.get(
+        element.id,
+      );
+      if (videoThumbnailDataUrl) {
+        // Render video thumbnail as <image> element
+        const image = svgRoot.ownerDocument.createElementNS(SVG_NS, "image");
+        image.setAttribute("href", videoThumbnailDataUrl);
+        image.setAttribute("width", `${element.width}`);
+        image.setAttribute("height", `${element.height}`);
+        image.setAttribute("preserveAspectRatio", "none");
+
+        const thumbnailOpacity = element.opacity / 100;
+        if (thumbnailOpacity !== 1) {
+          image.setAttribute("opacity", `${thumbnailOpacity}`);
+        }
+
+        image.setAttribute(
+          "transform",
+          `translate(${offsetX || 0} ${
+            offsetY || 0
+          }) rotate(${degree} ${cx} ${cy})`,
+        );
+
+        const g = maybeWrapNodesInFrameClipPath(
+          element,
+          root,
+          [image],
+          renderConfig.frameRendering,
+          elementsMap,
+        );
+
+        addToRoot(g || image, element);
+        break;
+      }
+
       // render placeholder rectangle
       const shape = ShapeCache.generateElementShape(element, renderConfig);
       const node = roughSVGDrawWithPrecision(

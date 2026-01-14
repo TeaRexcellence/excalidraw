@@ -228,8 +228,10 @@ export const isDirectVideoUrl = (url: string): boolean => {
     return true;
   }
 
-  // Check for local server video paths (both relative and absolute)
-  if (url.startsWith("/videos/") || url.includes("/videos/")) {
+  // Check for local server video paths:
+  // - Legacy: /videos/...
+  // - New: /projects/{category}/{project}/videos/...
+  if (url.includes("/videos/")) {
     return true;
   }
 
@@ -644,4 +646,145 @@ export const embeddableURLValidator = (
 ): boolean => {
   // Allow ALL URLs - no restrictions
   return !!url;
+};
+
+/**
+ * Get YouTube video ID from URL
+ */
+export const getYouTubeVideoId = (url: string): string | null => {
+  const match = url.match(RE_YOUTUBE);
+  return match?.[2] || null;
+};
+
+/**
+ * Get YouTube thumbnail URL for a video
+ */
+export const getYouTubeThumbnailUrl = (
+  videoId: string,
+  quality: "default" | "hqdefault" | "mqdefault" | "sddefault" | "maxresdefault" = "hqdefault",
+): string => {
+  return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+};
+
+/**
+ * Capture a frame from a video element as an image blob
+ */
+export const captureVideoFrame = (
+  videoSrc: string,
+  seekTime: number = 0,
+): Promise<Blob | null> => {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.crossOrigin = "anonymous";
+    video.muted = true;
+    video.preload = "metadata";
+
+    const cleanup = () => {
+      video.removeEventListener("loadeddata", onLoaded);
+      video.removeEventListener("error", onError);
+      video.removeEventListener("seeked", onSeeked);
+      video.src = "";
+      video.load();
+    };
+
+    const onError = () => {
+      cleanup();
+      resolve(null);
+    };
+
+    const onSeeked = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          cleanup();
+          resolve(null);
+          return;
+        }
+        ctx.drawImage(video, 0, 0);
+        canvas.toBlob(
+          (blob) => {
+            cleanup();
+            resolve(blob);
+          },
+          "image/png",
+          0.9,
+        );
+      } catch (err) {
+        cleanup();
+        resolve(null);
+      }
+    };
+
+    const onLoaded = () => {
+      // Seek to the specified time (or 1 second if video is long enough)
+      const targetTime = seekTime > 0 ? seekTime : Math.min(1, video.duration / 2);
+      video.currentTime = targetTime;
+    };
+
+    video.addEventListener("loadeddata", onLoaded);
+    video.addEventListener("error", onError);
+    video.addEventListener("seeked", onSeeked);
+
+    // Set timeout for slow-loading videos
+    setTimeout(() => {
+      if (!video.readyState) {
+        cleanup();
+        resolve(null);
+      }
+    }, 10000);
+
+    video.src = videoSrc;
+    video.load();
+  });
+};
+
+/**
+ * Get thumbnail for any video embed (YouTube, direct video, etc.)
+ * Returns a data URL or blob URL for the thumbnail
+ */
+export const getVideoThumbnail = async (
+  url: string,
+): Promise<string | null> => {
+  // Check if it's a YouTube video
+  const youtubeId = getYouTubeVideoId(url);
+  if (youtubeId) {
+    // Return YouTube's thumbnail URL directly
+    return getYouTubeThumbnailUrl(youtubeId, "hqdefault");
+  }
+
+  // For direct video URLs, capture a frame
+  if (isDirectVideoUrl(url)) {
+    const cleanUrl = stripVideoOptionsFromUrl(url);
+    const blob = await captureVideoFrame(cleanUrl);
+    if (blob) {
+      return URL.createObjectURL(blob);
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Load an image from a URL and return it as an HTMLImageElement
+ */
+export const loadImageFromUrl = (url: string): Promise<HTMLImageElement | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+
+    // Timeout for slow images
+    setTimeout(() => {
+      if (!img.complete) {
+        resolve(null);
+      }
+    }, 5000);
+
+    img.src = url;
+  });
 };

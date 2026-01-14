@@ -412,16 +412,47 @@ const _renderStaticScene = ({
             element.width &&
             element.height
           ) {
-            const label = createPlaceholderEmbeddableLabel(element);
-            renderElement(
-              label,
-              elementsMap,
-              allElementsMap,
-              rc,
-              context,
-              renderConfig,
-              appState,
-            );
+            // Check if we have a preloaded video thumbnail for this element
+            const thumbnailImg = renderConfig.videoThumbnails?.get(element.id);
+            if (thumbnailImg && isExporting) {
+              // Draw video thumbnail instead of placeholder
+              context.save();
+
+              const zoom = appState.zoom.value;
+              const x = (element.x + appState.scrollX) * zoom;
+              const y = (element.y + appState.scrollY) * zoom;
+              const width = element.width * zoom;
+              const height = element.height * zoom;
+
+              // Apply element rotation if any
+              if (element.angle) {
+                const cx = x + width / 2;
+                const cy = y + height / 2;
+                context.translate(cx, cy);
+                context.rotate(element.angle);
+                context.translate(-cx, -cy);
+              }
+
+              // Apply element opacity
+              context.globalAlpha = element.opacity / 100;
+
+              // Draw thumbnail scaled to element bounds
+              context.drawImage(thumbnailImg, x, y, width, height);
+
+              context.restore();
+            } else {
+              // Fall back to placeholder label
+              const label = createPlaceholderEmbeddableLabel(element);
+              renderElement(
+                label,
+                elementsMap,
+                allElementsMap,
+                rc,
+                context,
+                renderConfig,
+                appState,
+              );
+            }
           }
           if (!isExporting) {
             renderLinkIcon(element, context, appState, elementsMap);

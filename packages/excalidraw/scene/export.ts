@@ -58,6 +58,11 @@ import { Fonts } from "../fonts";
 import { renderStaticScene } from "../renderer/staticScene";
 import { renderSceneToSvg } from "../renderer/staticSvgScene";
 
+import {
+  prefetchVideoThumbnails,
+  prefetchVideoThumbnailsAsDataUrls,
+} from "./videoThumbnails";
+
 import type { RenderableElementsMap } from "./types";
 
 import type { AppState, BinaryFiles } from "../types";
@@ -238,6 +243,9 @@ export const exportToCanvas = async (
     files,
   });
 
+  // Prefetch video thumbnails for export
+  const videoThumbnails = await prefetchVideoThumbnails(elementsForRender);
+
   renderStaticScene({
     canvas,
     rc: rough.canvas(canvas),
@@ -269,6 +277,7 @@ export const exportToCanvas = async (
       elementsPendingErasure: new Set(),
       pendingFlowchartNodes: null,
       theme: appState.exportWithDarkMode ? THEME.DARK : THEME.LIGHT,
+      videoThumbnails,
     },
   });
 
@@ -470,6 +479,10 @@ export const exportToSvg = async (
 
   const renderEmbeddables = opts?.renderEmbeddables ?? false;
 
+  // Prefetch video thumbnails for SVG export
+  const videoThumbnails =
+    await prefetchVideoThumbnailsAsDataUrls(elementsForRender);
+
   renderSceneToSvg(
     elementsForRender,
     toBrandedType<RenderableElementsMap>(arrayToMap(elementsForRender)),
@@ -493,6 +506,7 @@ export const exportToSvg = async (
         : new Map(),
       reuseImages: opts?.reuseImages ?? true,
       theme: exportWithDarkMode ? THEME.DARK : THEME.LIGHT,
+      videoThumbnails,
     },
   );
 

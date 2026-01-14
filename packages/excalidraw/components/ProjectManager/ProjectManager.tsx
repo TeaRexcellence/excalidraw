@@ -6,6 +6,7 @@ import { CaptureUpdateAction } from "@excalidraw/element";
 
 import { t } from "../../i18n";
 import { useApp } from "../App";
+import { exportToCanvas } from "../../scene/export";
 import { Dialog } from "../Dialog";
 import { FilledButton } from "../FilledButton";
 import { triggerSaveProjectAtom, ProjectManagerData } from "../../../../excalidraw-app/data/ProjectManagerData";
@@ -185,50 +186,43 @@ export const ProjectManager: React.FC = () => {
     [previewCache, index.projects, index.groups, sanitizeFolderName],
   );
 
-  // Generate preview for current scene using the static canvas
-  // Note: This captures the canvas only, not embeds/iframes (cross-origin limitation)
+  // Generate preview using the same export function as "Export Image"
+  // This ensures previews look identical to exports (including video thumbnails)
   const generatePreview = useCallback(async (): Promise<Blob | null> => {
     try {
       const elements = app.scene.getNonDeletedElements();
-      console.log("[Preview] Generating preview, elements:", elements.length);
       if (elements.length === 0) {
-        console.log("[Preview] No elements, skipping preview");
         return null;
       }
 
-      // Small delay to ensure canvas is fully rendered
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Use the existing canvas and create a scaled preview
-      const canvas = app.canvas;
-      if (!canvas) {
-        console.log("[Preview] No canvas available");
-        return null;
-      }
-
-      console.log("[Preview] Canvas size:", canvas.width, "x", canvas.height);
-
-      // Create a smaller canvas for the preview
-      const previewCanvas = document.createElement("canvas");
-      const maxSize = 300;
-      const scale = Math.min(maxSize / canvas.width, maxSize / canvas.height, 1);
-      previewCanvas.width = canvas.width * scale;
-      previewCanvas.height = canvas.height * scale;
-
-      const ctx = previewCanvas.getContext("2d");
-      if (!ctx) {
-        console.log("[Preview] Failed to get 2d context");
-        return null;
-      }
-
-      ctx.scale(scale, scale);
-      ctx.drawImage(canvas, 0, 0);
+      // Use the same exportToCanvas function as the export dialog
+      const canvas = await exportToCanvas(
+        elements,
+        {
+          ...app.state,
+          exportScale: 1, // Use 1x scale for preview (smaller file size)
+        },
+        app.files,
+        {
+          exportBackground: true,
+          exportPadding: 10,
+          viewBackgroundColor: app.state.viewBackgroundColor,
+        },
+        // Custom canvas creator to limit preview size
+        (width, height) => {
+          const maxSize = 400;
+          const scale = Math.min(maxSize / width, maxSize / height, 1);
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(width * scale);
+          canvas.height = Math.round(height * scale);
+          return { canvas, scale };
+        },
+      );
 
       return new Promise((resolve) => {
-        previewCanvas.toBlob((blob) => {
-          console.log("[Preview] Generated blob:", blob?.size, "bytes");
+        canvas.toBlob((blob) => {
           resolve(blob);
-        }, "image/png", 0.8);
+        }, "image/png", 0.85);
       });
     } catch (err) {
       console.error("[Preview] Failed to generate preview:", err);
@@ -667,18 +661,31 @@ export const ProjectManager: React.FC = () => {
   // Delete project
   const handleDeleteProject = useCallback(
     async (projectId: string) => {
+      const isCurrentProject = index.currentProjectId === projectId;
+
       await api.deleteProject(projectId);
 
       const newIndex: ProjectsIndex = {
         ...index,
         projects: index.projects.filter((p) => p.id !== projectId),
-        currentProjectId:
-          index.currentProjectId === projectId ? null : index.currentProjectId,
+        currentProjectId: isCurrentProject ? null : index.currentProjectId,
       };
       setIndex(newIndex);
       await api.saveIndex(newIndex);
+
+      // If we deleted the current project, reset the canvas
+      if (isCurrentProject) {
+        app.syncActionResult({
+          elements: [],
+          appState: {
+            name: "",
+            viewBackgroundColor: app.state.viewBackgroundColor,
+          },
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
+      }
     },
-    [index],
+    [app, index],
   );
 
   // Move project to group

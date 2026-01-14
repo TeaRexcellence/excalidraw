@@ -37,6 +37,8 @@ export type StaticCanvasRenderConfig = {
   elementsPendingErasure: ElementsPendingErasure;
   pendingFlowchartNodes: PendingExcalidrawElements | null;
   theme: AppState["theme"];
+  /** Preloaded video thumbnails for export (element ID -> HTMLImageElement) */
+  videoThumbnails?: Map<string, HTMLImageElement>;
 };
 
 export type SVGRenderConfig = {
@@ -56,6 +58,8 @@ export type SVGRenderConfig = {
    */
   reuseImages: boolean;
   theme: AppState["theme"];
+  /** Preloaded video thumbnails for SVG export (element ID -> data URL string) */
+  videoThumbnails?: Map<string, string>;
 };
 
 export type InteractiveCanvasRenderConfig = {
