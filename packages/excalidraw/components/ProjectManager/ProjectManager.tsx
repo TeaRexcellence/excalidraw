@@ -10,6 +10,7 @@ import { Dialog } from "../Dialog";
 import { FilledButton } from "../FilledButton";
 import { triggerSaveProjectAtom, ProjectManagerData } from "../../../../excalidraw-app/data/ProjectManagerData";
 
+import { ProjectCard } from "./ProjectCard";
 import { ProjectGroup } from "./ProjectGroup";
 import type { Project, ProjectGroup as ProjectGroupType, ProjectsIndex } from "./types";
 import { DEFAULT_PROJECTS_INDEX } from "./types";
@@ -18,7 +19,7 @@ import "./ProjectManager.scss";
 
 const MIN_CARD_SIZE = 100;
 const MAX_CARD_SIZE = 300;
-const DEFAULT_CARD_SIZE = 150;
+const DEFAULT_CARD_SIZE = MIN_CARD_SIZE;
 const CARD_SIZE_STEP = 25;
 
 // API helpers
@@ -732,6 +733,24 @@ export const ProjectManager: React.FC = () => {
     [index, generatePreview],
   );
 
+  // Toggle favorite status
+  const handleToggleFavorite = useCallback(
+    async (projectId: string) => {
+      const project = index.projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const newIndex: ProjectsIndex = {
+        ...index,
+        projects: index.projects.map((p) =>
+          p.id === projectId ? { ...p, isFavorite: !p.isFavorite } : p,
+        ),
+      };
+      setIndex(newIndex);
+      await api.saveIndex(newIndex);
+    },
+    [index],
+  );
+
   // Zoom controls
   const handleZoomIn = useCallback(() => {
     setCardSize((prev) => Math.min(prev + CARD_SIZE_STEP, MAX_CARD_SIZE));
@@ -742,6 +761,7 @@ export const ProjectManager: React.FC = () => {
   }, []);
 
   // Group projects
+  const favoriteProjects = index.projects.filter((p) => p.isFavorite);
   const ungroupedProjects = index.projects.filter((p) => p.groupId === null);
   const availableGroups = index.groups.map((g) => ({ id: g.id, name: g.name }));
 
@@ -852,7 +872,7 @@ export const ProjectManager: React.FC = () => {
                 onChange={(e) => setModalName(e.target.value)}
                 onKeyDown={handleModalKeyDown}
                 placeholder={
-                  modalType === "group" ? "Enter group name" : "Enter project name"
+                  modalType === "group" ? "Enter category name" : "Enter project name"
                 }
                 autoFocus
               />
@@ -876,6 +896,39 @@ export const ProjectManager: React.FC = () => {
       )}
 
       <div className="ProjectManager__content" ref={contentRef}>
+        {/* Render favorites section if any favorites exist */}
+        {favoriteProjects.length > 0 && (
+          <div className="ProjectManager__favorites">
+            <div className="ProjectManager__favorites__header">
+              <span className="ProjectManager__favorites__icon">★</span>
+              <span className="ProjectManager__favorites__title">Favorites</span>
+              <span className="ProjectManager__favorites__count">({favoriteProjects.length})</span>
+            </div>
+            <div className="ProjectGroup__grid">
+              {favoriteProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  isActive={project.id === index.currentProjectId}
+                  justSaved={project.id === justSavedId}
+                  previewUrl={getPreviewUrl(project.id)}
+                  size={cardSize}
+                  onSelect={handleSelectProject}
+                  onOpenInNewTab={handleOpenInNewTab}
+                  onOpenFileLocation={handleOpenFileLocation}
+                  onRename={handleRenameProject}
+                  onDelete={handleDeleteProject}
+                  onMoveToGroup={handleMoveToGroup}
+                  onSetCustomPreview={handleSetCustomPreview}
+                  onRemoveCustomPreview={handleRemoveCustomPreview}
+                  onToggleFavorite={handleToggleFavorite}
+                  availableGroups={availableGroups}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Render groups */}
         {index.groups
           .sort((a, b) => a.order - b.order)
@@ -902,6 +955,7 @@ export const ProjectManager: React.FC = () => {
                 onMoveToGroup={handleMoveToGroup}
                 onSetCustomPreview={handleSetCustomPreview}
                 onRemoveCustomPreview={handleRemoveCustomPreview}
+                onToggleFavorite={handleToggleFavorite}
                 availableGroups={availableGroups}
                 getPreviewUrl={getPreviewUrl}
               />
@@ -926,6 +980,7 @@ export const ProjectManager: React.FC = () => {
           onMoveToGroup={handleMoveToGroup}
           onSetCustomPreview={handleSetCustomPreview}
           onRemoveCustomPreview={handleRemoveCustomPreview}
+          onToggleFavorite={handleToggleFavorite}
           availableGroups={availableGroups}
           getPreviewUrl={getPreviewUrl}
         />

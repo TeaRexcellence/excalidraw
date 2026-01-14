@@ -19,6 +19,7 @@ interface ProjectGroupProps {
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
   onSetCustomPreview: (projectId: string, file: File) => void;
   onRemoveCustomPreview: (projectId: string) => void;
+  onToggleFavorite: (projectId: string) => void;
   availableGroups: Array<{ id: string; name: string }>;
   getPreviewUrl: (projectId: string) => string | null;
 }
@@ -40,6 +41,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   onMoveToGroup,
   onSetCustomPreview,
   onRemoveCustomPreview,
+  onToggleFavorite,
   availableGroups,
   getPreviewUrl,
 }) => {
@@ -103,7 +105,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
             />
           ) : (
             <span className="ProjectGroup__name">
-              {isUngrouped ? "Ungrouped" : group?.name}
+              {isUngrouped ? "Uncategorized" : group?.name}
             </span>
           )}
           <span className="ProjectGroup__count">({projects.length})</span>
@@ -116,7 +118,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
                 e.stopPropagation();
                 setIsEditing(true);
               }}
-              title="Rename group"
+              title="Rename category"
             >
               ✏️
             </button>
@@ -124,11 +126,11 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               className="ProjectGroup__action ProjectGroup__action--danger"
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`Delete group "${group.name}"? Projects will be moved to Ungrouped.`)) {
+                if (confirm(`Delete category "${group.name}"? Projects will be moved to Uncategorized.`)) {
                   onDeleteGroup(group.id);
                 }
               }}
-              title="Delete group"
+              title="Delete category"
             >
               🗑️
             </button>
@@ -154,6 +156,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               onMoveToGroup={onMoveToGroup}
               onSetCustomPreview={onSetCustomPreview}
               onRemoveCustomPreview={onRemoveCustomPreview}
+              onToggleFavorite={onToggleFavorite}
               availableGroups={availableGroups}
             />
           ))}

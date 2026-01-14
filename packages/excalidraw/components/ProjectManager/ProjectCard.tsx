@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import type { Project } from "./types";
 
 interface ProjectCardProps {
@@ -15,6 +15,7 @@ interface ProjectCardProps {
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
   onSetCustomPreview: (projectId: string, file: File) => void;
   onRemoveCustomPreview: (projectId: string) => void;
+  onToggleFavorite: (projectId: string) => void;
   availableGroups: Array<{ id: string; name: string }>;
 }
 
@@ -32,11 +33,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onMoveToGroup,
   onSetCustomPreview,
   onRemoveCustomPreview,
+  onToggleFavorite,
   availableGroups,
 }) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const tooltipTimeoutRef = useRef<number | null>(null);
 
   const handleClick = useCallback(() => {
     onSelect(project.id);
@@ -68,6 +74,60 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     [onSetCustomPreview, project.id],
   );
 
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    // Hide tooltip and reset timer on any mouse movement
+    setShowTooltip(false);
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+    }
+
+    setTooltipPos({
+      x: e.clientX,
+      y: e.clientY - 10,
+    });
+
+    // Show tooltip after mouse stops moving
+    tooltipTimeoutRef.current = window.setTimeout(() => {
+      setShowTooltip(true);
+    }, 500);
+  }, []);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    setTooltipPos({
+      x: e.clientX,
+      y: e.clientY - 10,
+    });
+    // Delay showing tooltip
+    tooltipTimeoutRef.current = window.setTimeout(() => {
+      setShowTooltip(true);
+    }, 500);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (tooltipTimeoutRef.current) {
+      clearTimeout(tooltipTimeoutRef.current);
+      tooltipTimeoutRef.current = null;
+    }
+    setShowTooltip(false);
+  }, []);
+
+  const handleFavoriteClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onToggleFavorite(project.id);
+    },
+    [onToggleFavorite, project.id],
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (tooltipTimeoutRef.current) {
+        clearTimeout(tooltipTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Close context menu when clicking outside
   React.useEffect(() => {
     if (showContextMenu) {
@@ -87,12 +147,23 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         onChange={handleFileSelect}
       />
       <div
+        ref={cardRef}
         className={`ProjectCard ${isActive ? "ProjectCard--active" : ""} ${justSaved ? "ProjectCard--just-saved" : ""}`}
         style={{ width: size, height: size + 30 }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
         {justSaved && <div className="ProjectCard__savedBadge">Saved!</div>}
+        <button
+          className={`ProjectCard__favoriteBtn ${project.isFavorite ? "ProjectCard__favoriteBtn--active" : ""}`}
+          onClick={handleFavoriteClick}
+          title={project.isFavorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          {project.isFavorite ? "★" : "☆"}
+        </button>
         <div
           className="ProjectCard__preview"
           style={{ width: size, height: size }}
@@ -174,7 +245,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           )}
           <div className="ProjectCard__contextMenu__divider" />
           <div className="ProjectCard__contextMenu__submenu">
-            <span>Move to group</span>
+            <span>Move to category</span>
             <div className="ProjectCard__contextMenu__submenu__items">
               <button
                 onClick={() => {
@@ -183,7 +254,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 }}
                 className={project.groupId === null ? "active" : ""}
               >
-                Ungrouped
+                Uncategorized
               </button>
               {availableGroups.map((group) => (
                 <button
@@ -211,6 +282,21 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           >
             Delete
           </button>
+        </div>
+      )}
+
+      {showTooltip && (
+        <div
+          className="ProjectCard__tooltip"
+          style={{
+            position: "fixed",
+            left: tooltipPos.x + 12,
+            top: tooltipPos.y,
+            transform: "translateY(-100%)",
+            zIndex: 10000,
+          }}
+        >
+          {project.title}
         </div>
       )}
     </>

@@ -363,14 +363,14 @@
   "projectManager": {
     "title": "Projects",
     "newProject": "New Project",
-    "newGroup": "New Group",
+    "newGroup": "New Category",
     "empty": "No projects yet. Create your first project to get started.",
     "createFirst": "Create First Project",
     "openInNewTab": "Open in new tab",
     "rename": "Rename",
     "delete": "Delete",
-    "moveToGroup": "Move to group",
-    "ungrouped": "Ungrouped"
+    "moveToGroup": "Move to category",
+    "ungrouped": "Uncategorized"
   },
   "hints": {
     "dismissSearch": "{{shortcut}} to dismiss search",

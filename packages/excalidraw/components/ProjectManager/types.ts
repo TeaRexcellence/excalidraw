@@ -5,6 +5,7 @@ export interface Project {
   createdAt: number;
   updatedAt: number;
   hasCustomPreview?: boolean; // true if user set a custom cover image
+  isFavorite?: boolean; // true if project is marked as favorite
 }
 
 export interface ProjectGroup {
