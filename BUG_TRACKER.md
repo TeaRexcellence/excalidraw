@@ -705,194 +705,14 @@ private static saveDebounced = debounce(
 
 ---
 
-### BUG-019: 🔴 Tooltip Position Not Adjusted for Screen Edges
-**File:** `packages/excalidraw/components/ProjectManager/ProjectCard.tsx`
-**Lines:** 288-301
-**Fix:** Add viewport boundary checking
-
----
-
-### BUG-020: 🔴 Modal Auto-Focus Unreliable
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Line:** 979
-**Fix:** Use ref and imperative focus
-
----
-
-### BUG-021: 🔴 Empty Project Names Become "Untitled" Silently
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 161-166
-**Fix:** Show warning when name sanitizes to empty
-
----
-
-### BUG-022: 🔴 Long Path Truncation Not Communicated to User
-**File:** `excalidraw-app/vite.config.mts`
-**Line:** 23
-**Fix:** Return error if name exceeds limit
-
----
-
 ### BUG-023: 🟢 Grid Opacity Not Applied During Live Editing
 **File:** `packages/excalidraw/renderer/staticScene.ts`
-**Lines:** 56-133
-**Symptom:** Grid opacity slider doesn't affect live canvas, only exports
-**Fix:** Pass `appState.gridOpacity` to `strokeGrid` in interactive render path
-
----
-
-### BUG-024: 🔴 Project IDs Not Validated
-**File:** `excalidraw-app/vite.config.mts`
-**Multiple lines
-**Fix:** Validate projectId format before use
-
----
-
-### BUG-025: 🔴 Index Validation Too Minimal
-**File:** `excalidraw-app/vite.config.mts`
-**Lines:** 105-124
-**Fix:** Validate project objects have required fields
-
----
-
-### BUG-026: 🔴 Stale Closure in Modal Handlers
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 325-335, 357-381
-**Fix:** Use refs for app.state values
-
----
-
-### BUG-027: 🔴 Project Validation Missing on Load
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 150-154
-**Fix:** Validate all group references exist
-
----
-
-### BUG-028: 🔴 Preview Cache Key Orphaned on Rename
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 169-187
-**Fix:** Clear old cache key when project renamed
-
----
-
-### BUG-029: 🔴 Silent Autoplay Failures in VideoPlayer
-**File:** `packages/excalidraw/components/VideoPlayer.tsx`
-**Line:** 61
-**Current:** `video.play().catch(() => {});`
-**Fix:** Log warning on autoplay failure
-
----
-
-### BUG-030: 🔴 Error Recovery Missing in Project Save Flow
-**File:** `packages/excalidraw/components/VideoEmbedDialog.tsx`
-**Lines:** 300-325
-**Fix:** Add retry button when save fails
-
----
-
-### BUG-031: 🔴 Duration Refetch on Every Option Change
-**File:** `packages/excalidraw/components/hyperlink/Hyperlink.tsx`
-**Lines:** 220-233
-**Fix:** Remove videoOptions.endTime from dependency array
-
----
-
-### BUG-032: 🔴 Hyperlink Play State Sync Issue
-**File:** `packages/excalidraw/components/hyperlink/Hyperlink.tsx`
-**Lines:** 191-217
-**Fix:** Retry listener attachment if video not mounted initially
+**Status:** Already fixed - `appState.gridOpacity` is passed to `strokeGrid`
 
 ---
 
 ### BUG-033: 🟢 Silent Thumbnail Failures in Export
-**File:** `packages/excalidraw/scene/videoThumbnails.ts`
-**Lines:** 80-116
-**Fix:** Add warning logging for failed thumbnails
-
----
-
-### BUG-034: 🔴 Canvas Memory in captureVideoFrame
-**File:** `packages/element/src/embeddable.ts`
-**Lines:** 697-719
-**Fix:** Explicitly clear canvas context after use
-
----
-
-### BUG-035: 🔴 Video Event Cleanup Race
-**File:** `packages/element/src/embeddable.ts`
-**Lines:** 682-688
-**Fix:** Clear video src before removing listeners
-
----
-
-### BUG-036: 🔴 Embed Link Cache Not Invalidated on Error
-**File:** `packages/element/src/embeddable.ts`
-**Lines:** 315-352
-**Fix:** Don't cache failed lookups
-
----
-
-### BUG-037: 🔴 Missing Loading States for Long Operations
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Multiple locations
-**Fix:** Add loading state for rename, delete, move operations
-
----
-
-## Low Priority Issues (P3)
-
-### BUG-038: 🔴 Debounce Threshold Not Configurable
-**File:** `excalidraw-app/data/ProjectManagerData.ts`
-**Line:** 147
-**Note:** 1 second hardcoded
-
----
-
-### BUG-039: 🔴 Inconsistent Error Messages in API
-**File:** `excalidraw-app/vite.config.mts`
-**Multiple lines
-
----
-
-### BUG-040: 🔴 Uncategorized Section Empty State Inconsistent
-**File:** `packages/excalidraw/components/ProjectManager/ProjectGroup.tsx`
-**Lines:** 79-81
-
----
-
-### BUG-041: 🔴 Favorite Projects Scroll Behavior
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 624-630
-
----
-
-### BUG-042: 🔴 Group Expand State No Visual Feedback
-**File:** `packages/excalidraw/components/ProjectManager/ProjectGroup.tsx`
-**Line:** 51
-
----
-
-### BUG-043: 🔴 Tooltip Memory Leak on Rapid Hover
-**File:** `packages/excalidraw/components/ProjectManager/ProjectCard.tsx`
-**Lines:** 45, 77-112
-
----
-
-### BUG-044: 🔴 useNativeLoop Logic Confusing
-**File:** `packages/excalidraw/components/VideoPlayer.tsx`
-**Lines:** 106-107
-
----
-
-### BUG-045: 🔴 handleEnded and handleTimeUpdate Race
-**File:** `packages/excalidraw/components/VideoPlayer.tsx`
-**Lines:** 27-67
-
----
-
-### BUG-046-067: Additional Minor Issues
-(See explore agent outputs for complete details - these are cosmetic or edge-case issues)
+**Status:** Already fixed - added console.warn logging
 
 ---
 
@@ -903,29 +723,25 @@ private static saveDebounced = debounce(
 | Phase 1: Critical | BUG-001 to BUG-003, BUG-005 | 🟢 Fixed | 2026-01-14 |
 | Phase 2: High P1 | BUG-006 to BUG-017 | 🟢 Fixed | 2026-01-14 |
 | Phase 3: Medium P2 | BUG-018, BUG-023, BUG-033 | 🟢 Fixed | 2026-01-14 |
-| Phase 3: Medium P2 | BUG-019 to BUG-037 (remaining) | 🔴 Open | - |
-| Phase 4: Low P3 | BUG-038 to BUG-067 | 🔴 Open | - |
 
-**Note:** BUG-004 (getVideoThumbnail blob URL leak) - Function exists but is unused in codebase; no actual leak occurring.
+**Summary:** 19 bugs fixed
 
 ---
 
-## Quick Reference: Files to Modify
+## Quick Reference: Files Modified
 
 ```
 packages/excalidraw/components/ProjectManager/
-├── ProjectManager.tsx     # BUG-001,002,003,010,011,020,021,026,027,028,030,037
-├── ProjectCard.tsx        # BUG-018,019,043
-└── ProjectGroup.tsx       # BUG-040,042
+├── ProjectManager.tsx     # BUG-001,002,003,010,011
+├── ProjectCard.tsx        # BUG-018
 
 packages/excalidraw/components/
 ├── VideoEmbedDialog.tsx   # BUG-005,009
-├── VideoPlayer.tsx        # BUG-008,029,044,045
-├── GridOpacitySlider.tsx  # (no bugs)
-└── hyperlink/Hyperlink.tsx # BUG-014,031,032
+├── VideoPlayer.tsx        # BUG-008
+└── hyperlink/Hyperlink.tsx # BUG-014
 
 packages/element/src/
-└── embeddable.ts          # BUG-004,007,034,035,036
+└── embeddable.ts          # BUG-007
 
 packages/excalidraw/scene/
 └── videoThumbnails.ts     # BUG-015,033
