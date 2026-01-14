@@ -12,7 +12,20 @@ import { createHtmlPlugin } from "vite-plugin-html";
 import Sitemap from "vite-plugin-sitemap";
 import { woff2BrowserPlugin } from "../scripts/woff2/woff2-vite-plugins";
 
+// Sanitize a name for use as a folder name
+function sanitizeFolderName(name: string): string {
+  // Replace invalid characters with underscore
+  // Invalid on Windows: \ / : * ? " < > |
+  // Also replace leading/trailing spaces and dots
+  return name
+    .replace(/[\\/:*?"<>|]/g, "_")
+    .replace(/^[\s.]+|[\s.]+$/g, "")
+    .substring(0, 100) // Limit length
+    || "Untitled";
+}
+
 // Plugin to handle local project file management
+// Folder structure: projects/{CategoryName}/{ProjectTitle}/scene.excalidraw
 function projectFilePlugin(): Plugin {
   const publicDir = path.resolve(__dirname, "../public");
   const projectsDir = path.join(publicDir, "projects");
@@ -29,6 +42,49 @@ function projectFilePlugin(): Plugin {
         JSON.stringify({ projects: [], groups: [], currentProjectId: null }, null, 2),
       );
     }
+  };
+
+  // Get index data
+  const getIndex = () => {
+    ensureProjectsDir();
+    try {
+      const data = fs.readFileSync(indexPath, "utf-8");
+      return JSON.parse(data);
+    } catch {
+      return { projects: [], groups: [], currentProjectId: null };
+    }
+  };
+
+  // Get the folder path for a project based on its category and title
+  const getProjectPath = (projectId: string): string | null => {
+    const index = getIndex();
+    const project = index.projects.find((p: any) => p.id === projectId);
+    if (!project) return null;
+
+    const categoryName = project.groupId
+      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
+      : "Uncategorized";
+
+    const safeCategoryName = sanitizeFolderName(categoryName);
+    const safeProjectTitle = sanitizeFolderName(project.title);
+
+    return path.join(projectsDir, safeCategoryName, safeProjectTitle);
+  };
+
+  // Get the URL path for a project (for serving static files)
+  const getProjectUrlPath = (projectId: string): string | null => {
+    const index = getIndex();
+    const project = index.projects.find((p: any) => p.id === projectId);
+    if (!project) return null;
+
+    const categoryName = project.groupId
+      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
+      : "Uncategorized";
+
+    const safeCategoryName = sanitizeFolderName(categoryName);
+    const safeProjectTitle = sanitizeFolderName(project.title);
+
+    return `/projects/${safeCategoryName}/${safeProjectTitle}`;
   };
 
   return {
@@ -84,10 +140,10 @@ function projectFilePlugin(): Plugin {
         const sceneGetMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/scene$/);
         if (req.method === "GET" && sceneGetMatch) {
           const projectId = sceneGetMatch[1];
-          const scenePath = path.join(projectsDir, projectId, "scene.excalidraw");
+          const projectDir = getProjectPath(projectId);
 
-          if (fs.existsSync(scenePath)) {
-            const data = fs.readFileSync(scenePath, "utf-8");
+          if (projectDir && fs.existsSync(path.join(projectDir, "scene.excalidraw"))) {
+            const data = fs.readFileSync(path.join(projectDir, "scene.excalidraw"), "utf-8");
             res.setHeader("Content-Type", "application/json");
             res.end(data);
           } else {
@@ -101,7 +157,13 @@ function projectFilePlugin(): Plugin {
         const scenePostMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/scene$/);
         if (req.method === "POST" && scenePostMatch) {
           const projectId = scenePostMatch[1];
-          const projectDir = path.join(projectsDir, projectId);
+          const projectDir = getProjectPath(projectId);
+
+          if (!projectDir) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: "Project not found in index" }));
+            return;
+          }
 
           if (!fs.existsSync(projectDir)) {
             fs.mkdirSync(projectDir, { recursive: true });
@@ -124,7 +186,14 @@ function projectFilePlugin(): Plugin {
         const previewMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/preview$/);
         if (req.method === "POST" && previewMatch) {
           const projectId = previewMatch[1];
-          const projectDir = path.join(projectsDir, projectId);
+          const projectDir = getProjectPath(projectId);
+          const projectUrlPath = getProjectUrlPath(projectId);
+
+          if (!projectDir || !projectUrlPath) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: "Project not found in index" }));
+            return;
+          }
 
           if (!fs.existsSync(projectDir)) {
             fs.mkdirSync(projectDir, { recursive: true });
@@ -138,7 +207,7 @@ function projectFilePlugin(): Plugin {
             const buffer = Buffer.concat(chunks);
             fs.writeFileSync(previewPath, buffer);
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ url: `/projects/${projectId}/preview.png` }));
+            res.end(JSON.stringify({ url: `${projectUrlPath}/preview.png` }));
           });
           return;
         }
@@ -147,10 +216,15 @@ function projectFilePlugin(): Plugin {
         const deleteMatch = urlPath.match(/^\/api\/projects\/([^/]+)$/);
         if (req.method === "DELETE" && deleteMatch) {
           const projectId = deleteMatch[1];
-          const projectDir = path.join(projectsDir, projectId);
+          const projectDir = getProjectPath(projectId);
 
-          if (fs.existsSync(projectDir)) {
+          if (projectDir && fs.existsSync(projectDir)) {
             fs.rmSync(projectDir, { recursive: true, force: true });
+            // Clean up empty category folder
+            const categoryDir = path.dirname(projectDir);
+            if (fs.existsSync(categoryDir) && fs.readdirSync(categoryDir).length === 0) {
+              fs.rmdirSync(categoryDir);
+            }
           }
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ deleted: true }));
@@ -161,7 +235,13 @@ function projectFilePlugin(): Plugin {
         const openFolderMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/open-folder$/);
         if (req.method === "POST" && openFolderMatch) {
           const projectId = openFolderMatch[1];
-          const projectDir = path.join(projectsDir, projectId);
+          const projectDir = getProjectPath(projectId);
+
+          if (!projectDir) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: "Project not found" }));
+            return;
+          }
 
           // Create folder if it doesn't exist
           if (!fs.existsSync(projectDir)) {
@@ -196,6 +276,83 @@ function projectFilePlugin(): Plugin {
           return;
         }
 
+        // Move project folder (when renamed or category changed)
+        const moveMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/move$/);
+        if (req.method === "POST" && moveMatch) {
+          const projectId = moveMatch[1];
+          const chunks: Buffer[] = [];
+
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", () => {
+            try {
+              const { oldCategoryName, oldTitle, newCategoryName, newTitle } = JSON.parse(Buffer.concat(chunks).toString());
+
+              const safeOldCategory = sanitizeFolderName(oldCategoryName || "Uncategorized");
+              const safeOldTitle = sanitizeFolderName(oldTitle);
+              const safeNewCategory = sanitizeFolderName(newCategoryName || "Uncategorized");
+              const safeNewTitle = sanitizeFolderName(newTitle);
+
+              const oldPath = path.join(projectsDir, safeOldCategory, safeOldTitle);
+              const newPath = path.join(projectsDir, safeNewCategory, safeNewTitle);
+
+              if (oldPath !== newPath && fs.existsSync(oldPath)) {
+                // Ensure new category folder exists
+                const newCategoryDir = path.join(projectsDir, safeNewCategory);
+                if (!fs.existsSync(newCategoryDir)) {
+                  fs.mkdirSync(newCategoryDir, { recursive: true });
+                }
+
+                // Move the folder
+                fs.renameSync(oldPath, newPath);
+
+                // Clean up empty old category folder
+                const oldCategoryDir = path.join(projectsDir, safeOldCategory);
+                if (fs.existsSync(oldCategoryDir) && fs.readdirSync(oldCategoryDir).length === 0) {
+                  fs.rmdirSync(oldCategoryDir);
+                }
+              }
+
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+              console.error("Failed to move project:", err);
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: "Failed to move project" }));
+            }
+          });
+          return;
+        }
+
+        // Rename category folder
+        if (req.method === "POST" && urlPath === "/api/projects/rename-category") {
+          const chunks: Buffer[] = [];
+
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", () => {
+            try {
+              const { oldName, newName } = JSON.parse(Buffer.concat(chunks).toString());
+
+              const safeOldName = sanitizeFolderName(oldName);
+              const safeNewName = sanitizeFolderName(newName);
+
+              const oldPath = path.join(projectsDir, safeOldName);
+              const newPath = path.join(projectsDir, safeNewName);
+
+              if (oldPath !== newPath && fs.existsSync(oldPath)) {
+                fs.renameSync(oldPath, newPath);
+              }
+
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ success: true }));
+            } catch (err) {
+              console.error("Failed to rename category:", err);
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: "Failed to rename category" }));
+            }
+          });
+          return;
+        }
+
         next();
       });
     },
@@ -203,10 +360,53 @@ function projectFilePlugin(): Plugin {
 }
 
 // Plugin to handle local video file management
-// Videos are stored in public/projects/{projectId}/videos/
+// Videos are stored in public/projects/{CategoryName}/{ProjectTitle}/videos/
 function videoFilePlugin(): Plugin {
   const publicDir = path.resolve(__dirname, "../public");
   const projectsDir = path.join(publicDir, "projects");
+  const indexPath = path.join(projectsDir, "projects.json");
+
+  // Get index data
+  const getIndex = () => {
+    try {
+      const data = fs.readFileSync(indexPath, "utf-8");
+      return JSON.parse(data);
+    } catch {
+      return { projects: [], groups: [], currentProjectId: null };
+    }
+  };
+
+  // Get the folder path for a project based on its category and title
+  const getProjectPath = (projectId: string): string | null => {
+    const index = getIndex();
+    const project = index.projects.find((p: any) => p.id === projectId);
+    if (!project) return null;
+
+    const categoryName = project.groupId
+      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
+      : "Uncategorized";
+
+    const safeCategoryName = sanitizeFolderName(categoryName);
+    const safeProjectTitle = sanitizeFolderName(project.title);
+
+    return path.join(projectsDir, safeCategoryName, safeProjectTitle);
+  };
+
+  // Get the URL path for a project
+  const getProjectUrlPath = (projectId: string): string | null => {
+    const index = getIndex();
+    const project = index.projects.find((p: any) => p.id === projectId);
+    if (!project) return null;
+
+    const categoryName = project.groupId
+      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
+      : "Uncategorized";
+
+    const safeCategoryName = sanitizeFolderName(categoryName);
+    const safeProjectTitle = sanitizeFolderName(project.title);
+
+    return `/projects/${safeCategoryName}/${safeProjectTitle}`;
+  };
 
   return {
     name: "video-file-plugin",
@@ -230,8 +430,17 @@ function videoFilePlugin(): Plugin {
             return;
           }
 
+          const projectDir = getProjectPath(projectId);
+          const projectUrlPath = getProjectUrlPath(projectId);
+
+          if (!projectDir || !projectUrlPath) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: "Project not found" }));
+            return;
+          }
+
           // Store videos in project's videos subfolder
-          const videosDir = path.join(projectsDir, projectId, "videos");
+          const videosDir = path.join(projectDir, "videos");
           if (!fs.existsSync(videosDir)) {
             fs.mkdirSync(videosDir, { recursive: true });
           }
@@ -244,7 +453,7 @@ function videoFilePlugin(): Plugin {
             const buffer = Buffer.concat(chunks);
             fs.writeFileSync(filePath, buffer);
             // URL path reflects new storage location
-            const videoUrl = `/projects/${projectId}/videos/${filename}`;
+            const videoUrl = `${projectUrlPath}/videos/${filename}`;
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify({ url: videoUrl }));
           });
@@ -254,7 +463,7 @@ function videoFilePlugin(): Plugin {
         // Handle video deletion
         if (req.method === "DELETE" && req.url?.startsWith("/api/videos/")) {
           const urlPath = req.url.replace("/api/videos/", "");
-          // Support both old format (videos/projectId/file) and new format (projects/projectId/videos/file)
+          // Support both old format (videos/projectId/file) and new format (projects/category/project/videos/file)
           let filePath: string;
           if (urlPath.startsWith("projects/")) {
             filePath = path.join(publicDir, urlPath);
@@ -287,7 +496,15 @@ function videoFilePlugin(): Plugin {
             return;
           }
 
-          const videosDir = path.join(projectsDir, projectId, "videos");
+          const projectDir = getProjectPath(projectId);
+
+          if (!projectDir) {
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify({ files: [] }));
+            return;
+          }
+
+          const videosDir = path.join(projectDir, "videos");
 
           let files: string[] = [];
           if (fs.existsSync(videosDir)) {

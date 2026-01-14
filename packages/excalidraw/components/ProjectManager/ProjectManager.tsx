@@ -79,6 +79,33 @@ const api = {
   async deleteProject(projectId: string): Promise<void> {
     await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
   },
+
+  async moveProject(
+    projectId: string,
+    oldCategoryName: string | null,
+    oldTitle: string,
+    newCategoryName: string | null,
+    newTitle: string,
+  ): Promise<void> {
+    await fetch(`/api/projects/${projectId}/move`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        oldCategoryName: oldCategoryName || "Uncategorized",
+        oldTitle,
+        newCategoryName: newCategoryName || "Uncategorized",
+        newTitle,
+      }),
+    });
+  },
+
+  async renameCategory(oldName: string, newName: string): Promise<void> {
+    await fetch("/api/projects/rename-category", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ oldName, newName }),
+    });
+  },
 };
 
 // Generate a random project/group name
@@ -129,16 +156,33 @@ export const ProjectManager: React.FC = () => {
   const pendingSaveTriggerRef = useRef(0);
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
+  // Sanitize name for folder path (must match server-side sanitization)
+  const sanitizeFolderName = useCallback((name: string): string => {
+    return name
+      .replace(/[<>:"/\\|?*]/g, "_")
+      .replace(/\s+/g, " ")
+      .trim() || "Untitled";
+  }, []);
+
   // Get preview URL for a project
   const getPreviewUrl = useCallback(
     (projectId: string): string | null => {
       if (previewCache[projectId]) {
         return previewCache[projectId];
       }
-      // Return the static URL path - browser will cache it
-      return `/projects/${projectId}/preview.png`;
+      // Build path based on category/title structure
+      const project = index.projects.find((p) => p.id === projectId);
+      if (!project) {
+        return null;
+      }
+      const category = project.groupId
+        ? index.groups.find((g) => g.id === project.groupId)?.name || "Uncategorized"
+        : "Uncategorized";
+      const categoryFolder = sanitizeFolderName(category);
+      const projectFolder = sanitizeFolderName(project.title);
+      return `/projects/${categoryFolder}/${projectFolder}/preview.png`;
     },
-    [previewCache],
+    [previewCache, index.projects, index.groups, sanitizeFolderName],
   );
 
   // Generate preview for current scene using the static canvas
@@ -308,9 +352,28 @@ export const ProjectManager: React.FC = () => {
     setModalName("");
   }, []);
 
+  // Helper to get category name by group ID
+  const getCategoryName = useCallback(
+    (groupId: string | null): string | null => {
+      if (!groupId) return null;
+      return index.groups.find((g) => g.id === groupId)?.name || null;
+    },
+    [index.groups],
+  );
+
   // Actually rename the project (called from modal confirm)
   const doRenameProject = useCallback(
     async (projectId: string, newTitle: string) => {
+      const project = index.projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const oldTitle = project.title;
+      const categoryName = getCategoryName(project.groupId);
+
+      // Move folder first (rename)
+      await api.moveProject(projectId, categoryName, oldTitle, categoryName, newTitle);
+
+      // Then update index
       const newIndex: ProjectsIndex = {
         ...index,
         projects: index.projects.map((p) =>
@@ -320,7 +383,7 @@ export const ProjectManager: React.FC = () => {
       setIndex(newIndex);
       await api.saveIndex(newIndex);
     },
-    [index],
+    [index, getCategoryName],
   );
 
   // Confirm create from modal
@@ -339,9 +402,7 @@ export const ProjectManager: React.FC = () => {
         updatedAt: Date.now(),
       };
 
-      // Save current scene to the new project
-      await saveCurrentProject(projectId, true);
-
+      // Save index FIRST so the API knows the project's path (title/category)
       const newIndex: ProjectsIndex = {
         ...index,
         projects: [...index.projects, newProject],
@@ -350,6 +411,9 @@ export const ProjectManager: React.FC = () => {
 
       setIndex(newIndex);
       await api.saveIndex(newIndex);
+
+      // Now save scene and preview (API can now look up the project path)
+      await saveCurrentProject(projectId, true);
     } else if (modalType === "project") {
       // Create new blank project
       // First, save current project if there is one
@@ -619,17 +683,27 @@ export const ProjectManager: React.FC = () => {
 
   // Move project to group
   const handleMoveToGroup = useCallback(
-    async (projectId: string, groupId: string | null) => {
+    async (projectId: string, newGroupId: string | null) => {
+      const project = index.projects.find((p) => p.id === projectId);
+      if (!project) return;
+
+      const oldCategoryName = getCategoryName(project.groupId);
+      const newCategoryName = getCategoryName(newGroupId);
+
+      // Move folder to new category
+      await api.moveProject(projectId, oldCategoryName, project.title, newCategoryName, project.title);
+
+      // Then update index
       const newIndex: ProjectsIndex = {
         ...index,
         projects: index.projects.map((p) =>
-          p.id === projectId ? { ...p, groupId, updatedAt: Date.now() } : p,
+          p.id === projectId ? { ...p, groupId: newGroupId, updatedAt: Date.now() } : p,
         ),
       };
       setIndex(newIndex);
       await api.saveIndex(newIndex);
     },
-    [index],
+    [index, getCategoryName],
   );
 
   // Toggle group expanded state
@@ -650,6 +724,15 @@ export const ProjectManager: React.FC = () => {
   // Rename group
   const handleRenameGroup = useCallback(
     async (groupId: string, newName: string) => {
+      const group = index.groups.find((g) => g.id === groupId);
+      if (!group) return;
+
+      const oldName = group.name;
+
+      // Rename folder first
+      await api.renameCategory(oldName, newName);
+
+      // Then update index
       const newIndex: ProjectsIndex = {
         ...index,
         groups: index.groups.map((g) =>
@@ -665,6 +748,18 @@ export const ProjectManager: React.FC = () => {
   // Delete group (move projects to ungrouped)
   const handleDeleteGroup = useCallback(
     async (groupId: string) => {
+      const group = index.groups.find((g) => g.id === groupId);
+      if (!group) return;
+
+      const categoryName = group.name;
+
+      // Move all projects in this group to Uncategorized
+      const projectsInGroup = index.projects.filter((p) => p.groupId === groupId);
+      for (const project of projectsInGroup) {
+        await api.moveProject(project.id, categoryName, project.title, null, project.title);
+      }
+
+      // Then update index
       const newIndex: ProjectsIndex = {
         ...index,
         groups: index.groups.filter((g) => g.id !== groupId),
