@@ -5,6 +5,8 @@ import { CaptureUpdateAction } from "@excalidraw/element";
 
 import { t } from "../../i18n";
 import { useApp } from "../App";
+import { Dialog } from "../Dialog";
+import { FilledButton } from "../FilledButton";
 
 import { ProjectGroup } from "./ProjectGroup";
 import type { Project, ProjectGroup as ProjectGroupType, ProjectsIndex } from "./types";
@@ -73,12 +75,31 @@ const api = {
   },
 };
 
+// Generate a random project/group name
+const generateRandomName = (prefix: string): string => {
+  const adjectives = ["Swift", "Bright", "Cool", "Fresh", "Bold", "Calm", "Wild", "Neat", "Soft", "Sharp"];
+  const nouns = ["Canvas", "Sketch", "Draft", "Design", "Board", "Space", "Flow", "Wave", "Spark", "Frame"];
+  const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  return `${prefix} ${adj} ${noun}`;
+};
+
+// Modal types
+type ModalType = "project" | "group" | null;
+
 export const ProjectManager: React.FC = () => {
   const app = useApp();
   const [index, setIndex] = useState<ProjectsIndex>(DEFAULT_PROJECTS_INDEX);
   const [cardSize, setCardSize] = useState(DEFAULT_CARD_SIZE);
   const [isLoading, setIsLoading] = useState(true);
   const [previewCache, setPreviewCache] = useState<Record<string, string>>({});
+
+  // Modal state
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [modalName, setModalName] = useState("");
+
+  // Check if current canvas has unsaved content (not in project manager)
+  const hasUnsavedCanvas = index.currentProjectId === null && app.scene.getNonDeletedElements().length > 0;
 
   // Load projects on mount
   useEffect(() => {
@@ -101,6 +122,7 @@ export const ProjectManager: React.FC = () => {
   );
 
   // Generate preview for current scene using the static canvas
+  // Note: This captures the canvas only, not embeds/iframes (cross-origin limitation)
   const generatePreview = useCallback(async (): Promise<Blob | null> => {
     try {
       const elements = app.scene.getNonDeletedElements();
@@ -138,8 +160,8 @@ export const ProjectManager: React.FC = () => {
     }
   }, [app]);
 
-  // Save current project
-  const saveCurrentProject = useCallback(
+  // Save current project (data only, no preview update)
+  const saveProjectData = useCallback(
     async (projectId: string) => {
       const elements = app.scene.getElementsIncludingDeleted();
       const appState = app.state;
@@ -160,37 +182,51 @@ export const ProjectManager: React.FC = () => {
       };
 
       await api.saveScene(projectId, sceneData);
-
-      // Generate and save preview
-      const previewBlob = await generatePreview();
-      if (previewBlob) {
-        const previewUrl = await api.savePreview(projectId, previewBlob);
-        setPreviewCache((prev) => ({
-          ...prev,
-          [projectId]: previewUrl + "?t=" + Date.now(),
-        }));
-      }
     },
-    [app, generatePreview],
+    [app],
   );
 
-  // Create new project with blank canvas
-  const handleNewProject = useCallback(async () => {
-    // First, save current project if there is one
-    if (index.currentProjectId) {
-      await saveCurrentProject(index.currentProjectId);
-    }
+  // Save current project with optional preview update
+  const saveCurrentProject = useCallback(
+    async (projectId: string, updatePreview: boolean = true) => {
+      await saveProjectData(projectId);
 
+      // Only generate preview when explicitly requested
+      if (updatePreview) {
+        const previewBlob = await generatePreview();
+        if (previewBlob) {
+          const previewUrl = await api.savePreview(projectId, previewBlob);
+          setPreviewCache((prev) => ({
+            ...prev,
+            [projectId]: previewUrl + "?t=" + Date.now(),
+          }));
+        }
+      }
+    },
+    [saveProjectData, generatePreview],
+  );
+
+  // Open modal to create new project
+  const handleNewProjectClick = useCallback(() => {
+    setModalName(generateRandomName(""));
+    setModalType("project");
+  }, []);
+
+  // Save current canvas as a new project (keeps existing content)
+  const handleSaveCurrentAsProject = useCallback(async () => {
+    const name = app.state.name || generateRandomName("");
     const projectId = nanoid(10);
-    const title = `Project ${index.projects.length + 1}`;
 
     const newProject: Project = {
       id: projectId,
-      title,
+      title: name,
       groupId: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
+
+    // Save current scene to the new project
+    await saveCurrentProject(projectId, true);
 
     const newIndex: ProjectsIndex = {
       ...index,
@@ -198,52 +234,105 @@ export const ProjectManager: React.FC = () => {
       currentProjectId: projectId,
     };
 
-    // Clear the canvas to start fresh
-    app.syncActionResult({
-      elements: [],
-      appState: {
-        name: title,
-        viewBackgroundColor: app.state.viewBackgroundColor,
-      },
-      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-    });
-
-    // Save the blank project
-    await api.saveScene(projectId, {
-      type: "excalidraw",
-      version: 2,
-      elements: [],
-      appState: {
-        viewBackgroundColor: app.state.viewBackgroundColor,
-        name: title,
-      },
-      files: {},
-    });
-
     setIndex(newIndex);
     await api.saveIndex(newIndex);
-  }, [app, index, saveCurrentProject]);
+  }, [app.state.name, index, saveCurrentProject]);
 
-  // Create new group
-  const handleNewGroup = useCallback(async () => {
-    const groupId = nanoid(10);
-    const name = `Group ${index.groups.length + 1}`;
+  // Open modal to create new group
+  const handleNewGroupClick = useCallback(() => {
+    setModalName(generateRandomName(""));
+    setModalType("group");
+  }, []);
 
-    const newGroup: ProjectGroupType = {
-      id: groupId,
-      name,
-      order: index.groups.length,
-      expanded: true,
-    };
+  // Close modal
+  const handleModalClose = useCallback(() => {
+    setModalType(null);
+    setModalName("");
+  }, []);
 
-    const newIndex: ProjectsIndex = {
-      ...index,
-      groups: [...index.groups, newGroup],
-    };
+  // Confirm create from modal
+  const handleModalConfirm = useCallback(async () => {
+    const name = modalName.trim() || (modalType === "project" ? "Untitled Project" : "Untitled Group");
 
-    setIndex(newIndex);
-    await api.saveIndex(newIndex);
-  }, [index]);
+    if (modalType === "project") {
+      // First, save current project if there is one
+      if (index.currentProjectId) {
+        await saveCurrentProject(index.currentProjectId);
+      }
+
+      const projectId = nanoid(10);
+
+      const newProject: Project = {
+        id: projectId,
+        title: name,
+        groupId: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      const newIndex: ProjectsIndex = {
+        ...index,
+        projects: [...index.projects, newProject],
+        currentProjectId: projectId,
+      };
+
+      // Clear the canvas to start fresh
+      app.syncActionResult({
+        elements: [],
+        appState: {
+          name,
+          viewBackgroundColor: app.state.viewBackgroundColor,
+        },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+
+      // Save the blank project
+      await api.saveScene(projectId, {
+        type: "excalidraw",
+        version: 2,
+        elements: [],
+        appState: {
+          viewBackgroundColor: app.state.viewBackgroundColor,
+          name,
+        },
+        files: {},
+      });
+
+      setIndex(newIndex);
+      await api.saveIndex(newIndex);
+    } else if (modalType === "group") {
+      const groupId = nanoid(10);
+
+      const newGroup: ProjectGroupType = {
+        id: groupId,
+        name,
+        order: index.groups.length,
+        expanded: true,
+      };
+
+      const newIndex: ProjectsIndex = {
+        ...index,
+        groups: [...index.groups, newGroup],
+      };
+
+      setIndex(newIndex);
+      await api.saveIndex(newIndex);
+    }
+
+    handleModalClose();
+  }, [app, index, modalName, modalType, saveCurrentProject, handleModalClose]);
+
+  // Handle modal key press
+  const handleModalKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        handleModalConfirm();
+      } else if (e.key === "Escape") {
+        handleModalClose();
+      }
+    },
+    [handleModalConfirm, handleModalClose],
+  );
 
   // Select/switch to a project
   const handleSelectProject = useCallback(
@@ -298,9 +387,9 @@ export const ProjectManager: React.FC = () => {
   // Open project in new tab
   const handleOpenInNewTab = useCallback(
     async (projectId: string) => {
-      // Save current project first
+      // Save current project data (no preview update needed)
       if (index.currentProjectId) {
-        await saveCurrentProject(index.currentProjectId);
+        await saveCurrentProject(index.currentProjectId, false);
       }
 
       // Open in new tab with project ID in hash
@@ -308,6 +397,17 @@ export const ProjectManager: React.FC = () => {
     },
     [index.currentProjectId, saveCurrentProject],
   );
+
+  // Open file location in system file explorer
+  const handleOpenFileLocation = useCallback(async (projectId: string) => {
+    try {
+      await fetch(`/api/projects/${projectId}/open-folder`, {
+        method: "POST",
+      });
+    } catch (err) {
+      console.error("Failed to open file location:", err);
+    }
+  }, []);
 
   // Rename project
   const handleRenameProject = useCallback(
@@ -447,14 +547,64 @@ export const ProjectManager: React.FC = () => {
         </div>
       </div>
 
+      {hasUnsavedCanvas && (
+        <div className="ProjectManager__unsavedBanner">
+          <span>Current canvas is not saved to a project</span>
+          <button onClick={handleSaveCurrentAsProject}>
+            Save as project
+          </button>
+        </div>
+      )}
+
       <div className="ProjectManager__actions">
-        <button className="ProjectManager__actionBtn" onClick={handleNewProject}>
+        <button className="ProjectManager__actionBtn" onClick={handleNewProjectClick}>
           + {t("projectManager.newProject")}
         </button>
-        <button className="ProjectManager__actionBtn" onClick={handleNewGroup}>
+        <button className="ProjectManager__actionBtn" onClick={handleNewGroupClick}>
           + {t("projectManager.newGroup")}
         </button>
       </div>
+
+      {/* Create Modal */}
+      {modalType && (
+        <Dialog
+          onCloseRequest={handleModalClose}
+          title={modalType === "project" ? t("projectManager.newProject") : t("projectManager.newGroup")}
+          size="small"
+        >
+          <div className="ProjectManager__dialog">
+            <div className="ProjectManager__dialog__inputGroup">
+              <label htmlFor="project-name-input" className="ProjectManager__dialog__label">
+                Name
+              </label>
+              <input
+                id="project-name-input"
+                type="text"
+                className="ProjectManager__dialog__input"
+                value={modalName}
+                onChange={(e) => setModalName(e.target.value)}
+                onKeyDown={handleModalKeyDown}
+                placeholder={modalType === "project" ? "Enter project name" : "Enter group name"}
+                autoFocus
+              />
+            </div>
+            <div className="ProjectManager__dialog__actions">
+              <FilledButton
+                variant="outlined"
+                color="primary"
+                label="Cancel"
+                onClick={handleModalClose}
+              />
+              <FilledButton
+                variant="filled"
+                color="primary"
+                label="Create"
+                onClick={handleModalConfirm}
+              />
+            </div>
+          </div>
+        </Dialog>
+      )}
 
       <div className="ProjectManager__content">
         {/* Render groups */}
@@ -476,6 +626,7 @@ export const ProjectManager: React.FC = () => {
                 onDeleteGroup={handleDeleteGroup}
                 onSelectProject={handleSelectProject}
                 onOpenInNewTab={handleOpenInNewTab}
+                onOpenFileLocation={handleOpenFileLocation}
                 onRenameProject={handleRenameProject}
                 onDeleteProject={handleDeleteProject}
                 onMoveToGroup={handleMoveToGroup}
@@ -496,6 +647,7 @@ export const ProjectManager: React.FC = () => {
           onDeleteGroup={handleDeleteGroup}
           onSelectProject={handleSelectProject}
           onOpenInNewTab={handleOpenInNewTab}
+          onOpenFileLocation={handleOpenFileLocation}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onMoveToGroup={handleMoveToGroup}
@@ -506,7 +658,7 @@ export const ProjectManager: React.FC = () => {
         {index.projects.length === 0 && (
           <div className="ProjectManager__empty">
             <p>{t("projectManager.empty")}</p>
-            <button onClick={handleNewProject}>
+            <button onClick={handleNewProjectClick}>
               {t("projectManager.createFirst")}
             </button>
           </div>

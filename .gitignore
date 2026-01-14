@@ -29,3 +29,4 @@ meta*.json
 .claude
 CLAUDE.md
 public/videos/
+public/projects/

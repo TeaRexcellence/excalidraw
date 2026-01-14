@@ -12,6 +12,7 @@ interface ProjectGroupProps {
   onDeleteGroup: (groupId: string) => void;
   onSelectProject: (projectId: string) => void;
   onOpenInNewTab: (projectId: string) => void;
+  onOpenFileLocation: (projectId: string) => void;
   onRenameProject: (projectId: string, newTitle: string) => void;
   onDeleteProject: (projectId: string) => void;
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
@@ -29,6 +30,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   onDeleteGroup,
   onSelectProject,
   onOpenInNewTab,
+  onOpenFileLocation,
   onRenameProject,
   onDeleteProject,
   onMoveToGroup,
@@ -139,6 +141,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               size={cardSize}
               onSelect={onSelectProject}
               onOpenInNewTab={onOpenInNewTab}
+              onOpenFileLocation={onOpenFileLocation}
               onRename={onRenameProject}
               onDelete={onDeleteProject}
               onMoveToGroup={onMoveToGroup}

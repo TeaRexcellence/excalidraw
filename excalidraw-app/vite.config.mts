@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs";
+import { exec } from "child_process";
 import { defineConfig, loadEnv } from "vite";
 import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
@@ -36,17 +37,38 @@ function projectFilePlugin(): Plugin {
       ensureProjectsDir();
 
       server.middlewares.use(async (req, res, next) => {
+        // Strip query string for matching
+        const urlPath = req.url?.split("?")[0] || "";
+
+        // Debug: log API requests
+        if (urlPath.startsWith("/api/projects")) {
+          console.log(`[project-api] ${req.method} ${urlPath}`);
+        }
+
         // Get projects index
-        if (req.method === "GET" && req.url === "/api/projects/list") {
+        if (req.method === "GET" && urlPath === "/api/projects/list") {
           ensureProjectsDir();
-          const data = fs.readFileSync(indexPath, "utf-8");
-          res.setHeader("Content-Type", "application/json");
-          res.end(data);
+          try {
+            const data = fs.readFileSync(indexPath, "utf-8");
+            // Validate JSON and ensure it has required structure
+            const parsed = JSON.parse(data);
+            if (!parsed || !Array.isArray(parsed.projects) || !Array.isArray(parsed.groups)) {
+              throw new Error("Invalid projects index structure");
+            }
+            res.setHeader("Content-Type", "application/json");
+            res.end(data);
+          } catch {
+            // File is empty, corrupted, or invalid - return default and fix the file
+            const defaultIndex = { projects: [], groups: [], currentProjectId: null };
+            fs.writeFileSync(indexPath, JSON.stringify(defaultIndex, null, 2));
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify(defaultIndex));
+          }
           return;
         }
 
         // Save projects index
-        if (req.method === "POST" && req.url === "/api/projects/save") {
+        if (req.method === "POST" && urlPath === "/api/projects/save") {
           const chunks: Buffer[] = [];
           req.on("data", (chunk) => chunks.push(chunk));
           req.on("end", () => {
@@ -59,7 +81,7 @@ function projectFilePlugin(): Plugin {
         }
 
         // Get project scene data
-        const sceneGetMatch = req.url?.match(/^\/api\/projects\/([^/]+)\/scene$/);
+        const sceneGetMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/scene$/);
         if (req.method === "GET" && sceneGetMatch) {
           const projectId = sceneGetMatch[1];
           const scenePath = path.join(projectsDir, projectId, "scene.excalidraw");
@@ -76,7 +98,7 @@ function projectFilePlugin(): Plugin {
         }
 
         // Save project scene data
-        const scenePostMatch = req.url?.match(/^\/api\/projects\/([^/]+)\/scene$/);
+        const scenePostMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/scene$/);
         if (req.method === "POST" && scenePostMatch) {
           const projectId = scenePostMatch[1];
           const projectDir = path.join(projectsDir, projectId);
@@ -99,7 +121,7 @@ function projectFilePlugin(): Plugin {
         }
 
         // Save project preview image
-        const previewMatch = req.url?.match(/^\/api\/projects\/([^/]+)\/preview$/);
+        const previewMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/preview$/);
         if (req.method === "POST" && previewMatch) {
           const projectId = previewMatch[1];
           const projectDir = path.join(projectsDir, projectId);
@@ -122,7 +144,7 @@ function projectFilePlugin(): Plugin {
         }
 
         // Delete project
-        const deleteMatch = req.url?.match(/^\/api\/projects\/([^/]+)$/);
+        const deleteMatch = urlPath.match(/^\/api\/projects\/([^/]+)$/);
         if (req.method === "DELETE" && deleteMatch) {
           const projectId = deleteMatch[1];
           const projectDir = path.join(projectsDir, projectId);
@@ -132,6 +154,45 @@ function projectFilePlugin(): Plugin {
           }
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ deleted: true }));
+          return;
+        }
+
+        // Open project folder in file explorer
+        const openFolderMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/open-folder$/);
+        if (req.method === "POST" && openFolderMatch) {
+          const projectId = openFolderMatch[1];
+          const projectDir = path.join(projectsDir, projectId);
+
+          // Create folder if it doesn't exist
+          if (!fs.existsSync(projectDir)) {
+            fs.mkdirSync(projectDir, { recursive: true });
+          }
+
+          // Open folder based on platform
+          const platform = process.platform;
+
+          let command: string;
+          if (platform === "win32") {
+            // Use path.resolve to get proper Windows path with backslashes
+            const winPath = path.resolve(projectDir);
+            command = `explorer "${winPath}"`;
+          } else if (platform === "darwin") {
+            command = `open "${projectDir}"`;
+          } else {
+            command = `xdg-open "${projectDir}"`;
+          }
+
+          exec(command, (err: Error | null) => {
+            if (err) {
+              console.error("Failed to open folder:", err);
+              res.statusCode = 500;
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ error: "Failed to open folder" }));
+            } else {
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ opened: true }));
+            }
+          });
           return;
         }
 

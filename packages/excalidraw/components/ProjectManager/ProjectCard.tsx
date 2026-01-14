@@ -8,6 +8,7 @@ interface ProjectCardProps {
   size: number;
   onSelect: (projectId: string) => void;
   onOpenInNewTab: (projectId: string) => void;
+  onOpenFileLocation: (projectId: string) => void;
   onRename: (projectId: string, newTitle: string) => void;
   onDelete: (projectId: string) => void;
   onMoveToGroup: (projectId: string, groupId: string | null) => void;
@@ -21,6 +22,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   size,
   onSelect,
   onOpenInNewTab,
+  onOpenFileLocation,
   onRename,
   onDelete,
   onMoveToGroup,
@@ -96,12 +98,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               src={previewUrl}
               alt={project.title}
               draggable={false}
+              onError={(e) => {
+                // Hide broken image, show placeholder instead
+                e.currentTarget.style.display = "none";
+                e.currentTarget.nextElementSibling?.classList.remove("ProjectCard__placeholder--hidden");
+              }}
             />
-          ) : (
-            <div className="ProjectCard__placeholder">
-              <span>No preview</span>
-            </div>
-          )}
+          ) : null}
+          <div className={`ProjectCard__placeholder ${previewUrl ? "ProjectCard__placeholder--hidden" : ""}`}>
+            <span>No preview</span>
+          </div>
         </div>
         <div className="ProjectCard__title">
           {isEditing ? (
@@ -146,6 +152,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             }}
           >
             Rename
+          </button>
+          <button
+            onClick={() => {
+              onOpenFileLocation(project.id);
+              closeContextMenu();
+            }}
+          >
+            Open file location
           </button>
           <div className="ProjectCard__contextMenu__divider" />
           <div className="ProjectCard__contextMenu__submenu">
