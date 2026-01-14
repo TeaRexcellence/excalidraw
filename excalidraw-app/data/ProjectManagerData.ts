@@ -21,6 +21,9 @@ export type { Project, ProjectGroup, ProjectsIndex };
 // Atom to trigger save modal from outside ProjectManager component
 export const triggerSaveProjectAtom = atom(0);
 
+// Atom to trigger project list refresh from outside ProjectManager component
+export const triggerRefreshProjectsAtom = atom(0);
+
 const DEFAULT_INDEX: ProjectsIndex = DEFAULT_PROJECTS_INDEX;
 
 // API helpers

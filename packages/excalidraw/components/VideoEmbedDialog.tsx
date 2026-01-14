@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useSetAtom } from "jotai";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
@@ -8,6 +9,7 @@ import { isDirectVideoUrl } from "@excalidraw/element/embeddable";
 import { Dialog } from "./Dialog";
 import { FilledButton } from "./FilledButton";
 import { useApp } from "./App";
+import { triggerRefreshProjectsAtom } from "../../../excalidraw-app/data/ProjectManagerData";
 
 import "./VideoEmbedDialog.scss";
 
@@ -213,6 +215,7 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
   onClose,
 }) => {
   const app = useApp();
+  const triggerRefresh = useSetAtom(triggerRefreshProjectsAtom);
   const [dialogState, setDialogState] = useState<DialogState>("checking");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -361,6 +364,9 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
 
+      // Trigger project list refresh so the new project appears in sidebar
+      triggerRefresh((n) => n + 1);
+
       setDialogState("video-dialog");
     } catch (err) {
       console.error("[Video] Failed to save project:", err);
@@ -368,7 +374,7 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [app, projectName]);
+  }, [app, projectName, triggerRefresh]);
 
   const handleProjectNameKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

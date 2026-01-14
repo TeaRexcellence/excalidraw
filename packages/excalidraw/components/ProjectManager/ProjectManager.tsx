@@ -10,7 +10,7 @@ import { exportToCanvas } from "../../scene/export";
 import { Dialog } from "../Dialog";
 import { FilledButton } from "../FilledButton";
 import { DotsIcon } from "../icons";
-import { triggerSaveProjectAtom, ProjectManagerData } from "../../../../excalidraw-app/data/ProjectManagerData";
+import { triggerSaveProjectAtom, triggerRefreshProjectsAtom, ProjectManagerData } from "../../../../excalidraw-app/data/ProjectManagerData";
 
 import { ProjectCard } from "./ProjectCard";
 import { ProjectGroup } from "./ProjectGroup";
@@ -228,6 +228,9 @@ export const ProjectManager: React.FC = () => {
   // Listen for external save trigger (from main menu)
   const saveTrigger = useAtomValue(triggerSaveProjectAtom);
 
+  // Listen for external refresh trigger (from VideoEmbedDialog after creating project)
+  const refreshTrigger = useAtomValue(triggerRefreshProjectsAtom);
+
   // Check if current canvas has unsaved content (not in project manager)
   const hasUnsavedCanvas = index.currentProjectId === null && app.scene.getNonDeletedElements().length > 0;
 
@@ -238,6 +241,15 @@ export const ProjectManager: React.FC = () => {
       setIsLoading(false);
     });
   }, []);
+
+  // Refresh project list when triggered externally
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      api.getIndex().then((data) => {
+        setIndex(data);
+      });
+    }
+  }, [refreshTrigger]);
 
   // Keep ProjectManagerData cache in sync with local index
   // This prevents divergence between auto-save and manual operations
