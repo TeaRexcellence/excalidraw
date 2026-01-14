@@ -10,17 +10,17 @@ This document provides comprehensive documentation for all custom features added
 2. [Video Player Support](#2-video-player-support)
 3. [Video Controls Panel](#3-video-controls-panel)
 4. [Local Project Manager](#4-local-project-manager)
-5. [Grid Opacity Control](#5-grid-opacity-control)
-6. [UI Debloat](#6-ui-debloat)
-7. [Video Thumbnail Export](#7-video-thumbnail-export)
-8. [Main Menu](#8-main-menu)
-9. [File Structure](#9-file-structure)
-10. [API Reference](#10-api-reference)
-11. [State Management](#11-state-management)
-12. [Code Patterns & Gotchas](#12-code-patterns--gotchas)
-13. [Internationalization](#13-internationalization)
-14. [Development](#14-development)
-15. [Related Documentation](#15-related-documentation)
+5. [Project Export/Import](#5-project-exportimport)
+6. [Grid Opacity Control](#6-grid-opacity-control)
+7. [UI Debloat](#7-ui-debloat)
+8. [Video Thumbnail Export](#8-video-thumbnail-export)
+9. [Main Menu](#9-main-menu)
+10. [File Structure](#10-file-structure)
+11. [API Reference](#11-api-reference)
+12. [State Management](#12-state-management)
+13. [Code Patterns & Gotchas](#13-code-patterns--gotchas)
+14. [Internationalization](#14-internationalization)
+15. [Development](#15-development)
 
 ---
 
@@ -277,7 +277,60 @@ The `ProjectManagerData` class provides:
 
 ---
 
-## 5. Grid Opacity Control
+## 5. Project Export/Import
+
+### Overview
+
+Projects can be exported as zip files and imported back, allowing for backup, sharing, and migration between installations.
+
+### Settings Menu
+
+Access export/import via the **⋮** (dots) button in the Project Manager header:
+
+| Option | Description |
+|--------|-------------|
+| **Export Project** | Downloads the current project as a zip file |
+| **Import Project** | Opens modal to import a project from zip |
+| **Reset Project Manager** | Deletes ALL projects (requires typing CONFIRM) |
+
+### Export
+
+Exports the current project folder as a zip file containing:
+
+```
+MyProject.zip
+├── scene.excalidraw     # Canvas data (required)
+├── preview.png          # Project thumbnail
+└── videos/              # Any uploaded videos
+    ├── video1.mp4
+    └── video2.webm
+```
+
+- Only enabled when a project is currently open
+- Downloads directly to your browser's download folder
+- Filename matches project name
+
+### Import
+
+1. Click "Import Project" in settings dropdown
+2. Select a `.zip` file exported from this system
+3. Project is validated (must contain `scene.excalidraw`)
+4. Imported to `Uncategorized` folder
+5. Duplicate names get `(1)`, `(2)` suffix automatically
+
+### Reset Project Manager
+
+**Danger zone** - Permanently deletes all projects:
+
+1. Click "Reset Project Manager" (red text)
+2. Modal shows the projects directory path
+3. Type `CONFIRM` exactly to enable delete button
+4. All project folders are deleted, index is reset
+5. Canvas is cleared
+
+---
+
+## 6. Grid Opacity Control
 
 ### Overview
 Adjustable grid opacity (10% - 100%) accessible from the canvas context menu.
@@ -302,7 +355,7 @@ gridOpacity: 100  // 10-100, default 100
 
 ---
 
-## 6. UI Debloat
+## 7. UI Debloat
 
 ### Overview
 Removed unnecessary UI elements and simplified the interface for a cleaner experience.
@@ -327,7 +380,7 @@ Removed unnecessary UI elements and simplified the interface for a cleaner exper
 
 ---
 
-## 7. Video Thumbnail Export
+## 8. Video Thumbnail Export
 
 ### Overview
 Videos now display their thumbnails in PNG/SVG exports instead of black boxes or placeholder text.
@@ -381,7 +434,7 @@ prefetchVideoThumbnailsAsDataUrls(elements): Promise<Map<string, string>>
 
 ---
 
-## 8. Main Menu
+## 9. Main Menu
 
 **Location:** `excalidraw-app/components/AppMainMenu.tsx`
 
@@ -403,7 +456,7 @@ These two options are different:
 
 ---
 
-## 9. File Structure
+## 10. File Structure
 
 ### Project Storage Layout
 
@@ -454,7 +507,7 @@ public/projects/
 
 ---
 
-## 10. API Reference
+## 11. API Reference
 
 ### Server-Side APIs
 
@@ -473,6 +526,10 @@ The Vite development server provides these APIs (defined in `excalidraw-app/vite
 | `/api/projects/{id}/open-folder` | POST | Open project folder in file explorer |
 | `/api/projects/{id}/move` | POST | Move/rename project folder |
 | `/api/projects/rename-category` | POST | Rename category folder |
+| `/api/projects/{id}/export` | POST | Export project as zip (returns zip file) |
+| `/api/projects/import` | POST | Import project from zip file |
+| `/api/projects/path` | GET | Get projects directory path |
+| `/api/projects/reset` | POST | Delete all projects and reset index |
 
 #### Video APIs
 
@@ -505,7 +562,7 @@ ProjectManagerData.setCurrentProjectId(id): Promise<void>
 
 ---
 
-## 11. State Management
+## 12. State Management
 
 ### Key State Locations
 
@@ -535,7 +592,7 @@ useEffect(() => {
 
 ---
 
-## 12. Code Patterns & Gotchas
+## 13. Code Patterns & Gotchas
 
 ### Stale Closure Prevention
 
@@ -612,7 +669,7 @@ await saveCurrentProject();
 
 ---
 
-## 13. Internationalization
+## 14. Internationalization
 
 ### Overview
 
@@ -675,7 +732,7 @@ The fork adds new translation keys for video and project manager features. All s
 
 ---
 
-## 14. Development
+## 15. Development
 
 ### Commands
 
@@ -728,17 +785,13 @@ const nouns = ["Canvas", "Sketch", "Draft", "Design", "Board", "Space", "Flow", 
 
 ---
 
-## 15. Related Documentation
-
-- **[BUG_TRACKER.md](./BUG_TRACKER.md)** - Comprehensive bug tracking with 19+ identified and fixed issues
-- **[CLAUDE.md](./CLAUDE.md)** - Development workflow and codebase structure guide
-
----
-
 ## Commit History
 
 | Commit | Description |
 |--------|-------------|
+| `6e48ab51` | Add Reset Project Manager option with confirmation |
+| `56c95c97` | Add project export/import & fix sanitization mismatch |
+| `f470e022` | Fix client/server sanitization mismatch & consolidate types |
 | `958c078d` | Fix critical bugs (19 total) & add "Start New Project" menu option |
 | `e931a3c4` | Video thumbnail export & improved local video workflow |
 | `10bbf123` | Make project folders match project manager structure |
