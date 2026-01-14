@@ -231,12 +231,21 @@ export const ProjectManager: React.FC = () => {
   const pendingSaveTriggerRef = useRef(0);
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
-  // Sanitize name for folder path (must match server-side sanitization)
+  // Sanitize name for folder path (must match server-side sanitization in vite.config.mts)
   const sanitizeFolderName = useCallback((name: string): string => {
-    return name
-      .replace(/[<>:"/\\|?*]/g, "_")
-      .replace(/\s+/g, " ")
-      .trim() || "Untitled";
+    // Must match the server-side sanitizeFolderName function exactly
+    let safe = name
+      .replace(/\.\./g, "_") // Prevent path traversal
+      .replace(/[\\/:*?"<>|]/g, "_") // Invalid Windows characters
+      .replace(/^[\s.]+|[\s.]+$/g, "") // Strip leading/trailing spaces and dots
+      .substring(0, 100); // Limit length
+
+    // Double-check no path traversal remains
+    while (safe.includes("..")) {
+      safe = safe.replace(/\.\./g, "_");
+    }
+
+    return safe || "Untitled";
   }, []);
 
   // Get preview URL for a project

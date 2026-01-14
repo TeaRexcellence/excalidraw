@@ -11,35 +11,17 @@ import { atom } from "jotai";
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
 
+// Import types from the canonical source
+import type { Project, ProjectGroup, ProjectsIndex } from "@excalidraw/excalidraw/components/ProjectManager/types";
+import { DEFAULT_PROJECTS_INDEX } from "@excalidraw/excalidraw/components/ProjectManager/types";
+
+// Re-export types for convenience
+export type { Project, ProjectGroup, ProjectsIndex };
+
 // Atom to trigger save modal from outside ProjectManager component
 export const triggerSaveProjectAtom = atom(0);
 
-export interface Project {
-  id: string;
-  title: string;
-  groupId: string | null;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface ProjectGroup {
-  id: string;
-  name: string;
-  order: number;
-  expanded: boolean;
-}
-
-export interface ProjectsIndex {
-  projects: Project[];
-  groups: ProjectGroup[];
-  currentProjectId: string | null;
-}
-
-const DEFAULT_INDEX: ProjectsIndex = {
-  projects: [],
-  groups: [],
-  currentProjectId: null,
-};
+const DEFAULT_INDEX: ProjectsIndex = DEFAULT_PROJECTS_INDEX;
 
 // API helpers
 const api = {
