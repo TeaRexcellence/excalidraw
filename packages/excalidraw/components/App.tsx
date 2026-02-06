@@ -8884,6 +8884,7 @@ class App extends React.Component<AppProps, AppState> {
               selectedPointsIndices: [endIdx],
               initialState: {
                 ...linearElementEditor.initialState,
+                arrowStartIsInside: event.altKey,
                 lastClickedPoint: endIdx,
                 origin: pointFrom<GlobalPoint>(
                   pointerDownState.origin.x,
