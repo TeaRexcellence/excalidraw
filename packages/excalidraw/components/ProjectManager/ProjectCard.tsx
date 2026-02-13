@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import type { Project } from "./types";
+import type { Project, ProjectGroup } from "./types";
+import { CategoryPicker } from "./CategoryPicker";
 
 interface ProjectCardProps {
   project: Project;
@@ -7,6 +8,7 @@ interface ProjectCardProps {
   justSaved: boolean;
   previewUrl: string | null;
   size: number;
+  groups: ProjectGroup[];
   onSelect: (projectId: string) => void;
   onOpenInNewTab: (projectId: string) => void;
   onOpenFileLocation: (projectId: string) => void;
@@ -16,7 +18,9 @@ interface ProjectCardProps {
   onSetCustomPreview: (projectId: string, file: File) => void;
   onRemoveCustomPreview: (projectId: string) => void;
   onToggleFavorite: (projectId: string) => void;
+  onCreateCategory: (name: string) => void;
   availableGroups: Array<{ id: string; name: string }>;
+  showCategoryBadge?: boolean;
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -34,9 +38,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onSetCustomPreview,
   onRemoveCustomPreview,
   onToggleFavorite,
+  onCreateCategory,
   availableGroups,
+  groups,
+  showCategoryBadge,
 }) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -192,9 +200,19 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           <div className={`ProjectCard__placeholder ${previewUrl ? "ProjectCard__placeholder--hidden" : ""}`}>
             <span>No preview</span>
           </div>
+          <div className="ProjectCard__gradient" />
         </div>
-        <div className="ProjectCard__title">
-          <span title={project.title}>{project.title}</span>
+        <div className="ProjectCard__info">
+          <div className="ProjectCard__title">
+            <span title={project.title}>{project.title}</span>
+          </div>
+          {showCategoryBadge && project.groupId && (
+            <div className="ProjectCard__badges">
+              <span className="ProjectCard__badge">
+                {groups.find((g) => g.id === project.groupId)?.name}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -253,32 +271,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             </button>
           )}
           <div className="ProjectCard__contextMenu__divider" />
-          <div className="ProjectCard__contextMenu__submenu">
-            <span>Move to category</span>
-            <div className="ProjectCard__contextMenu__submenu__items">
-              <button
-                onClick={() => {
-                  onMoveToGroup(project.id, null);
-                  closeContextMenu();
-                }}
-                className={project.groupId === null ? "active" : ""}
-              >
-                Uncategorized
-              </button>
-              {availableGroups.map((group) => (
-                <button
-                  key={group.id}
-                  onClick={() => {
-                    onMoveToGroup(project.id, group.id);
-                    closeContextMenu();
-                  }}
-                  className={project.groupId === group.id ? "active" : ""}
-                >
-                  {group.name}
-                </button>
-              ))}
-            </div>
-          </div>
+          <button
+            onClick={() => {
+              closeContextMenu();
+              setShowCategoryPicker(true);
+            }}
+          >
+            Manage categories
+          </button>
           <div className="ProjectCard__contextMenu__divider" />
           <button
             className="ProjectCard__contextMenu__danger"
@@ -292,6 +292,17 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             Delete
           </button>
         </div>
+      )}
+
+      {showCategoryPicker && (
+        <CategoryPicker
+          projectId={project.id}
+          currentGroupId={project.groupId}
+          groups={groups}
+          onMoveToGroup={onMoveToGroup}
+          onCreateCategory={onCreateCategory}
+          onClose={() => setShowCategoryPicker(false)}
+        />
       )}
 
       {showTooltip && (

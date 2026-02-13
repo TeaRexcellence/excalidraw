@@ -15,8 +15,6 @@ import { triggerSaveProjectAtom, triggerRefreshProjectsAtom, ProjectManagerData 
 
 import { ProjectCard } from "./ProjectCard";
 import { ProjectGroup } from "./ProjectGroup";
-import { CategoryBar } from "./CategoryBar";
-import type { FilterType } from "./CategoryBar";
 import type { Project, ProjectGroup as ProjectGroupType, ProjectsIndex } from "./types";
 import { DEFAULT_PROJECTS_INDEX } from "./types";
 
@@ -213,9 +211,6 @@ export const ProjectManager: React.FC = () => {
   const [modalName, setModalName] = useState("");
   const [renameProjectId, setRenameProjectId] = useState<string | null>(null);
 
-  // Filter state for CategoryBar
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-
   // Settings dropdown state
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -379,19 +374,12 @@ export const ProjectManager: React.FC = () => {
   );
 
   // Save current project with optional preview update
-  // Respects hasCustomPreview — never overwrites a custom preview
   const saveCurrentProject = useCallback(
     async (projectId: string, updatePreview: boolean = true) => {
       await saveProjectData(projectId);
 
-      // Only generate preview when explicitly requested AND project doesn't have custom preview
+      // Only generate preview when explicitly requested
       if (updatePreview) {
-        const currentIndex = indexRef.current;
-        const project = currentIndex.projects.find((p) => p.id === projectId);
-        if (project?.hasCustomPreview) {
-          return; // Don't overwrite custom preview
-        }
-
         const previewBlob = await generatePreview();
         if (previewBlob) {
           const previewUrl = await api.savePreview(projectId, previewBlob);
@@ -1042,26 +1030,6 @@ export const ProjectManager: React.FC = () => {
     [index],
   );
 
-  // Create a new category (from CategoryBar or CategoryPicker)
-  const handleCreateCategory = useCallback(
-    async (name: string) => {
-      const groupId = nanoid(10);
-      const newGroup: ProjectGroupType = {
-        id: groupId,
-        name,
-        order: index.groups.length,
-        expanded: true,
-      };
-      const newIndex: ProjectsIndex = {
-        ...index,
-        groups: [...index.groups, newGroup],
-      };
-      setIndex(newIndex);
-      await api.saveIndex(newIndex);
-    },
-    [index],
-  );
-
   // Zoom controls
   const handleZoomIn = useCallback(() => {
     setCardSize((prev) => Math.min(prev + CARD_SIZE_STEP, MAX_CARD_SIZE));
@@ -1315,18 +1283,10 @@ export const ProjectManager: React.FC = () => {
         <button className="ProjectManager__actionBtn" onClick={handleNewProjectClick}>
           + {t("projectManager.newProject")}
         </button>
+        <button className="ProjectManager__actionBtn" onClick={handleNewGroupClick}>
+          + {t("projectManager.newGroup")}
+        </button>
       </div>
-
-      <CategoryBar
-        groups={index.groups}
-        activeFilter={activeFilter}
-        favoriteCount={favoriteProjects.length}
-        uncategorizedCount={ungroupedProjects.length}
-        onFilterChange={setActiveFilter}
-        onCreateCategory={handleCreateCategory}
-        onRenameCategory={handleRenameGroup}
-        onDeleteCategory={handleDeleteGroup}
-      />
 
       {/* Confirm Save Dialog - shown when creating new project with unsaved changes */}
       {modalType === "confirm-save" && (
@@ -1510,180 +1470,94 @@ export const ProjectManager: React.FC = () => {
       )}
 
       <div className="ProjectManager__content" ref={contentRef}>
-        {(() => {
-          // Shared props for all ProjectGroup instances
-          const groupSharedProps = {
-            currentProjectId: index.currentProjectId,
-            justSavedId,
-            cardSize,
-            allGroups: index.groups,
-            onToggleExpand: handleToggleExpand,
-            onRenameGroup: handleRenameGroup,
-            onDeleteGroup: handleDeleteGroup,
-            onSelectProject: handleSelectProject,
-            onOpenInNewTab: handleOpenInNewTab,
-            onOpenFileLocation: handleOpenFileLocation,
-            onRenameProject: handleRenameProject,
-            onDeleteProject: handleDeleteProject,
-            onMoveToGroup: handleMoveToGroup,
-            onSetCustomPreview: handleSetCustomPreview,
-            onRemoveCustomPreview: handleRemoveCustomPreview,
-            onToggleFavorite: handleToggleFavorite,
-            onCreateCategory: handleCreateCategory,
-            availableGroups,
-            getPreviewUrl,
-          };
-
-          if (activeFilter === "favorites") {
-            // Show only favorites in a flat grid
-            return (
-              <div className="ProjectGroup__grid">
-                {favoriteProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    isActive={project.id === index.currentProjectId}
-                    justSaved={project.id === justSavedId}
-                    previewUrl={getPreviewUrl(project.id)}
-                    size={cardSize}
-                    groups={index.groups}
-                    onSelect={handleSelectProject}
-                    onOpenInNewTab={handleOpenInNewTab}
-                    onOpenFileLocation={handleOpenFileLocation}
-                    onRename={handleRenameProject}
-                    onDelete={handleDeleteProject}
-                    onMoveToGroup={handleMoveToGroup}
-                    onSetCustomPreview={handleSetCustomPreview}
-                    onRemoveCustomPreview={handleRemoveCustomPreview}
-                    onToggleFavorite={handleToggleFavorite}
-                    onCreateCategory={handleCreateCategory}
-                    availableGroups={availableGroups}
-                    showCategoryBadge
-                  />
-                ))}
-                {favoriteProjects.length === 0 && (
-                  <div className="ProjectManager__empty">
-                    <p>No favorite projects yet</p>
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          if (activeFilter === "uncategorized") {
-            // Show only uncategorized projects in a flat grid
-            return (
-              <div className="ProjectGroup__grid">
-                {ungroupedProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    isActive={project.id === index.currentProjectId}
-                    justSaved={project.id === justSavedId}
-                    previewUrl={getPreviewUrl(project.id)}
-                    size={cardSize}
-                    groups={index.groups}
-                    onSelect={handleSelectProject}
-                    onOpenInNewTab={handleOpenInNewTab}
-                    onOpenFileLocation={handleOpenFileLocation}
-                    onRename={handleRenameProject}
-                    onDelete={handleDeleteProject}
-                    onMoveToGroup={handleMoveToGroup}
-                    onSetCustomPreview={handleSetCustomPreview}
-                    onRemoveCustomPreview={handleRemoveCustomPreview}
-                    onToggleFavorite={handleToggleFavorite}
-                    onCreateCategory={handleCreateCategory}
-                    availableGroups={availableGroups}
-                  />
-                ))}
-                {ungroupedProjects.length === 0 && (
-                  <div className="ProjectManager__empty">
-                    <p>No uncategorized projects</p>
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          if (activeFilter !== "all") {
-            // Filter by specific category
-            const filtered = index.projects.filter((p) => p.groupId === activeFilter);
-            return (
-              <div className="ProjectGroup__grid">
-                {filtered.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    isActive={project.id === index.currentProjectId}
-                    justSaved={project.id === justSavedId}
-                    previewUrl={getPreviewUrl(project.id)}
-                    size={cardSize}
-                    groups={index.groups}
-                    onSelect={handleSelectProject}
-                    onOpenInNewTab={handleOpenInNewTab}
-                    onOpenFileLocation={handleOpenFileLocation}
-                    onRename={handleRenameProject}
-                    onDelete={handleDeleteProject}
-                    onMoveToGroup={handleMoveToGroup}
-                    onSetCustomPreview={handleSetCustomPreview}
-                    onRemoveCustomPreview={handleRemoveCustomPreview}
-                    onToggleFavorite={handleToggleFavorite}
-                    onCreateCategory={handleCreateCategory}
-                    availableGroups={availableGroups}
-                  />
-                ))}
-                {filtered.length === 0 && (
-                  <div className="ProjectManager__empty">
-                    <p>No projects in this category</p>
-                  </div>
-                )}
-              </div>
-            );
-          }
-
-          // "All" view — cascading sections: Favorites → Named groups → Uncategorized
-          return (
-            <>
-              {/* Favorites section */}
-              {favoriteProjects.length > 0 && (
-                <ProjectGroup
-                  group={null}
-                  sectionId="favorites"
-                  label="Favorites"
-                  icon="★"
-                  projects={favoriteProjects}
-                  showCategoryBadge
-                  {...groupSharedProps}
+        {/* Render favorites section if any favorites exist */}
+        {favoriteProjects.length > 0 && (
+          <div className="ProjectManager__favorites">
+            <div className="ProjectManager__favorites__header">
+              <span className="ProjectManager__favorites__icon">★</span>
+              <span className="ProjectManager__favorites__title">Favorites</span>
+              <span className="ProjectManager__favorites__count">({favoriteProjects.length})</span>
+            </div>
+            <div className="ProjectGroup__grid">
+              {favoriteProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  isActive={project.id === index.currentProjectId}
+                  justSaved={project.id === justSavedId}
+                  previewUrl={getPreviewUrl(project.id)}
+                  size={cardSize}
+                  onSelect={handleSelectProject}
+                  onOpenInNewTab={handleOpenInNewTab}
+                  onOpenFileLocation={handleOpenFileLocation}
+                  onRename={handleRenameProject}
+                  onDelete={handleDeleteProject}
+                  onMoveToGroup={handleMoveToGroup}
+                  onSetCustomPreview={handleSetCustomPreview}
+                  onRemoveCustomPreview={handleRemoveCustomPreview}
+                  onToggleFavorite={handleToggleFavorite}
+                  availableGroups={availableGroups}
                 />
-              )}
+              ))}
+            </div>
+          </div>
+        )}
 
-              {/* Named groups */}
-              {index.groups
-                .sort((a, b) => a.order - b.order)
-                .map((group) => {
-                  const groupProjects = index.projects.filter(
-                    (p) => p.groupId === group.id,
-                  );
-                  return (
-                    <ProjectGroup
-                      key={group.id}
-                      group={group}
-                      projects={groupProjects}
-                      {...groupSharedProps}
-                    />
-                  );
-                })}
-
-              {/* Ungrouped projects */}
+        {/* Render groups */}
+        {index.groups
+          .sort((a, b) => a.order - b.order)
+          .map((group) => {
+            const groupProjects = index.projects.filter(
+              (p) => p.groupId === group.id,
+            );
+            return (
               <ProjectGroup
-                group={null}
-                sectionId="uncategorized"
-                projects={ungroupedProjects}
-                {...groupSharedProps}
+                key={group.id}
+                group={group}
+                projects={groupProjects}
+                currentProjectId={index.currentProjectId}
+                justSavedId={justSavedId}
+                cardSize={cardSize}
+                onToggleExpand={handleToggleExpand}
+                onRenameGroup={handleRenameGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onSelectProject={handleSelectProject}
+                onOpenInNewTab={handleOpenInNewTab}
+                onOpenFileLocation={handleOpenFileLocation}
+                onRenameProject={handleRenameProject}
+                onDeleteProject={handleDeleteProject}
+                onMoveToGroup={handleMoveToGroup}
+                onSetCustomPreview={handleSetCustomPreview}
+                onRemoveCustomPreview={handleRemoveCustomPreview}
+                onToggleFavorite={handleToggleFavorite}
+                availableGroups={availableGroups}
+                getPreviewUrl={getPreviewUrl}
               />
-            </>
-          );
-        })()}
+            );
+          })}
+
+        {/* Render ungrouped projects */}
+        <ProjectGroup
+          group={null}
+          projects={ungroupedProjects}
+          currentProjectId={index.currentProjectId}
+          justSavedId={justSavedId}
+          cardSize={cardSize}
+          onToggleExpand={handleToggleExpand}
+          onRenameGroup={handleRenameGroup}
+          onDeleteGroup={handleDeleteGroup}
+          onSelectProject={handleSelectProject}
+          onOpenInNewTab={handleOpenInNewTab}
+          onOpenFileLocation={handleOpenFileLocation}
+          onRenameProject={handleRenameProject}
+          onDeleteProject={handleDeleteProject}
+          onMoveToGroup={handleMoveToGroup}
+          onSetCustomPreview={handleSetCustomPreview}
+          onRemoveCustomPreview={handleRemoveCustomPreview}
+          onToggleFavorite={handleToggleFavorite}
+          availableGroups={availableGroups}
+          getPreviewUrl={getPreviewUrl}
+        />
 
         {index.projects.length === 0 && (
           <div className="ProjectManager__empty">

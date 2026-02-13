@@ -1,13 +1,42 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import type { Project, ProjectGroup as ProjectGroupType } from "./types";
 import { ProjectCard } from "./ProjectCard";
 
+type SectionId = "favorites" | "uncategorized" | string;
+
+const COLLAPSE_STORAGE_KEY = "excalidraw-projectgroup-collapsed";
+
+const getCollapsedSections = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const setCollapsedSection = (id: string, collapsed: boolean) => {
+  try {
+    const sections = getCollapsedSections();
+    if (collapsed) {
+      sections.add(id);
+    } else {
+      sections.delete(id);
+    }
+    localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify([...sections]));
+  } catch {
+    // ignore storage errors
+  }
+};
+
 interface ProjectGroupProps {
   group: ProjectGroupType | null; // null for "Ungrouped"
+  sectionId?: SectionId; // "favorites", "uncategorized", or group id
   projects: Project[];
   currentProjectId: string | null;
   justSavedId: string | null;
   cardSize: number;
+  allGroups: ProjectGroupType[]; // all groups for CategoryPicker
   onToggleExpand: (groupId: string) => void;
   onRenameGroup: (groupId: string, newName: string) => void;
   onDeleteGroup: (groupId: string) => void;
@@ -20,16 +49,22 @@ interface ProjectGroupProps {
   onSetCustomPreview: (projectId: string, file: File) => void;
   onRemoveCustomPreview: (projectId: string) => void;
   onToggleFavorite: (projectId: string) => void;
+  onCreateCategory: (name: string) => void;
   availableGroups: Array<{ id: string; name: string }>;
   getPreviewUrl: (projectId: string) => string | null;
+  label?: string; // custom label override (e.g. "★ Favorites")
+  icon?: string; // optional icon before label
+  showCategoryBadge?: boolean;
 }
 
 export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   group,
+  sectionId,
   projects,
   currentProjectId,
   justSavedId,
   cardSize,
+  allGroups,
   onToggleExpand,
   onRenameGroup,
   onDeleteGroup,
@@ -42,20 +77,42 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   onSetCustomPreview,
   onRemoveCustomPreview,
   onToggleFavorite,
+  onCreateCategory,
   availableGroups,
   getPreviewUrl,
+  label,
+  icon,
+  showCategoryBadge,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(group?.name || "");
 
-  const isExpanded = group?.expanded ?? true;
-  const isUngrouped = group === null;
+  const isUngrouped = group === null && sectionId === "uncategorized";
+  const isFavorites = sectionId === "favorites";
+  const isSpecialSection = isUngrouped || isFavorites;
+
+  const effectiveId = sectionId || group?.id || "uncategorized";
+
+  const [localExpanded, setLocalExpanded] = useState(() => {
+    if (isSpecialSection) {
+      return !getCollapsedSections().has(effectiveId);
+    }
+    return true;
+  });
+
+  const isExpanded = isSpecialSection ? localExpanded : (group?.expanded ?? true);
 
   const handleToggle = useCallback(() => {
-    if (group) {
+    if (isSpecialSection) {
+      setLocalExpanded((prev) => {
+        const next = !prev;
+        setCollapsedSection(effectiveId, !next);
+        return next;
+      });
+    } else if (group) {
       onToggleExpand(group.id);
     }
-  }, [group, onToggleExpand]);
+  }, [isSpecialSection, effectiveId, group, onToggleExpand]);
 
   const handleRenameSubmit = useCallback(() => {
     if (group && editName.trim() && editName !== group.name) {
@@ -76,22 +133,22 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
     [group?.name, handleRenameSubmit],
   );
 
-  if (projects.length === 0 && isUngrouped) {
+  if (projects.length === 0) {
     return null;
   }
+
+  const displayLabel = label || (isUngrouped ? "Uncategorized" : group?.name || "");
 
   return (
     <div className="ProjectGroup">
       <div
-        className={`ProjectGroup__header ${isUngrouped ? "ProjectGroup__header--ungrouped" : ""}`}
+        className="ProjectGroup__header"
         onClick={handleToggle}
       >
         <div className="ProjectGroup__header__left">
-          {!isUngrouped && (
-            <span className={`ProjectGroup__chevron ${isExpanded ? "expanded" : ""}`}>
-              ▶
-            </span>
-          )}
+          <span className={`ProjectGroup__chevron ${isExpanded ? "expanded" : ""}`}>
+            ▶
+          </span>
           {isEditing && group ? (
             <input
               type="text"
@@ -105,22 +162,24 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
             />
           ) : (
             <span className="ProjectGroup__name">
-              {isUngrouped ? "Uncategorized" : group?.name}
+              {icon && <span className="ProjectGroup__icon">{icon}</span>}
+              {displayLabel}
             </span>
           )}
-          <span className="ProjectGroup__count">({projects.length})</span>
+          <span className="ProjectGroup__count">{projects.length}</span>
         </div>
-        {!isUngrouped && group && (
+        {!isSpecialSection && group && (
           <div className="ProjectGroup__header__actions">
             <button
               className="ProjectGroup__action"
               onClick={(e) => {
                 e.stopPropagation();
+                setEditName(group.name);
                 setIsEditing(true);
               }}
               title="Rename category"
             >
-              ✏️
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
             </button>
             <button
               className="ProjectGroup__action ProjectGroup__action--danger"
@@ -132,13 +191,13 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               }}
               title="Delete category"
             >
-              🗑️
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             </button>
           </div>
         )}
       </div>
 
-      {(isExpanded || isUngrouped) && (
+      {isExpanded && (
         <div className="ProjectGroup__grid">
           {projects.map((project) => (
             <ProjectCard
@@ -148,6 +207,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               justSaved={project.id === justSavedId}
               previewUrl={getPreviewUrl(project.id)}
               size={cardSize}
+              groups={allGroups}
               onSelect={onSelectProject}
               onOpenInNewTab={onOpenInNewTab}
               onOpenFileLocation={onOpenFileLocation}
@@ -157,7 +217,9 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               onSetCustomPreview={onSetCustomPreview}
               onRemoveCustomPreview={onRemoveCustomPreview}
               onToggleFavorite={onToggleFavorite}
+              onCreateCategory={onCreateCategory}
               availableGroups={availableGroups}
+              showCategoryBadge={showCategoryBadge}
             />
           ))}
         </div>
