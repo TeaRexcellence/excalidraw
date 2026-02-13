@@ -230,6 +230,16 @@ export type ExcalidrawDocumentElement = _ExcalidrawElementBase &
     fileContent: string;
   }>;
 
+export type ExcalidrawProjectLinkElement = _ExcalidrawElementBase &
+  Readonly<{
+    type: "projectLink";
+    title: string;
+    description: string;
+    projectId: string;
+    projectName: string;
+    imageBase64: string;
+  }>;
+
 /**
  * These are elements that don't have any additional properties.
  */
@@ -255,7 +265,8 @@ export type ExcalidrawRectanguloidElement =
   | ExcalidrawSelectionElement
   | ExcalidrawTableElement
   | ExcalidrawCodeBlockElement
-  | ExcalidrawDocumentElement;
+  | ExcalidrawDocumentElement
+  | ExcalidrawProjectLinkElement;
 
 /**
  * ExcalidrawElement should be JSON serializable and (eventually) contain
@@ -275,7 +286,8 @@ export type ExcalidrawElement =
   | ExcalidrawEmbeddableElement
   | ExcalidrawTableElement
   | ExcalidrawCodeBlockElement
-  | ExcalidrawDocumentElement;
+  | ExcalidrawDocumentElement
+  | ExcalidrawProjectLinkElement;
 
 export type ExcalidrawNonSelectionElement = Exclude<
   ExcalidrawElement,

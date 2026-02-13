@@ -475,6 +475,19 @@ export const DocumentInsertIcon = createIcon(
   tablerIconProps,
 );
 
+// project link card icon
+export const ProjectLinkIcon = createIcon(
+  <g strokeWidth="1.5">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" />
+    <path d="M16 3v18" />
+    <path d="M18 10l2 2l-2 2" />
+    <path d="M7 9h5" />
+    <path d="M7 13h3" />
+  </g>,
+  tablerIconProps,
+);
+
 // custom video player icon
 export const VideoIcon = createIcon(
   <g stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none">
@@ -1260,6 +1273,39 @@ export const FillSolidIcon = createIcon(
     </defs>
   </>,
   { ...modifiedTablerIconProps, fill: "currentColor" },
+);
+
+export const StrokeWidthHairlineIcon = createIcon(
+  <path
+    d="M4.167 10h11.666"
+    stroke="currentColor"
+    strokeWidth="0.35"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />,
+  modifiedTablerIconProps,
+);
+
+export const StrokeWidthFineIcon = createIcon(
+  <path
+    d="M4.167 10h11.666"
+    stroke="currentColor"
+    strokeWidth="0.6"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />,
+  modifiedTablerIconProps,
+);
+
+export const StrokeWidthLightIcon = createIcon(
+  <path
+    d="M4.167 10h11.666"
+    stroke="currentColor"
+    strokeWidth="0.85"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  />,
+  modifiedTablerIconProps,
 );
 
 export const StrokeWidthBaseIcon = createIcon(

@@ -43,6 +43,7 @@ export const distanceToElement = (
     case "table":
     case "codeblock":
     case "document":
+    case "projectLink":
       return distanceToRectanguloidElement(element, elementsMap, p);
     case "diamond":
       return distanceToDiamondElement(element, elementsMap, p);

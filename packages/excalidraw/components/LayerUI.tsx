@@ -10,7 +10,7 @@ import {
   isShallowEqual,
 } from "@excalidraw/common";
 
-import { mutateElement, isDocumentElement } from "@excalidraw/element";
+import { mutateElement, isDocumentElement, isImageElement } from "@excalidraw/element";
 
 import { showSelectedShapeActions } from "@excalidraw/element";
 
@@ -67,6 +67,9 @@ import { TableCreateDialog } from "./TableCreateDialog";
 import { CodeBlockCreateDialog } from "./CodeBlockCreateDialog";
 import { DocumentInsertDialog } from "./DocumentInsertDialog";
 import { DocumentViewerDialog } from "./DocumentViewerDialog";
+import { ImageViewerDialog } from "./ImageViewerDialog";
+import { ProjectLinkCreateDialog } from "./ProjectLinkCreateDialog";
+import { ProjectLinkEditDialog } from "./ProjectLinkEditDialog";
 
 import "./LayerUI.scss";
 import "./Toolbar.scss";
@@ -582,6 +585,21 @@ const LayerUI = ({
           }}
         />
       )}
+      {appState.openDialog?.name === "projectLinkCreate" && (
+        <ProjectLinkCreateDialog
+          onClose={() => {
+            setAppState({ openDialog: null });
+          }}
+        />
+      )}
+      {appState.openDialog?.name === "projectLinkEdit" && (
+        <ProjectLinkEditDialog
+          elementId={(appState.openDialog as any).elementId}
+          onClose={() => {
+            setAppState({ openDialog: null });
+          }}
+        />
+      )}
       {appState.openDialog?.name === "documentViewer" && (() => {
         const docElement = app.scene
           .getElementsIncludingDeleted()
@@ -596,6 +614,26 @@ const LayerUI = ({
         return (
           <DocumentViewerDialog
             element={docElement}
+            onClose={() => {
+              setAppState({ openDialog: null });
+            }}
+          />
+        );
+      })()}
+      {appState.openDialog?.name === "imageViewer" && (() => {
+        const imgElement = app.scene
+          .getElementsIncludingDeleted()
+          .find(
+            (el) =>
+              el.id === (appState.openDialog as any).imageElementId &&
+              isImageElement(el),
+          );
+        if (!imgElement || !isImageElement(imgElement)) {
+          return null;
+        }
+        return (
+          <ImageViewerDialog
+            imageElementId={imgElement.id}
             onClose={() => {
               setAppState({ openDialog: null });
             }}

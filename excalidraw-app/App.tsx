@@ -234,9 +234,15 @@ const initializeScene = async (opts: {
   } | null = null;
 
   if (projectHashMatch) {
-    // Load specific project from hash
-    await ProjectManagerData.setCurrentProjectId(projectHashMatch[1]);
-    projectData = await ProjectManagerData.loadCurrentProject();
+    // Load specific project from hash — validate it exists first
+    const hashProjectId = projectHashMatch[1];
+    const hashIndex = await ProjectManagerData.getIndex();
+    const projectExists = hashIndex.projects.some((p) => p.id === hashProjectId);
+    if (projectExists) {
+      await ProjectManagerData.setCurrentProjectId(hashProjectId);
+      projectData = await ProjectManagerData.loadCurrentProject();
+    }
+    // else: ignore invalid hash, fall through to normal load
   } else if (!id && !jsonBackendMatch && !externalUrlMatch) {
     // No external source, try to load current project from Project Manager
     projectData = await ProjectManagerData.loadCurrentProject();
@@ -572,6 +578,11 @@ const ExcalidrawWrapper = () => {
       if (isTestEnv()) {
         return;
       }
+      // Skip localStorage sync when a project is active — the project file
+      // is the canonical source; localStorage data would overwrite it.
+      if (ProjectManagerData.hasCurrentProject()) {
+        return;
+      }
       if (
         !document.hidden &&
         ((collabAPI && !collabAPI.isCollaborating()) || isCollabDisabled)
@@ -809,6 +820,11 @@ const ExcalidrawWrapper = () => {
     () => setShareDialogState({ isOpen: true, type: "collaborationOnly" }),
     [setShareDialogState],
   );
+
+  // Regenerate project preview when theme changes
+  useEffect(() => {
+    ProjectManagerData.regenerateCurrentPreview();
+  }, [editorTheme]);
 
   // browsers generally prevent infinite self-embedding, there are
   // cases where it still happens, and while we disallow self-embedding

@@ -70,6 +70,7 @@ import {
   TableIcon,
   CodeBlockIcon,
   DocumentInsertIcon,
+  ProjectLinkIcon,
   frameToolIcon,
   laserPointerToolIcon,
   LassoIcon,
@@ -1227,6 +1228,17 @@ export const ShapesSwitcher = ({
                 aria-label={t("toolBar.document")}
                 data-testid="toolbar-document"
                 onClick={() => app.setOpenDialog({ name: "documentInsert" })}
+              />,
+              <ToolButton
+                key="projectLink"
+                className="Shape"
+                type="button"
+                icon={ProjectLinkIcon}
+                name="projectLink"
+                title={t("toolBar.projectLink")}
+                aria-label={t("toolBar.projectLink")}
+                data-testid="toolbar-project-link"
+                onClick={() => app.setOpenDialog({ name: "projectLinkCreate" })}
               />,
             ];
           }

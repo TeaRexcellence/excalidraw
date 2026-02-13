@@ -64,6 +64,7 @@ import {
 import { drawTableOnCanvas } from "./renderTable";
 import { drawCodeBlockOnCanvas } from "./renderCodeBlock";
 import { drawDocumentOnCanvas } from "./renderDocument";
+import { drawProjectLinkOnCanvas } from "./renderProjectLink";
 import { getContainingFrame } from "./frame";
 import { getCornerRadius } from "./utils";
 
@@ -82,6 +83,7 @@ import type {
   ExcalidrawTableElement,
   ExcalidrawCodeBlockElement,
   ExcalidrawDocumentElement,
+  ExcalidrawProjectLinkElement,
 } from "./types";
 
 import type { RoughCanvas } from "roughjs/bin/canvas";
@@ -457,6 +459,14 @@ const drawElementOnCanvas = (
     case "document": {
       drawDocumentOnCanvas(
         element as ExcalidrawDocumentElement,
+        context,
+        renderConfig,
+      );
+      break;
+    }
+    case "projectLink": {
+      drawProjectLinkOnCanvas(
+        element as ExcalidrawProjectLinkElement,
         context,
         renderConfig,
       );
@@ -850,7 +860,8 @@ export const renderElement = (
     case "embeddable":
     case "table":
     case "codeblock":
-    case "document": {
+    case "document":
+    case "projectLink": {
       if (renderConfig.isExporting) {
         const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
         const cx = (x1 + x2) / 2 + appState.scrollX;

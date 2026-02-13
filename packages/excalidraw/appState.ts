@@ -112,7 +112,7 @@ export const getDefaultAppState = (): Omit<
     viewBackgroundColor: COLOR_PALETTE.white,
     zenModeEnabled: false,
     zoom: {
-      value: 1 as NormalizedZoomValue,
+      value: 2 as NormalizedZoomValue,
     },
     viewModeEnabled: false,
     showHyperlinkPopup: false,

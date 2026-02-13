@@ -1,0 +1,116 @@
+.ProjectLinkCreateDialog {
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-on-surface);
+    }
+
+    input[type="text"],
+    textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--color-border-outline-variant);
+      border-radius: 6px;
+      font-size: 14px;
+      background: var(--color-surface-low);
+      color: var(--color-on-surface);
+      outline: none;
+      transition: border-color 0.15s;
+
+      &:focus {
+        border-color: var(--color-primary);
+      }
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    input[type="file"] {
+      font-size: 13px;
+    }
+  }
+
+  &__imagePreview {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    img {
+      width: 60px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--color-border-outline-variant);
+    }
+
+    button {
+      font-size: 12px;
+      color: var(--color-danger);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+  }
+
+  &__projectList {
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border-outline-variant);
+    border-radius: 6px;
+    background: var(--color-surface-low);
+  }
+
+  &__projectItem {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 14px;
+    border: none;
+    background: transparent;
+    color: var(--color-on-surface);
+    cursor: pointer;
+    transition: background-color 0.1s;
+
+    &:hover {
+      background: var(--color-surface-high);
+    }
+
+    &--selected {
+      background: var(--color-primary-light);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+  }
+
+  &__loading,
+  &__empty {
+    padding: 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--color-on-surface);
+    opacity: 0.6;
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+  }
+}

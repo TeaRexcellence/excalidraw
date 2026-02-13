@@ -32,6 +32,7 @@ import type {
   ExcalidrawTableElement,
   ExcalidrawCodeBlockElement,
   ExcalidrawDocumentElement,
+  ExcalidrawProjectLinkElement,
 } from "./types";
 
 export const isInitializedImageElement = (
@@ -211,6 +212,7 @@ export const isRectanguloidElement = (
       element.type === "table" ||
       element.type === "codeblock" ||
       element.type === "document" ||
+      element.type === "projectLink" ||
       (element.type === "text" && !element.containerId))
   );
 };
@@ -232,7 +234,8 @@ export const isRectangularElement = (
       element.type === "freedraw" ||
       element.type === "table" ||
       element.type === "codeblock" ||
-      element.type === "document")
+      element.type === "document" ||
+      element.type === "projectLink")
   );
 };
 
@@ -273,7 +276,8 @@ export const isExcalidrawElement = (
     case "selection":
     case "table":
     case "codeblock":
-    case "document": {
+    case "document":
+    case "projectLink": {
       return true;
     }
     default: {
@@ -299,6 +303,12 @@ export const isDocumentElement = (
   element: ExcalidrawElement | null,
 ): element is ExcalidrawDocumentElement => {
   return element != null && element.type === "document";
+};
+
+export const isProjectLinkElement = (
+  element: ExcalidrawElement | null,
+): element is ExcalidrawProjectLinkElement => {
+  return element != null && element.type === "projectLink";
 };
 
 export const isFlowchartNodeElement = (

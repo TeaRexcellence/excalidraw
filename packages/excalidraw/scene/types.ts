@@ -179,4 +179,5 @@ export type ElementShapes = {
   table: null;
   codeblock: null;
   document: null;
+  projectLink: null;
 };

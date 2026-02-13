@@ -1,0 +1,43 @@
+.excalidraw {
+  .image-view-button-hitarea {
+    position: absolute;
+    z-index: var(--zIndex-canvasButtons);
+    pointer-events: all;
+
+    .image-view-button {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: var(--border-radius-lg);
+      background: var(--island-bg-color);
+      box-shadow: 0px 2px 4px 0 rgb(0 0 0 / 30%);
+      cursor: pointer;
+      padding: 0;
+      pointer-events: all;
+
+      svg {
+        width: 16px;
+        height: 16px;
+        color: var(--icon-fill-color);
+      }
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    &:hover .image-view-button {
+      opacity: 1;
+    }
+  }
+}

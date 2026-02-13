@@ -4,6 +4,7 @@ import { useAtomValue } from "jotai";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
+import { getDefaultAppState } from "../../appState";
 import { t } from "../../i18n";
 import { useApp } from "../App";
 import { exportToCanvas } from "../../scene/export";
@@ -309,17 +310,20 @@ export const ProjectManager: React.FC = () => {
       }
 
       // Use the same exportToCanvas function as the export dialog
+      // Match preview theme to current UI theme
+      const isDark = app.state.theme === "dark";
       const canvas = await exportToCanvas(
         elements,
         {
           ...app.state,
+          exportWithDarkMode: isDark,
           exportScale: 1, // Use 1x scale for preview (smaller file size)
         },
         app.files,
         {
           exportBackground: true,
           exportPadding: 10,
-          viewBackgroundColor: app.state.viewBackgroundColor,
+          viewBackgroundColor: isDark ? "#121212" : app.state.viewBackgroundColor,
         },
         // Custom canvas creator to limit preview size
         (width, height) => {
@@ -518,6 +522,8 @@ export const ProjectManager: React.FC = () => {
         currentProjectId: projectId,
       };
 
+      // Update cachedIndex before saving so auto-save targets the new project
+      ProjectManagerData.updateCachedIndex(newIndex);
       setIndex(newIndex);
       await api.saveIndex(newIndex);
 
@@ -525,51 +531,63 @@ export const ProjectManager: React.FC = () => {
       await saveCurrentProject(projectId, true);
     } else if (modalType === "project") {
       // Create new blank project
-      // First, save current project if there is one
-      if (index.currentProjectId) {
-        await saveCurrentProject(index.currentProjectId);
+      ProjectManagerData.beginProjectSwitch();
+      try {
+        // Save current project if there is one
+        if (index.currentProjectId) {
+          await saveCurrentProject(index.currentProjectId);
+        }
+
+        const projectId = nanoid(10);
+
+        const newProject: Project = {
+          id: projectId,
+          title: name,
+          groupId: null,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        const newIndex: ProjectsIndex = {
+          ...index,
+          projects: [...index.projects, newProject],
+          currentProjectId: projectId,
+        };
+
+        // Update cachedIndex BEFORE clearing canvas so any triggered onChange
+        // targets the new project, not the old one
+        ProjectManagerData.updateCachedIndex(newIndex);
+        setIndex(newIndex);
+        await api.saveIndex(newIndex);
+
+        // Save the blank project scene
+        await api.saveScene(projectId, {
+          type: "excalidraw",
+          version: 2,
+          elements: [],
+          appState: {
+            viewBackgroundColor: app.state.viewBackgroundColor,
+            name,
+          },
+          files: {},
+        });
+
+        // NOW clear the canvas (which triggers onChange → save)
+        const defaults = getDefaultAppState();
+        app.syncActionResult({
+          elements: [],
+          appState: {
+            name,
+            viewBackgroundColor: app.state.viewBackgroundColor,
+            zoom: defaults.zoom,
+            scrollX: 0,
+            scrollY: 0,
+          },
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
+      } finally {
+        ProjectManagerData.endProjectSwitch();
       }
-
-      const projectId = nanoid(10);
-
-      const newProject: Project = {
-        id: projectId,
-        title: name,
-        groupId: null,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-
-      const newIndex: ProjectsIndex = {
-        ...index,
-        projects: [...index.projects, newProject],
-        currentProjectId: projectId,
-      };
-
-      // Clear the canvas to start fresh
-      app.syncActionResult({
-        elements: [],
-        appState: {
-          name,
-          viewBackgroundColor: app.state.viewBackgroundColor,
-        },
-        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-      });
-
-      // Save the blank project
-      await api.saveScene(projectId, {
-        type: "excalidraw",
-        version: 2,
-        elements: [],
-        appState: {
-          viewBackgroundColor: app.state.viewBackgroundColor,
-          name,
-        },
-        files: {},
-      });
-
-      setIndex(newIndex);
-      await api.saveIndex(newIndex);
     } else if (modalType === "group") {
       const groupId = nanoid(10);
 
@@ -627,12 +645,10 @@ export const ProjectManager: React.FC = () => {
       }
 
       operationInProgress.current = true;
+      ProjectManagerData.beginProjectSwitch();
 
       try {
-        // Cancel any pending debounced save to prevent it from saving to old project
-        ProjectManagerData.cancelPendingSave();
-
-        // Auto-save current project first
+        // Auto-save current project first (save is already cancelled by beginProjectSwitch)
         if (currentIndex.currentProjectId) {
           console.log("[ProjectManager] Saving current project:", currentIndex.currentProjectId);
           await saveCurrentProject(currentIndex.currentProjectId);
@@ -641,13 +657,27 @@ export const ProjectManager: React.FC = () => {
         // Load the new project
         console.log("[ProjectManager] Loading scene for:", projectId);
         const sceneData = await api.getScene(projectId);
-        console.log("[ProjectManager] Scene data:", sceneData);
 
         // Get fresh index after async operations
         const freshIndex = indexRef.current;
 
+        // Build the new index with currentProjectId pointing to the NEW project
+        const newIndex: ProjectsIndex = {
+          ...freshIndex,
+          currentProjectId: projectId,
+          projects: freshIndex.projects.map((p) =>
+            p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
+          ),
+        };
+
+        // Update cachedIndex FIRST so any onChange triggered by syncActionResult
+        // targets the correct (new) project
+        ProjectManagerData.updateCachedIndex(newIndex);
+        setIndex(newIndex);
+        await api.saveIndex(newIndex);
+
+        // NOW update the canvas (which triggers onChange → save)
         if (sceneData) {
-          // Use syncActionResult to update the scene
           console.log("[ProjectManager] Updating scene with elements:", sceneData.elements?.length || 0);
           app.syncActionResult({
             elements: sceneData.elements || [],
@@ -670,7 +700,6 @@ export const ProjectManager: React.FC = () => {
           }
         } else {
           console.log("[ProjectManager] No scene data found, creating empty scene");
-          // If no scene exists, create an empty canvas
           app.syncActionResult({
             elements: [],
             appState: {
@@ -679,23 +708,27 @@ export const ProjectManager: React.FC = () => {
             captureUpdate: CaptureUpdateAction.IMMEDIATELY,
           });
         }
-
-        // Update current project ID using fresh index
-        const newIndex: ProjectsIndex = {
-          ...freshIndex,
-          currentProjectId: projectId,
-          projects: freshIndex.projects.map((p) =>
-            p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
-          ),
-        };
-        setIndex(newIndex);
-        await api.saveIndex(newIndex);
       } finally {
+        ProjectManagerData.endProjectSwitch();
         operationInProgress.current = false;
       }
     },
     [app, saveCurrentProject],
   );
+
+  // Listen for project link card navigation events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const projectId = (e as CustomEvent).detail?.projectId;
+      if (projectId) {
+        handleSelectProject(projectId);
+      }
+    };
+    window.addEventListener("excalidraw-navigate-project", handler);
+    return () => {
+      window.removeEventListener("excalidraw-navigate-project", handler);
+    };
+  }, [handleSelectProject]);
 
   // Open project in new tab
   const handleOpenInNewTab = useCallback(

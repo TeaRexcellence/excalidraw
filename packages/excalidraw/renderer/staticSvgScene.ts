@@ -1014,6 +1014,107 @@ const renderElementToSvg = (
         }
 
         addToRoot(g, element);
+      } else if (element.type === "projectLink") {
+        const plEl = element as any;
+        const g = svgRoot.ownerDocument.createElementNS(SVG_NS, "g");
+        g.setAttribute(
+          "transform",
+          `translate(${offsetX || 0} ${
+            offsetY || 0
+          }) rotate(${degree} ${cx} ${cy})`,
+        );
+
+        // Card background
+        const bgRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        bgRect.setAttribute("x", "0");
+        bgRect.setAttribute("y", "0");
+        bgRect.setAttribute("width", `${element.width}`);
+        bgRect.setAttribute("height", `${element.height}`);
+        bgRect.setAttribute("fill", "#ffffff");
+        bgRect.setAttribute("stroke", "#d1d5db");
+        bgRect.setAttribute("stroke-width", "1.5");
+        bgRect.setAttribute("rx", "10");
+        bgRect.setAttribute("ry", "10");
+        g.appendChild(bgRect);
+
+        // Arrow zone
+        const arrowX = element.width - 60;
+        const arrowRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        arrowRect.setAttribute("x", `${arrowX}`);
+        arrowRect.setAttribute("y", "0");
+        arrowRect.setAttribute("width", "60");
+        arrowRect.setAttribute("height", `${element.height}`);
+        arrowRect.setAttribute("fill", "#4f46e5");
+        arrowRect.setAttribute("rx", "0");
+        // Clip to right corners only by overlapping left side
+        const arrowClip = svgRoot.ownerDocument.createElementNS(SVG_NS, "clipPath");
+        const clipId = `clip-arrow-${element.id}`;
+        arrowClip.setAttribute("id", clipId);
+        const clipRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        clipRect.setAttribute("x", "0");
+        clipRect.setAttribute("y", "0");
+        clipRect.setAttribute("width", `${element.width}`);
+        clipRect.setAttribute("height", `${element.height}`);
+        clipRect.setAttribute("rx", "10");
+        clipRect.setAttribute("ry", "10");
+        arrowClip.appendChild(clipRect);
+        g.appendChild(arrowClip);
+        arrowRect.setAttribute("clip-path", `url(#${clipId})`);
+        g.appendChild(arrowRect);
+
+        // Chevron
+        const chevron = svgRoot.ownerDocument.createElementNS(SVG_NS, "polyline");
+        const chevronCx = arrowX + 30;
+        const chevronCy = element.height / 2;
+        chevron.setAttribute("points",
+          `${chevronCx - 6},${chevronCy - 10} ${chevronCx + 6},${chevronCy} ${chevronCx - 6},${chevronCy + 10}`);
+        chevron.setAttribute("fill", "none");
+        chevron.setAttribute("stroke", "#ffffff");
+        chevron.setAttribute("stroke-width", "3");
+        chevron.setAttribute("stroke-linecap", "round");
+        chevron.setAttribute("stroke-linejoin", "round");
+        g.appendChild(chevron);
+
+        // Title
+        const titleText = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+        titleText.textContent = plEl.title || "Untitled Link";
+        titleText.setAttribute("x", "14");
+        titleText.setAttribute("y", "30");
+        titleText.setAttribute("font-family", "Arial, Helvetica, sans-serif");
+        titleText.setAttribute("font-size", "16px");
+        titleText.setAttribute("font-weight", "bold");
+        titleText.setAttribute("fill", "#111827");
+        g.appendChild(titleText);
+
+        // Description
+        if (plEl.description) {
+          const descText = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+          descText.textContent = plEl.description;
+          descText.setAttribute("x", "14");
+          descText.setAttribute("y", "52");
+          descText.setAttribute("font-family", "Arial, Helvetica, sans-serif");
+          descText.setAttribute("font-size", "14px");
+          descText.setAttribute("fill", "#6b7280");
+          g.appendChild(descText);
+        }
+
+        // Project name
+        if (plEl.projectName) {
+          const projText = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+          projText.textContent = `→ ${plEl.projectName}`;
+          projText.setAttribute("x", "14");
+          projText.setAttribute("y", `${element.height - 14}`);
+          projText.setAttribute("font-family", "Arial, Helvetica, sans-serif");
+          projText.setAttribute("font-size", "12px");
+          projText.setAttribute("fill", "#4f46e5");
+          g.appendChild(projText);
+        }
+
+        if (opacity !== 1) {
+          g.setAttribute("opacity", `${opacity}`);
+        }
+
+        addToRoot(g, element);
       } else {
         // @ts-ignore
         throw new Error(`Unimplemented type ${element.type}`);

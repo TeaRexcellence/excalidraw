@@ -150,7 +150,9 @@ export type ActionName =
   | "addColumnLeft"
   | "deleteColumn"
   | "openDocumentLocation"
-  | "viewDocumentContents";
+  | "viewDocumentContents"
+  | "editProjectLink"
+  | "navigateToProject";
 
 export type PanelComponentProps = {
   elements: readonly ExcalidrawElement[];

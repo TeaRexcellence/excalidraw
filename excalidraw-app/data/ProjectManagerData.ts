@@ -92,6 +92,23 @@ let cachedIndex: ProjectsIndex | null = null;
 let previewGenerator: ((projectId: string) => Promise<void>) | null = null;
 
 export class ProjectManagerData {
+  private static switchingProject = false;
+
+  /**
+   * Begin a project switch — suppresses auto-saves until endProjectSwitch()
+   */
+  static beginProjectSwitch(): void {
+    this.switchingProject = true;
+    this.cancelPendingSave();
+  }
+
+  /**
+   * End a project switch — re-enables auto-saves
+   */
+  static endProjectSwitch(): void {
+    this.switchingProject = false;
+  }
+
   private static saveDebounced = debounce(
     async (
       projectId: string,
@@ -126,7 +143,10 @@ export class ProjectManagerData {
           }
         }
 
-        // Update the project's updatedAt timestamp
+        // Update the cached index's updatedAt timestamp (but do NOT write
+        // the index file here — that races with UI-driven index writes and
+        // causes index corruption). The index is persisted by explicit user
+        // actions in ProjectManager.tsx.
         if (cachedIndex) {
           cachedIndex = {
             ...cachedIndex,
@@ -134,7 +154,6 @@ export class ProjectManagerData {
               p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
             ),
           };
-          await api.saveIndex(cachedIndex);
         }
       } catch (err) {
         console.error("[ProjectManagerData] Auto-save failed:", err);
@@ -149,6 +168,21 @@ export class ProjectManagerData {
    */
   static setPreviewGenerator(generator: ((projectId: string) => Promise<void>) | null): void {
     previewGenerator = generator;
+  }
+
+  /**
+   * Regenerate the current project's preview (e.g. after theme change).
+   * No-op if no preview generator is registered or no current project.
+   */
+  static async regenerateCurrentPreview(): Promise<void> {
+    if (!previewGenerator || !cachedIndex?.currentProjectId) {
+      return;
+    }
+    try {
+      await previewGenerator(cachedIndex.currentProjectId);
+    } catch (err) {
+      console.warn("[ProjectManagerData] Preview regeneration failed:", err);
+    }
   }
 
   /**
@@ -211,6 +245,9 @@ export class ProjectManagerData {
     appState: AppState,
     files: BinaryFiles,
   ): void {
+    if (this.switchingProject) {
+      return;
+    }
     if (cachedIndex?.currentProjectId) {
       this.saveDebounced(cachedIndex.currentProjectId, elements, appState, files);
     }

@@ -69,6 +69,9 @@
     "hachure": "Hachure",
     "zigzag": "Zigzag",
     "crossHatch": "Cross-hatch",
+    "hairline": "Hairline",
+    "fine": "Fine",
+    "light": "Light",
     "thin": "Thin",
     "bold": "Bold",
     "left": "Left",
@@ -320,7 +323,8 @@
     "convertElementType": "Toggle shape type",
     "table": "Table",
     "codeBlock": "Code Block",
-    "document": "Insert Document"
+    "document": "Insert Document",
+    "projectLink": "Project Link"
   },
   "codeBlockDialog": {
     "title": "Create Code Block",
@@ -340,6 +344,27 @@
     "openFileLocation": "Open file location",
     "viewContents": "View contents"
   },
+  "projectLinkDialog": {
+    "createTitle": "Create Project Link",
+    "editTitle": "Edit Project Link",
+    "title": "Title",
+    "titlePlaceholder": "Enter card title...",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter a short description...",
+    "image": "Image (optional)",
+    "removeImage": "Remove",
+    "selectProject": "Link to Project",
+    "searchPlaceholder": "Search projects...",
+    "loading": "Loading projects...",
+    "noProjects": "No projects found",
+    "cancel": "Cancel",
+    "create": "Create",
+    "save": "Save"
+  },
+  "projectLinkActions": {
+    "edit": "Edit project link",
+    "navigate": "Navigate to project"
+  },
   "element": {
     "rectangle": "Rectangle",
     "diamond": "Diamond",
@@ -358,7 +383,8 @@
     "embeddable": "Web Embed",
     "selection": "Selection",
     "iframe": "IFrame",
-    "table": "Table"
+    "table": "Table",
+    "projectLink": "Project Link"
   },
   "headings": {
     "canvasActions": "Canvas actions",

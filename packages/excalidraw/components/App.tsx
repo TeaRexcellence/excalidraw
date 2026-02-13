@@ -145,6 +145,7 @@ import {
   isImageElement,
   isTableElement,
   isCodeBlockElement,
+  isProjectLinkElement,
   isEmbeddableElement,
   isInitializedImageElement,
   isLinearElement,
@@ -320,6 +321,8 @@ import {
   actionToggleCropEditor,
   actionOpenDocumentLocation,
   actionViewDocumentContents,
+  actionEditProjectLink,
+  actionNavigateToProject,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
 import { actionToggleHandTool, zoomToFit } from "../actions/actionCanvas";
@@ -412,6 +415,7 @@ import {
   setCursorForShape,
 } from "../cursor";
 import { ElementCanvasButtons } from "../components/ElementCanvasButtons";
+import { ImageViewButton } from "../components/ImageViewButton";
 import { LaserTrails } from "../laser-trails";
 import { withBatchedUpdates, withBatchedUpdatesThrottled } from "../reactUtils";
 import { textWysiwyg } from "../wysiwyg/textWysiwyg";
@@ -2122,6 +2126,23 @@ class App extends React.Component<AppProps, AppState> {
                                 }}
                               />
                             </ElementCanvasButtons>
+                          )}
+                        {selectedElements.length === 1 &&
+                          isImageElement(firstSelectedElement) &&
+                          !this.state.croppingElementId && (
+                            <ImageViewButton
+                              element={firstSelectedElement}
+                              elementsMap={elementsMap}
+                              onClick={() =>
+                                this.setState({
+                                  openDialog: {
+                                    name: "imageViewer",
+                                    imageElementId:
+                                      firstSelectedElement.id,
+                                  },
+                                })
+                              }
+                            />
                           )}
 
                         {this.state.toast !== null && (
@@ -6117,6 +6138,35 @@ class App extends React.Component<AppProps, AppState> {
       }
     }
 
+    // Handle double-click on project link elements
+    {
+      const hitElement = this.getElementAtPosition(sceneX, sceneY);
+      if (hitElement && isProjectLinkElement(hitElement)) {
+        const localX = sceneX - hitElement.x;
+        // Arrow zone is the rightmost 20% of the card (48/240 base ratio)
+        const arrowZoneX = hitElement.width * (1 - 48 / 240);
+
+        if (localX >= arrowZoneX) {
+          // Arrow zone — navigate to the linked project
+          const projectId = (hitElement as any).projectId;
+          if (projectId) {
+            window.dispatchEvent(
+              new CustomEvent("excalidraw-navigate-project", {
+                detail: { projectId },
+              }),
+            );
+          }
+        } else {
+          // Card body — open edit dialog
+          this.setState({
+            selectedElementIds: { [hitElement.id]: true },
+            openDialog: { name: "projectLinkEdit", elementId: hitElement.id },
+          });
+        }
+        return;
+      }
+    }
+
     resetCursor(this.interactiveCanvas);
 
     const selectedGroupIds = getSelectedGroupIds(this.state);
@@ -6856,6 +6906,13 @@ class App extends React.Component<AppProps, AppState> {
         ) {
           if (
             hitElement &&
+            isProjectLinkElement(hitElement) &&
+            scenePointerX - hitElement.x >=
+              hitElement.width * (1 - 48 / 240)
+          ) {
+            setCursor(this.interactiveCanvas, CURSOR_TYPE.POINTER);
+          } else if (
+            hitElement &&
             isIframeLikeElement(hitElement) &&
             this.isIframeLikeElementCenter(
               hitElement,
@@ -7523,6 +7580,29 @@ class App extends React.Component<AppProps, AppState> {
       ) {
         this.handleEmbeddableCenterClick(hitElement);
         return;
+      }
+    }
+
+    // Handle single click on project link arrow zone
+    if (clicklength < 300) {
+      const hitElement = this.getElementAtPosition(
+        scenePointer.x,
+        scenePointer.y,
+      );
+      if (hitElement && isProjectLinkElement(hitElement)) {
+        const localX = scenePointer.x - hitElement.x;
+        const arrowZoneX = hitElement.width * (1 - 48 / 240);
+        if (localX >= arrowZoneX) {
+          const projectId = (hitElement as any).projectId;
+          if (projectId) {
+            window.dispatchEvent(
+              new CustomEvent("excalidraw-navigate-project", {
+                detail: { projectId },
+              }),
+            );
+            return;
+          }
+        }
       }
     }
 
@@ -11731,9 +11811,10 @@ class App extends React.Component<AppProps, AppState> {
         y: gridY,
         width: distance(pointerDownState.originInGrid.x, gridX),
         height: distance(pointerDownState.originInGrid.y, gridY),
-        shouldMaintainAspectRatio: isImageElement(newElement)
-          ? !shouldMaintainAspectRatio(event)
-          : shouldMaintainAspectRatio(event),
+        shouldMaintainAspectRatio:
+          isImageElement(newElement) || isProjectLinkElement(newElement)
+            ? !shouldMaintainAspectRatio(event)
+            : shouldMaintainAspectRatio(event),
         shouldResizeFromCenter: shouldResizeFromCenter(event),
         zoom: this.state.zoom.value,
         scene: this.scene,
@@ -11958,7 +12039,10 @@ class App extends React.Component<AppProps, AppState> {
         this.scene,
         shouldRotateWithDiscreteAngle(event),
         shouldResizeFromCenter(event),
-        selectedElements.some((element) => isImageElement(element))
+        selectedElements.some(
+          (element) =>
+            isImageElement(element) || isProjectLinkElement(element),
+        )
           ? !shouldMaintainAspectRatio(event)
           : shouldMaintainAspectRatio(event),
         resizeX,
@@ -12090,6 +12174,9 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionOpenDocumentLocation,
       actionViewDocumentContents,
+      CONTEXT_MENU_SEPARATOR,
+      actionEditProjectLink,
+      actionNavigateToProject,
       CONTEXT_MENU_SEPARATOR,
       actionDuplicateSelection,
       actionToggleElementLock,

@@ -863,7 +863,8 @@ const _generateElementShape = (
     case "image":
     case "table":
     case "codeblock":
-    case "document": {
+    case "document":
+    case "projectLink": {
       const shape: ElementShapes[typeof element.type] = null;
       // we return (and cache) `null` to make sure we don't regenerate
       // `element.canvas` on rerenders
@@ -965,6 +966,7 @@ export const getElementShape = <Point extends GlobalPoint | LocalPoint>(
     case "table":
     case "codeblock":
     case "document":
+    case "projectLink":
       return getPolygonShape(element);
     case "arrow":
     case "line": {

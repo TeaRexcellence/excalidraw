@@ -45,6 +45,7 @@ import {
   isIframeLikeElement,
   isImageElement,
   isLinearElement,
+  isProjectLinkElement,
   isTextElement,
 } from "./typeChecks";
 import {
@@ -93,7 +94,7 @@ export const shouldTestInside = (element: ExcalidrawElement) => {
     return isDraggableFromInside && isPathALoop(element.points);
   }
 
-  return isDraggableFromInside || isImageElement(element);
+  return isDraggableFromInside || isImageElement(element) || isProjectLinkElement(element);
 };
 
 export type HitTestArgs = {
@@ -357,6 +358,7 @@ export const intersectElementWithLineSegment = (
     case "table":
     case "codeblock":
     case "document":
+    case "projectLink":
       return intersectRectanguloidWithLineSegment(
         element,
         elementsMap,

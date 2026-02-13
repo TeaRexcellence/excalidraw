@@ -92,6 +92,7 @@ export * from "./store";
 export * from "./tableElement";
 export * from "./renderCodeBlock";
 export * from "./renderDocument";
+export * from "./renderProjectLink";
 export * from "./textElement";
 export * from "./textMeasurements";
 export * from "./textWrapping";

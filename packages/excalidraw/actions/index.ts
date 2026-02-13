@@ -103,3 +103,8 @@ export {
   actionOpenDocumentLocation,
   actionViewDocumentContents,
 } from "./actionDocument";
+
+export {
+  actionEditProjectLink,
+  actionNavigateToProject,
+} from "./actionProjectLink";

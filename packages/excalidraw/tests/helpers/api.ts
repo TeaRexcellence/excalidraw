@@ -373,6 +373,9 @@ export class API {
       case "document":
         element = newElement({ type: "rectangle" as any, ...base, width, height }) as any;
         break;
+      case "projectLink":
+        element = newElement({ type: "rectangle" as any, ...base, width, height }) as any;
+        break;
       default:
         assertNever(
           type,

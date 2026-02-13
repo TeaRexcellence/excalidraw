@@ -52,6 +52,7 @@ import type {
   ExcalidrawCodeBlockElement,
   CodeBlockLanguage,
   ExcalidrawDocumentElement,
+  ExcalidrawProjectLinkElement,
 } from "./types";
 
 export type ElementConstructorOpts = MarkOptional<
@@ -636,5 +637,40 @@ export const newDocumentElement = (
     fileType: opts.fileType ?? "txt",
     filePath: opts.filePath ?? "",
     fileContent: opts.fileContent ?? "",
+  };
+};
+
+export const newProjectLinkElement = (
+  opts: {
+    title?: string;
+    description?: string;
+    projectId?: string;
+    projectName?: string;
+    imageBase64?: string;
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawProjectLinkElement> => {
+  // Auto-size height based on content
+  const hasDescription = !!(opts.description);
+  const hasImage = !!(opts.imageBase64);
+  let autoHeight = 56; // base: padding + title + project name
+  if (hasDescription) {
+    autoHeight += 42;
+  }
+  if (hasImage) {
+    autoHeight += 42;
+  }
+
+  return {
+    ..._newElementBase<ExcalidrawProjectLinkElement>("projectLink", {
+      ...opts,
+      width: opts.width || 240,
+      height: opts.height || autoHeight,
+    }),
+    type: "projectLink",
+    title: opts.title ?? "",
+    description: opts.description ?? "",
+    projectId: opts.projectId ?? "",
+    projectName: opts.projectName ?? "",
+    imageBase64: opts.imageBase64 ?? "",
   };
 };
