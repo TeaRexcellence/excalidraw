@@ -57,6 +57,7 @@ import {
   isFreeDrawElement,
   isImageElement,
   isLinearElement,
+  isTableElement,
   isTextElement,
 } from "./typeChecks";
 
@@ -902,6 +903,27 @@ export const resizeSingleElement = (
           endBinding: null,
         } as ElementUpdate<ExcalidrawArrowElement>;
       }
+    }
+
+    // Proportionally scale table column/row dimensions and sync element size
+    if (isTableElement(latestElement) && isTableElement(origElement)) {
+      const scaleX = Math.abs(nextWidth) / origElement.width;
+      const scaleY = Math.abs(nextHeight) / origElement.height;
+      const MIN_COL_WIDTH = 40;
+      const MIN_ROW_HEIGHT = 24;
+      const newColWidths = origElement.columnWidths.map(
+        (w: number) => Math.max(MIN_COL_WIDTH, w * scaleX),
+      );
+      const newRowHeights = origElement.rowHeights.map(
+        (h: number) => Math.max(MIN_ROW_HEIGHT, h * scaleY),
+      );
+      (updates as any).columnWidths = newColWidths;
+      (updates as any).rowHeights = newRowHeights;
+      // Keep element width/height in sync with actual cell dimensions
+      (updates as any).width = newColWidths.reduce((s: number, w: number) => s + w, 0);
+      (updates as any).height = newRowHeights.reduce((s: number, h: number) => s + h, 0);
+      // Reset scroll offset on resize (content dimensions changed)
+      (updates as any).scrollOffsetY = 0;
     }
 
     scene.mutateElement(latestElement, updates, {

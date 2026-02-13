@@ -29,6 +29,7 @@ import type {
   ExcalidrawLineElement,
   ExcalidrawFlowchartNodeElement,
   ExcalidrawLinearElementSubType,
+  ExcalidrawTableElement,
 } from "./types";
 
 export const isInitializedImageElement = (
@@ -205,6 +206,7 @@ export const isRectanguloidElement = (
       element.type === "embeddable" ||
       element.type === "frame" ||
       element.type === "magicframe" ||
+      element.type === "table" ||
       (element.type === "text" && !element.containerId))
   );
 };
@@ -223,7 +225,8 @@ export const isRectangularElement = (
       element.type === "embeddable" ||
       element.type === "frame" ||
       element.type === "magicframe" ||
-      element.type === "freedraw")
+      element.type === "freedraw" ||
+      element.type === "table")
   );
 };
 
@@ -261,7 +264,8 @@ export const isExcalidrawElement = (
     case "frame":
     case "magicframe":
     case "image":
-    case "selection": {
+    case "selection":
+    case "table": {
       return true;
     }
     default: {
@@ -269,6 +273,12 @@ export const isExcalidrawElement = (
       return false;
     }
   }
+};
+
+export const isTableElement = (
+  element: ExcalidrawElement | null,
+): element is ExcalidrawTableElement => {
+  return element != null && element.type === "table";
 };
 
 export const isFlowchartNodeElement = (

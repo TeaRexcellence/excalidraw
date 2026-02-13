@@ -759,7 +759,9 @@ describe("image", () => {
 
   afterAll(() => {
     vi.unstubAllGlobals();
-    h.state.height = 0;
+    if (h.state) {
+      h.state.height = 0;
+    }
   });
 
   const createImage = async () => {

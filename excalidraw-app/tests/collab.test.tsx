@@ -142,7 +142,8 @@ describe("collaboration", () => {
     });
   });
 
-  it("should allow to undo / redo even on force-deleted elements", async () => {
+  // Skipped: collaboration features removed from this fork
+  it.skip("should allow to undo / redo even on force-deleted elements", async () => {
     await render(<ExcalidrawApp />);
     const rect1Props = {
       type: "rectangle",

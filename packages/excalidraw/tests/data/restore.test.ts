@@ -693,7 +693,11 @@ describe("restoreAppState", () => {
   });
 
   it("should handle appState.openSidebar legacy values", () => {
-    expect(restore.restoreAppState({}, null).openSidebar).toBe(null);
+    // Default is projects sidebar open (project manager feature)
+    expect(restore.restoreAppState({}, null).openSidebar).toEqual({
+      name: DEFAULT_SIDEBAR.name,
+      tab: "projects",
+    });
     expect(
       restore.restoreAppState({ openSidebar: "library" } as any, null)
         .openSidebar,

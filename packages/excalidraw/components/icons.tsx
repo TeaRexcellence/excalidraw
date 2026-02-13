@@ -440,6 +440,18 @@ export const ImageIcon = createIcon(
   modifiedTablerIconProps,
 );
 
+// table icon
+export const TableIcon = createIcon(
+  <g strokeWidth="1.5">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" />
+    <path d="M3 10h18" />
+    <path d="M3 15h18" />
+    <path d="M10 3v18" />
+  </g>,
+  tablerIconProps,
+);
+
 // custom video player icon
 export const VideoIcon = createIcon(
   <g stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none">

@@ -146,8 +146,12 @@ export const SidebarInner = forwardRef(
     }, [closeLibrary, docked, editorInterface.canFitSidebar]);
 
     const [sidebarWidth, setSidebarWidthState] = useState(() => {
-      const saved = localStorage.getItem("excalidraw-sidebar-width");
-      return saved ? parseInt(saved, 10) : DEFAULT_SIDEBAR_WIDTH;
+      try {
+        const saved = localStorage.getItem("excalidraw-sidebar-width");
+        return saved ? parseInt(saved, 10) : DEFAULT_SIDEBAR_WIDTH;
+      } catch {
+        return DEFAULT_SIDEBAR_WIDTH;
+      }
     });
     const [isResizing, setIsResizing] = useState(false);
 
@@ -186,7 +190,11 @@ export const SidebarInner = forwardRef(
 
       const handleMouseUp = () => {
         setIsResizing(false);
-        localStorage.setItem("excalidraw-sidebar-width", sidebarWidth.toString());
+        try {
+          localStorage.setItem("excalidraw-sidebar-width", sidebarWidth.toString());
+        } catch {
+          // noop
+        }
       };
 
       document.addEventListener("mousemove", handleMouseMove);

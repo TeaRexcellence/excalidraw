@@ -110,6 +110,7 @@
     "pwacompat": "2.0.17",
     "roughjs": "4.6.4",
     "sass": "1.51.0",
+    "jspreadsheet-ce": "^4.13.4",
     "tunnel-rat": "0.1.2"
   },
   "devDependencies": {

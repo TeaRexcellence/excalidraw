@@ -245,9 +245,11 @@ describe("library menu", () => {
     const latestLibrary = await h.app.library.getLatestLibrary();
     expect(latestLibrary.length).toBe(0);
 
-    const libraryButton = container.querySelector(".sidebar-trigger");
+    // Switch sidebar to library tab (default is now projects tab)
+    await act(async () => {
+      h.setState({ openSidebar: { name: "default", tab: "library" } });
+    });
 
-    fireEvent.click(libraryButton!);
     fireEvent.click(
       queryByTestId(
         container.querySelector(".layer-ui__library")!,

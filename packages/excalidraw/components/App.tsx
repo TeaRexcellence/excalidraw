@@ -143,6 +143,7 @@ import {
   isBoundToContainer,
   isFrameLikeElement,
   isImageElement,
+  isTableElement,
   isEmbeddableElement,
   isInitializedImageElement,
   isLinearElement,
@@ -250,6 +251,7 @@ import {
   maxBindingDistance_simple,
   convertToExcalidrawElements,
   type ExcalidrawElementSkeleton,
+  getCellAtPoint,
 } from "@excalidraw/element";
 
 import type { GlobalPoint, LocalPoint, Radians } from "@excalidraw/math";
@@ -278,6 +280,7 @@ import type {
   ExcalidrawElbowArrowElement,
   SceneElementsMap,
   ExcalidrawBindableElement,
+  ExcalidrawTableElement,
 } from "@excalidraw/element/types";
 
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
@@ -408,6 +411,7 @@ import { ElementCanvasButtons } from "../components/ElementCanvasButtons";
 import { LaserTrails } from "../laser-trails";
 import { withBatchedUpdates, withBatchedUpdatesThrottled } from "../reactUtils";
 import { textWysiwyg } from "../wysiwyg/textWysiwyg";
+import { openTableSpreadsheetEditor } from "../wysiwyg/tableSpreadsheetEditor";
 import { isOverScrollBars } from "../scene/scrollbars";
 
 import { isMaybeMermaidDefinition } from "../mermaid";
@@ -2016,6 +2020,7 @@ class App extends React.Component<AppProps, AppState> {
                         </LayerUI>
 
                         <div className="excalidraw-textEditorContainer" />
+                        <div className="excalidraw-tableEditorContainer" />
                         <div className="excalidraw-contextMenuContainer" />
                         <div className="excalidraw-eye-dropper-container" />
                         <SVGLayer
@@ -4077,6 +4082,7 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   private cancelInProgressAnimation: (() => void) | null = null;
+  private tableSpreadsheetCloseHandler: (() => void) | null = null;
 
   scrollToContent = (
     /**
@@ -5751,6 +5757,24 @@ class App extends React.Component<AppProps, AppState> {
     return isTextBindableContainer(hitElement, false) ? hitElement : null;
   }
 
+  private startTableCellEditing = (
+    tableElement: ExcalidrawTableElement,
+    _row: number,
+    _col: number,
+  ) => {
+    if (this.tableSpreadsheetCloseHandler) {
+      return;
+    }
+    this.tableSpreadsheetCloseHandler = openTableSpreadsheetEditor({
+      tableElement,
+      app: this,
+      excalidrawContainer: this.excalidrawContainerRef.current,
+      onClose: () => {
+        this.tableSpreadsheetCloseHandler = null;
+      },
+    });
+  };
+
   private startTextEditing = ({
     sceneX,
     sceneY,
@@ -6037,6 +6061,27 @@ class App extends React.Component<AppProps, AppState> {
     if (selectedElements.length === 1 && isImageElement(selectedElements[0])) {
       this.startImageCropping(selectedElements[0]);
       return;
+    }
+
+    // Handle double-click on table cells — use hit-testing so it works
+    // even if the table wasn't pre-selected (first click selects, second
+    // click triggers dblclick in the same gesture)
+    {
+      const hitElement = this.getElementAtPosition(sceneX, sceneY);
+      if (hitElement && isTableElement(hitElement)) {
+        const tableEl = hitElement as ExcalidrawTableElement;
+        const localX = sceneX - tableEl.x;
+        const localY = sceneY - tableEl.y;
+        const cell = getCellAtPoint(tableEl, localX, localY);
+        if (cell) {
+          // Make sure the table is selected
+          this.setState({
+            selectedElementIds: { [tableEl.id]: true },
+          });
+          this.startTableCellEditing(tableEl, cell.row, cell.col);
+        }
+        return;
+      }
     }
 
     resetCursor(this.interactiveCanvas);
@@ -7359,7 +7404,8 @@ class App extends React.Component<AppProps, AppState> {
     } else if (
       this.state.activeTool.type !== "eraser" &&
       this.state.activeTool.type !== "hand" &&
-      this.state.activeTool.type !== "image"
+      this.state.activeTool.type !== "image" &&
+      this.state.activeTool.type !== "table"
     ) {
       this.createGenericElementOnPointerDown(
         this.state.activeTool.type,
@@ -12044,6 +12090,39 @@ class App extends React.Component<AppProps, AppState> {
       }
 
       const { deltaX, deltaY } = event;
+
+      // Scroll table element if cursor is over a scrollable table (no modifier keys)
+      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && deltaY !== 0) {
+        const { x: sceneX, y: sceneY } = viewportCoordsToSceneCoords(
+          {
+            clientX: this.lastViewportPosition.x,
+            clientY: this.lastViewportPosition.y,
+          },
+          this.state,
+        );
+        const hitElement = this.getElementAtPosition(sceneX, sceneY);
+        if (hitElement && isTableElement(hitElement)) {
+          const totalContentHeight = hitElement.rowHeights.reduce(
+            (s: number, h: number) => s + h,
+            0,
+          );
+          if (totalContentHeight > hitElement.height + 1) {
+            const maxScroll = totalContentHeight - hitElement.height;
+            const currentOffset = hitElement.scrollOffsetY || 0;
+            const newOffset = Math.max(
+              0,
+              Math.min(maxScroll, currentOffset + deltaY),
+            );
+            if (newOffset !== currentOffset) {
+              this.scene.mutateElement(hitElement as any, {
+                scrollOffsetY: newOffset,
+              });
+            }
+            return;
+          }
+        }
+      }
+
       // note that event.ctrlKey is necessary to handle pinch zooming
       if (event.metaKey || event.ctrlKey) {
         const sign = Math.sign(deltaY);

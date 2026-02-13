@@ -743,6 +743,61 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
       },
       "separator",
       {
+        "label": "tableActions.addRowAbove",
+        "name": "addRowAbove",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addRowBelow",
+        "name": "addRowBelow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteRow",
+        "name": "deleteRow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnLeft",
+        "name": "addColumnLeft",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnRight",
+        "name": "addColumnRight",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteColumn",
+        "name": "deleteColumn",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "PanelComponent": [Function],
         "icon": <svg
           aria-hidden="true"
@@ -926,6 +981,7 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -946,7 +1002,10 @@ exports[`contextMenu element > right-clicking on a group should select whole gro
   "openDialog": null,
   "openMenu": null,
   "openPopup": null,
-  "openSidebar": null,
+  "openSidebar": {
+    "name": "default",
+    "tab": "projects",
+  },
   "originSnapOffset": {
     "x": 0,
     "y": 0,
@@ -1128,6 +1187,7 @@ exports[`contextMenu element > selecting 'Add to library' in context menu adds e
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -1345,6 +1405,7 @@ exports[`contextMenu element > selecting 'Bring forward' in context menu brings 
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -1679,6 +1740,7 @@ exports[`contextMenu element > selecting 'Bring to front' in context menu brings
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -2013,6 +2075,7 @@ exports[`contextMenu element > selecting 'Copy styles' in context menu copies st
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -2230,6 +2293,7 @@ exports[`contextMenu element > selecting 'Delete' in context menu deletes elemen
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -2474,6 +2538,7 @@ exports[`contextMenu element > selecting 'Duplicate' in context menu duplicates 
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -2775,6 +2840,7 @@ exports[`contextMenu element > selecting 'Group selection' in context menu group
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -3150,6 +3216,7 @@ exports[`contextMenu element > selecting 'Paste styles' in context menu pastes s
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -3646,6 +3713,7 @@ exports[`contextMenu element > selecting 'Send backward' in context menu sends e
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -3972,6 +4040,7 @@ exports[`contextMenu element > selecting 'Send to back' in context menu sends el
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -4298,6 +4367,7 @@ exports[`contextMenu element > selecting 'Ungroup selection' in context menu ung
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -5403,6 +5473,61 @@ exports[`contextMenu element > shows 'Group selection' in context menu for multi
       },
       "separator",
       {
+        "label": "tableActions.addRowAbove",
+        "name": "addRowAbove",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addRowBelow",
+        "name": "addRowBelow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteRow",
+        "name": "deleteRow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnLeft",
+        "name": "addColumnLeft",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnRight",
+        "name": "addColumnRight",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteColumn",
+        "name": "deleteColumn",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "PanelComponent": [Function],
         "icon": <svg
           aria-hidden="true"
@@ -5586,6 +5711,7 @@ exports[`contextMenu element > shows 'Group selection' in context menu for multi
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -6623,6 +6749,61 @@ exports[`contextMenu element > shows 'Ungroup selection' in context menu for gro
       },
       "separator",
       {
+        "label": "tableActions.addRowAbove",
+        "name": "addRowAbove",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addRowBelow",
+        "name": "addRowBelow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteRow",
+        "name": "deleteRow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnLeft",
+        "name": "addColumnLeft",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnRight",
+        "name": "addColumnRight",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteColumn",
+        "name": "deleteColumn",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "PanelComponent": [Function],
         "icon": <svg
           aria-hidden="true"
@@ -6806,6 +6987,7 @@ exports[`contextMenu element > shows 'Ungroup selection' in context menu for gro
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -7495,6 +7677,12 @@ exports[`contextMenu element > shows context menu for canvas > [end of test] app
         "viewMode": true,
       },
       {
+        "Component": [Function],
+        "contextItemType": "custom",
+        "name": "gridOpacitySlider",
+        "predicate": [Function],
+      },
+      {
         "checked": [Function],
         "icon": <svg
           aria-hidden="true"
@@ -7744,6 +7932,7 @@ exports[`contextMenu element > shows context menu for canvas > [end of test] app
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -7764,7 +7953,10 @@ exports[`contextMenu element > shows context menu for canvas > [end of test] app
   "openDialog": null,
   "openMenu": null,
   "openPopup": null,
-  "openSidebar": null,
+  "openSidebar": {
+    "name": "default",
+    "tab": "projects",
+  },
   "originSnapOffset": {
     "x": 0,
     "y": 0,
@@ -8564,6 +8756,61 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
       },
       "separator",
       {
+        "label": "tableActions.addRowAbove",
+        "name": "addRowAbove",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addRowBelow",
+        "name": "addRowBelow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteRow",
+        "name": "deleteRow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnLeft",
+        "name": "addColumnLeft",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnRight",
+        "name": "addColumnRight",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteColumn",
+        "name": "deleteColumn",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "PanelComponent": [Function],
         "icon": <svg
           aria-hidden="true"
@@ -8747,6 +8994,7 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -9558,6 +9806,61 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
       },
       "separator",
       {
+        "label": "tableActions.addRowAbove",
+        "name": "addRowAbove",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addRowBelow",
+        "name": "addRowBelow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteRow",
+        "name": "deleteRow",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnLeft",
+        "name": "addColumnLeft",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.addColumnRight",
+        "name": "addColumnRight",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      {
+        "label": "tableActions.deleteColumn",
+        "name": "deleteColumn",
+        "perform": [Function],
+        "predicate": [Function],
+        "trackEvent": {
+          "category": "element",
+        },
+      },
+      "separator",
+      {
         "PanelComponent": [Function],
         "icon": <svg
           aria-hidden="true"
@@ -9741,6 +10044,7 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "height": 100,
@@ -9761,7 +10065,10 @@ exports[`contextMenu element > shows context menu for element > [end of test] ap
   "openDialog": null,
   "openMenu": null,
   "openPopup": null,
-  "openSidebar": null,
+  "openSidebar": {
+    "name": "default",
+    "tab": "projects",
+  },
   "originSnapOffset": {
     "x": 0,
     "y": 0,

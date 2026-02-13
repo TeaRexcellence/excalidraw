@@ -50,6 +50,7 @@ const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(index),
+      keepalive: true,
     });
   },
 
@@ -70,6 +71,7 @@ const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sceneData),
+      keepalive: true,
     });
   },
 

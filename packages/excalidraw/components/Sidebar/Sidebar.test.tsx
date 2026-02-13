@@ -344,9 +344,10 @@ describe("Sidebar", () => {
       await withExcalidrawDimensions(
         { width: 1920, height: 1080 },
         async () => {
+          // Initially no active library tab panel
           expect(
             container.querySelector<HTMLElement>(
-              "[role=tabpanel][data-testid=library]",
+              "[role=tabpanel][data-testid=library][data-state=active]",
             ),
           ).toBeNull();
 
@@ -356,7 +357,7 @@ describe("Sidebar", () => {
           );
           expect(
             container.querySelector<HTMLElement>(
-              "[role=tabpanel][data-testid=library]",
+              "[role=tabpanel][data-testid=library][data-state=active]",
             ),
           ).not.toBeNull();
 
@@ -366,7 +367,7 @@ describe("Sidebar", () => {
           );
           expect(
             container.querySelector<HTMLElement>(
-              "[role=tabpanel][data-testid=comments]",
+              "[role=tabpanel][data-testid=comments][data-state=active]",
             ),
           ).not.toBeNull();
 
@@ -376,7 +377,7 @@ describe("Sidebar", () => {
           );
           expect(
             container.querySelector<HTMLElement>(
-              "[role=tabpanel][data-testid=comments]",
+              "[role=tabpanel][data-testid=comments][data-state=active]",
             ),
           ).toBeNull();
 
@@ -386,7 +387,7 @@ describe("Sidebar", () => {
           );
           expect(
             container.querySelector<HTMLElement>(
-              "[role=tabpanel][data-testid=comments]",
+              "[role=tabpanel][data-testid=comments][data-state=active]",
             ),
           ).not.toBeNull();
         },

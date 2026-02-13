@@ -48,6 +48,7 @@ import type {
   ExcalidrawArrowElement,
   ExcalidrawElbowArrowElement,
   ExcalidrawLineElement,
+  ExcalidrawTableElement,
 } from "./types";
 
 export type ElementConstructorOpts = MarkOptional<
@@ -542,5 +543,52 @@ export const newImageElement = (
     fileId: opts.fileId ?? null,
     scale: opts.scale ?? [1, 1],
     crop: opts.crop ?? null,
+  };
+};
+
+export const DEFAULT_TABLE_CELL_WIDTH = 150;
+export const DEFAULT_TABLE_CELL_HEIGHT = 44;
+export const DEFAULT_TABLE_FONT_SIZE = 16;
+export const DEFAULT_TABLE_CELL_PADDING = 8;
+
+export const newTableElement = (
+  opts: {
+    rows?: number;
+    columns?: number;
+    cells?: string[][];
+    columnWidths?: number[];
+    rowHeights?: number[];
+    headerRow?: boolean;
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawTableElement> => {
+  const rows = Math.max(1, opts.rows || 3);
+  const columns = Math.max(1, opts.columns || 3);
+
+  const columnWidths =
+    opts.columnWidths || Array(columns).fill(DEFAULT_TABLE_CELL_WIDTH);
+  const rowHeights =
+    opts.rowHeights || Array(rows).fill(DEFAULT_TABLE_CELL_HEIGHT);
+
+  const cells =
+    opts.cells ||
+    Array.from({ length: rows }, () => Array(columns).fill(""));
+
+  const width = columnWidths.reduce((sum: number, w: number) => sum + w, 0);
+  const height = rowHeights.reduce((sum: number, h: number) => sum + h, 0);
+
+  return {
+    ..._newElementBase<ExcalidrawTableElement>("table", {
+      ...opts,
+      width,
+      height,
+    }),
+    type: "table",
+    columns,
+    rows,
+    cells,
+    columnWidths,
+    rowHeights,
+    headerRow: opts.headerRow ?? true,
+    scrollOffsetY: 0,
   };
 };

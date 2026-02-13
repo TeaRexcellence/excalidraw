@@ -154,6 +154,7 @@ export type ToolType =
   | "frame"
   | "magicframe"
   | "embeddable"
+  | "table"
   | "laser";
 
 export type ElementOrToolType = ExcalidrawElementType | ToolType | "custom";
@@ -372,7 +373,7 @@ export interface AppState {
   openSidebar: { name: SidebarName; tab?: SidebarTabName } | null;
   openDialog:
     | null
-    | { name: "imageExport" | "help" | "jsonExport" | "videoEmbed" }
+    | { name: "imageExport" | "help" | "jsonExport" | "videoEmbed" | "tableCreate" }
     | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
     | { name: "commandPalette" }
     | { name: "settings" }

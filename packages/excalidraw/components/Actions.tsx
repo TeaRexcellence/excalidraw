@@ -67,6 +67,7 @@ import { PropertiesPopover } from "./PropertiesPopover";
 import {
   EmbedIcon,
   VideoIcon,
+  TableIcon,
   frameToolIcon,
   laserPointerToolIcon,
   LassoIcon,
@@ -1191,6 +1192,17 @@ export const ShapesSwitcher = ({
                   }
                   app.setActiveTool({ type: "embeddable" });
                 }}
+              />,
+              <ToolButton
+                key="table"
+                className="Shape"
+                type="button"
+                icon={TableIcon}
+                name="table"
+                title={t("toolBar.table")}
+                aria-label={t("toolBar.table")}
+                data-testid="toolbar-table"
+                onClick={() => app.setOpenDialog({ name: "tableCreate" })}
               />,
             ];
           }

@@ -185,6 +185,25 @@ export type ExcalidrawFrameLikeElement =
   | ExcalidrawFrameElement
   | ExcalidrawMagicFrameElement;
 
+export type ExcalidrawTableElement = _ExcalidrawElementBase &
+  Readonly<{
+    type: "table";
+    /** Number of columns */
+    columns: number;
+    /** Number of rows */
+    rows: number;
+    /** 2D array [row][col] of cell text content */
+    cells: readonly (readonly string[])[];
+    /** Absolute pixel width of each column */
+    columnWidths: readonly number[];
+    /** Absolute pixel height of each row */
+    rowHeights: readonly number[];
+    /** Whether to render the first row as a header */
+    headerRow: boolean;
+    /** Vertical scroll offset in pixels for canvas rendering */
+    scrollOffsetY: number;
+  }>;
+
 /**
  * These are elements that don't have any additional properties.
  */
@@ -207,7 +226,8 @@ export type ExcalidrawRectanguloidElement =
   | ExcalidrawIframeLikeElement
   | ExcalidrawFrameLikeElement
   | ExcalidrawEmbeddableElement
-  | ExcalidrawSelectionElement;
+  | ExcalidrawSelectionElement
+  | ExcalidrawTableElement;
 
 /**
  * ExcalidrawElement should be JSON serializable and (eventually) contain
@@ -224,7 +244,8 @@ export type ExcalidrawElement =
   | ExcalidrawFrameElement
   | ExcalidrawMagicFrameElement
   | ExcalidrawIframeElement
-  | ExcalidrawEmbeddableElement;
+  | ExcalidrawEmbeddableElement
+  | ExcalidrawTableElement;
 
 export type ExcalidrawNonSelectionElement = Exclude<
   ExcalidrawElement,

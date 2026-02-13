@@ -727,6 +727,106 @@ const renderElementToSvg = (
         );
 
         addToRoot(g || node, element);
+      } else if (element.type === "table") {
+        const tableEl = element as any;
+        const g = svgRoot.ownerDocument.createElementNS(SVG_NS, "g");
+        g.setAttribute(
+          "transform",
+          `translate(${offsetX || 0} ${
+            offsetY || 0
+          }) rotate(${degree} ${cx} ${cy})`,
+        );
+
+        const isDark = renderConfig.theme === THEME.DARK;
+        const strokeColor = isDark
+          ? applyDarkModeFilter(element.strokeColor)
+          : element.strokeColor;
+
+        // Header background
+        if (tableEl.headerRow && tableEl.rows > 0) {
+          const headerRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+          headerRect.setAttribute("x", "0");
+          headerRect.setAttribute("y", "0");
+          headerRect.setAttribute("width", `${tableEl.columnWidths.reduce((s: number, w: number) => s + w, 0)}`);
+          headerRect.setAttribute("height", `${tableEl.rowHeights[0]}`);
+          headerRect.setAttribute("fill", isDark ? "rgba(99,102,140,0.35)" : "rgba(213,216,235,0.35)");
+          g.appendChild(headerRect);
+        }
+
+        const totalW = tableEl.columnWidths.reduce((s: number, w: number) => s + w, 0);
+        const totalH = tableEl.rowHeights.reduce((s: number, h: number) => s + h, 0);
+
+        // Inner grid lines
+        let gy = 0;
+        for (let r = 1; r < tableEl.rows; r++) {
+          gy += tableEl.rowHeights[r - 1];
+          const line = svgRoot.ownerDocument.createElementNS(SVG_NS, "line");
+          line.setAttribute("x1", "0");
+          line.setAttribute("y1", `${gy}`);
+          line.setAttribute("x2", `${totalW}`);
+          line.setAttribute("y2", `${gy}`);
+          line.setAttribute("stroke", isDark ? "#555" : "#c4c4c4");
+          line.setAttribute("stroke-width", "1");
+          g.appendChild(line);
+        }
+        let gx = 0;
+        for (let c = 1; c < tableEl.columns; c++) {
+          gx += tableEl.columnWidths[c - 1];
+          const line = svgRoot.ownerDocument.createElementNS(SVG_NS, "line");
+          line.setAttribute("x1", `${gx}`);
+          line.setAttribute("y1", "0");
+          line.setAttribute("x2", `${gx}`);
+          line.setAttribute("y2", `${totalH}`);
+          line.setAttribute("stroke", isDark ? "#555" : "#c4c4c4");
+          line.setAttribute("stroke-width", "1");
+          g.appendChild(line);
+        }
+
+        // Cell text — font scales with row height (matching canvas renderer)
+        gy = 0;
+        for (let r = 0; r < tableEl.rows; r++) {
+          gx = 0;
+          const cellH = tableEl.rowHeights[r];
+          const fontSize = Math.max(12, Math.min(72, cellH * 0.44));
+          const cellPadding = Math.max(4, fontSize * 0.5);
+          for (let c = 0; c < tableEl.columns; c++) {
+            const cellText = tableEl.cells[r]?.[c] || "";
+            if (cellText) {
+              const isHeader = tableEl.headerRow && r === 0;
+              const text = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+              text.textContent = cellText;
+              text.setAttribute("x", `${gx + cellPadding}`);
+              text.setAttribute("y", `${gy + cellH / 2}`);
+              text.setAttribute("font-family", "Virgil, Segoe UI Emoji");
+              text.setAttribute("font-size", `${fontSize}px`);
+              text.setAttribute("fill", strokeColor);
+              text.setAttribute("dominant-baseline", "central");
+              if (isHeader) {
+                text.setAttribute("font-weight", "bold");
+              }
+              g.appendChild(text);
+            }
+            gx += tableEl.columnWidths[c];
+          }
+          gy += tableEl.rowHeights[r];
+        }
+
+        // Outer border
+        const border = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        border.setAttribute("x", "0");
+        border.setAttribute("y", "0");
+        border.setAttribute("width", `${totalW}`);
+        border.setAttribute("height", `${totalH}`);
+        border.setAttribute("fill", "none");
+        border.setAttribute("stroke", strokeColor);
+        border.setAttribute("stroke-width", `${element.strokeWidth || 2}`);
+        g.appendChild(border);
+
+        if (opacity !== 1) {
+          g.setAttribute("opacity", `${opacity}`);
+        }
+
+        addToRoot(g, element);
       } else {
         // @ts-ignore
         throw new Error(`Unimplemented type ${element.type}`);

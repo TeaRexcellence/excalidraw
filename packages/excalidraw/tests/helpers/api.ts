@@ -363,6 +363,10 @@ export class API {
       case "magicframe":
         element = newMagicFrameElement({ ...base, width, height });
         break;
+      case "table":
+        // Table creation handled by newTableElement - skip in tests for now
+        element = newElement({ type: "rectangle" as any, ...base, width, height }) as any;
+        break;
       default:
         assertNever(
           type,

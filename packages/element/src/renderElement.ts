@@ -61,6 +61,7 @@ import {
   isMagicFrameElement,
   isImageElement,
 } from "./typeChecks";
+import { drawTableOnCanvas } from "./renderTable";
 import { getContainingFrame } from "./frame";
 import { getCornerRadius } from "./utils";
 
@@ -76,6 +77,7 @@ import type {
   ExcalidrawFrameLikeElement,
   NonDeletedSceneElementsMap,
   ElementsMap,
+  ExcalidrawTableElement,
 } from "./types";
 
 import type { RoughCanvas } from "roughjs/bin/canvas";
@@ -430,6 +432,14 @@ const drawElementOnCanvas = (
       }
 
       context.restore();
+      break;
+    }
+    case "table": {
+      drawTableOnCanvas(
+        element as ExcalidrawTableElement,
+        context,
+        renderConfig,
+      );
       break;
     }
     case "image": {
@@ -817,7 +827,8 @@ export const renderElement = (
     case "image":
     case "text":
     case "iframe":
-    case "embeddable": {
+    case "embeddable":
+    case "table": {
       if (renderConfig.isExporting) {
         const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
         const cx = (x1 + x2) / 2 + appState.scrollX;

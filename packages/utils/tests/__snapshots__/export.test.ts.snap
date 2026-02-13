@@ -53,6 +53,7 @@ exports[`exportToSvg > with default arguments 1`] = `
   },
   "frameToHighlight": null,
   "gridModeEnabled": false,
+  "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
   "hoveredElementIds": {},
@@ -70,7 +71,10 @@ exports[`exportToSvg > with default arguments 1`] = `
   "openDialog": null,
   "openMenu": null,
   "openPopup": null,
-  "openSidebar": null,
+  "openSidebar": {
+    "name": "default",
+    "tab": "projects",
+  },
   "originSnapOffset": {
     "x": 0,
     "y": 0,
