@@ -1,5 +1,3 @@
-import { CANVAS_SEARCH_TAB, DEFAULT_SIDEBAR } from "@excalidraw/common";
-
 import {
   isFlowchartNodeElement,
   isImageElement,
@@ -44,8 +42,7 @@ const getHints = ({
   const multiMode = appState.multiElement !== null;
 
   if (
-    appState.openSidebar?.name === DEFAULT_SIDEBAR.name &&
-    appState.openSidebar.tab === CANVAS_SEARCH_TAB &&
+    appState.openDialog?.name === "searchMenu" &&
     appState.searchMatches?.matches.length
   ) {
     return t("hints.dismissSearch", {

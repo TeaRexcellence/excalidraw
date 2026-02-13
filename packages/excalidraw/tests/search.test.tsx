@@ -1,9 +1,7 @@
 import React from "react";
 
 import {
-  CANVAS_SEARCH_TAB,
   CLASSES,
-  DEFAULT_SIDEBAR,
   KEYS,
 } from "@excalidraw/common";
 
@@ -22,51 +20,51 @@ import { act, render, waitFor } from "./test-utils";
 const { h } = window;
 
 const querySearchInput = async () => {
-  const input =
-    h.app.excalidrawContainerValue.container?.querySelector<HTMLInputElement>(
+  let input: HTMLInputElement | null = null;
+  await waitFor(() => {
+    input = document.querySelector<HTMLInputElement>(
       `.${CLASSES.SEARCH_MENU_INPUT_WRAPPER} input`,
-    )!;
-  await waitFor(() => expect(input).not.toBeNull());
-  return input;
+    );
+    expect(input).not.toBeNull();
+  });
+  return input!;
 };
 
 describe("search", () => {
   beforeEach(async () => {
     await render(<Excalidraw handleKeyboardGlobally />);
     API.setAppState({
-      openSidebar: null,
+      openDialog: null,
     });
   });
 
   it("should toggle search on cmd+f", async () => {
-    expect(h.app.state.openSidebar).toBeNull();
+    expect(h.app.state.openDialog).toBeNull();
 
     Keyboard.withModifierKeys({ ctrl: true }, () => {
       Keyboard.keyPress(KEYS.F);
     });
-    expect(h.app.state.openSidebar).not.toBeNull();
-    expect(h.app.state.openSidebar?.name).toBe(DEFAULT_SIDEBAR.name);
-    expect(h.app.state.openSidebar?.tab).toBe(CANVAS_SEARCH_TAB);
+    expect(h.app.state.openDialog).not.toBeNull();
+    expect(h.app.state.openDialog?.name).toBe("searchMenu");
 
     const searchInput = await querySearchInput();
     expect(searchInput.matches(":focus")).toBe(true);
   });
 
-  it("should refocus search input with cmd+f when search sidebar is still open", async () => {
+  it("should refocus search input with cmd+f when search dialog is still open", async () => {
     Keyboard.withModifierKeys({ ctrl: true }, () => {
       Keyboard.keyPress(KEYS.F);
     });
 
-    const searchInput =
-      h.app.excalidrawContainerValue.container?.querySelector<HTMLInputElement>(
-        `.${CLASSES.SEARCH_MENU_INPUT_WRAPPER} input`,
-      );
+    const searchInput = document.querySelector<HTMLInputElement>(
+      `.${CLASSES.SEARCH_MENU_INPUT_WRAPPER} input`,
+    );
 
     act(() => {
       searchInput?.blur();
     });
 
-    expect(h.app.state.openSidebar).not.toBeNull();
+    expect(h.app.state.openDialog).not.toBeNull();
     expect(searchInput?.matches(":focus")).toBe(false);
 
     Keyboard.withModifierKeys({ ctrl: true }, () => {
@@ -84,14 +82,13 @@ describe("search", () => {
       API.createElement({ type: "text", text: "test two" }),
     ]);
 
-    expect(h.app.state.openSidebar).toBeNull();
+    expect(h.app.state.openDialog).toBeNull();
 
     Keyboard.withModifierKeys({ ctrl: true }, () => {
       Keyboard.keyPress(KEYS.F);
     });
-    expect(h.app.state.openSidebar).not.toBeNull();
-    expect(h.app.state.openSidebar?.name).toBe(DEFAULT_SIDEBAR.name);
-    expect(h.app.state.openSidebar?.tab).toBe(CANVAS_SEARCH_TAB);
+    expect(h.app.state.openDialog).not.toBeNull();
+    expect(h.app.state.openDialog?.name).toBe("searchMenu");
 
     const searchInput = await querySearchInput();
 
@@ -129,14 +126,13 @@ describe("search", () => {
       originalText: "test text split into multiple lines",
     });
 
-    expect(h.app.state.openSidebar).toBeNull();
+    expect(h.app.state.openDialog).toBeNull();
 
     Keyboard.withModifierKeys({ ctrl: true }, () => {
       Keyboard.keyPress(KEYS.F);
     });
-    expect(h.app.state.openSidebar).not.toBeNull();
-    expect(h.app.state.openSidebar?.name).toBe(DEFAULT_SIDEBAR.name);
-    expect(h.app.state.openSidebar?.tab).toBe(CANVAS_SEARCH_TAB);
+    expect(h.app.state.openDialog).not.toBeNull();
+    expect(h.app.state.openDialog?.name).toBe("searchMenu");
 
     const searchInput = await querySearchInput();
 
@@ -175,14 +171,13 @@ describe("search", () => {
       name: "Frame: name test for frame, yes, frame!",
     });
 
-    expect(h.app.state.openSidebar).toBeNull();
+    expect(h.app.state.openDialog).toBeNull();
 
     Keyboard.withModifierKeys({ ctrl: true }, () => {
       Keyboard.keyPress(KEYS.F);
     });
-    expect(h.app.state.openSidebar).not.toBeNull();
-    expect(h.app.state.openSidebar?.name).toBe(DEFAULT_SIDEBAR.name);
-    expect(h.app.state.openSidebar?.tab).toBe(CANVAS_SEARCH_TAB);
+    expect(h.app.state.openDialog).not.toBeNull();
+    expect(h.app.state.openDialog?.name).toBe("searchMenu");
 
     const searchInput = await querySearchInput();
 

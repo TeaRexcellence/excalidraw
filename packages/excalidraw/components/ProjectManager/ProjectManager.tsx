@@ -323,7 +323,7 @@ export const ProjectManager: React.FC = () => {
         {
           exportBackground: true,
           exportPadding: 10,
-          viewBackgroundColor: isDark ? "#121212" : app.state.viewBackgroundColor,
+          viewBackgroundColor: app.state.viewBackgroundColor,
         },
         // Custom canvas creator to limit preview size
         (width, height) => {
@@ -963,6 +963,10 @@ export const ProjectManager: React.FC = () => {
             p.id === projectId ? { ...p, hasCustomPreview: true, updatedAt: Date.now() } : p,
           ),
         };
+        // Sync all caches synchronously so the auto-save preview generator
+        // sees hasCustomPreview immediately (before React re-renders)
+        indexRef.current = newIndex;
+        ProjectManagerData.updateCachedIndex(newIndex);
         setIndex(newIndex);
         await api.saveIndex(newIndex);
 
@@ -988,6 +992,10 @@ export const ProjectManager: React.FC = () => {
           p.id === projectId ? { ...p, hasCustomPreview: false, updatedAt: Date.now() } : p,
         ),
       };
+      // Sync all caches synchronously so the auto-save preview generator
+      // sees hasCustomPreview: false immediately
+      indexRef.current = newIndex;
+      ProjectManagerData.updateCachedIndex(newIndex);
       setIndex(newIndex);
       await api.saveIndex(newIndex);
 

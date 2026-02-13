@@ -70,6 +70,7 @@ import { DocumentViewerDialog } from "./DocumentViewerDialog";
 import { ImageViewerDialog } from "./ImageViewerDialog";
 import { ProjectLinkCreateDialog } from "./ProjectLinkCreateDialog";
 import { ProjectLinkEditDialog } from "./ProjectLinkEditDialog";
+import { SearchMenu } from "./SearchMenu";
 
 import "./LayerUI.scss";
 import "./Toolbar.scss";
@@ -640,6 +641,13 @@ const LayerUI = ({
           />
         );
       })()}
+      {appState.openDialog?.name === "searchMenu" && (
+        <SearchMenu
+          onClose={() => {
+            setAppState({ openDialog: null });
+          }}
+        />
+      )}
       <ActiveConfirmDialog />
       {appState.openDialog?.name === "elementLinkSelector" && (
         <ElementLinkDialog

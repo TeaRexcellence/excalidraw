@@ -712,9 +712,10 @@ const ExcalidrawWrapper = () => {
     // Save to Project Manager (if there's a current project)
     ProjectManagerData.save(elements, appState, files);
 
-    // this check is redundant, but since this is a hot path, it's best
-    // not to evaludate the nested expression every time
-    if (!LocalData.isSavePaused()) {
+    // Skip localStorage save when a project is active — the project manager
+    // handles persistence via its own backend, and localStorage has a small
+    // quota (~5-10 MB) that gets exceeded easily with many projects.
+    if (!LocalData.isSavePaused() && !ProjectManagerData.hasCurrentProject()) {
       LocalData.save(elements, appState, files, () => {
         if (excalidrawAPI) {
           let didChange = false;

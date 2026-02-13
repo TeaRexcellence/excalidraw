@@ -35,24 +35,30 @@ export const ImageViewButton = ({
     return null;
   }
 
-  const [x1, y1] = getElementAbsoluteCoords(element, elementsMap);
+  const [x1, y1, x2, y2, cx, cy] = getElementAbsoluteCoords(
+    element,
+    elementsMap,
+  );
 
-  const topLeft = sceneCoordsToViewportCoords(
-    { sceneX: x1, sceneY: y1 },
+  const center = sceneCoordsToViewportCoords(
+    { sceneX: cx, sceneY: cy },
     appState,
   );
 
   const width = element.width * appState.zoom.value;
   const height = element.height * appState.zoom.value;
 
+  const angleDeg = (element.angle * 180) / Math.PI;
+
   return (
     <div
       className="image-view-button-hitarea"
       style={{
-        left: topLeft.x - appState.offsetLeft,
-        top: topLeft.y - appState.offsetTop,
+        left: center.x - appState.offsetLeft - width / 2,
+        top: center.y - appState.offsetTop - height / 2,
         width,
         height,
+        transform: `rotate(${angleDeg}deg)`,
       }}
     >
       <button

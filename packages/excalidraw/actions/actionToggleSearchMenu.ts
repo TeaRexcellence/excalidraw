@@ -1,8 +1,6 @@
 import {
   KEYS,
-  CANVAS_SEARCH_TAB,
   CLASSES,
-  DEFAULT_SIDEBAR,
 } from "@excalidraw/common";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
@@ -25,16 +23,9 @@ export const actionToggleSearchMenu = register({
     predicate: (appState) => appState.gridModeEnabled,
   },
   perform(elements, appState, _, app) {
-    if (appState.openDialog) {
-      return false;
-    }
-
-    if (
-      appState.openSidebar?.name === DEFAULT_SIDEBAR.name &&
-      appState.openSidebar.tab === CANVAS_SEARCH_TAB
-    ) {
+    if (appState.openDialog?.name === "searchMenu") {
       const searchInput =
-        app.excalidrawContainerValue.container?.querySelector<HTMLInputElement>(
+        document.querySelector<HTMLInputElement>(
           `.${CLASSES.SEARCH_MENU_INPUT_WRAPPER} input`,
         );
 
@@ -43,11 +34,14 @@ export const actionToggleSearchMenu = register({
       return false;
     }
 
+    if (appState.openDialog) {
+      return false;
+    }
+
     return {
       appState: {
         ...appState,
-        openSidebar: { name: DEFAULT_SIDEBAR.name, tab: CANVAS_SEARCH_TAB },
-        openDialog: null,
+        openDialog: { name: "searchMenu" },
       },
       captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };

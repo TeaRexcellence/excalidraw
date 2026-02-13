@@ -1,9 +1,13 @@
 import type { ExcalidrawDocumentElement } from "./types";
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
 
+// Reference dimensions — all drawing is done at this size, then scaled
+const REF_W = 200;
+const REF_H = 80;
+
 const CORNER_RADIUS = 8;
-const FONT = '14px sans-serif';
-const BADGE_FONT = 'bold 11px sans-serif';
+const NAME_FONT = 'bold 13px sans-serif';
+const BADGE_FONT = 'bold 22px sans-serif';
 const LIGHT_BG = "#f5f5f5";
 const DARK_BG = "#2d2d2d";
 const LIGHT_TEXT = "#333333";
@@ -56,6 +60,14 @@ const getExtensionLabel = (fileType: string): string => {
   return `.${ext}`;
 };
 
+const stripExtension = (fileName: string): string => {
+  const lastDot = fileName.lastIndexOf(".");
+  if (lastDot > 0) {
+    return fileName.slice(0, lastDot);
+  }
+  return fileName;
+};
+
 export const drawDocumentOnCanvas = (
   element: ExcalidrawDocumentElement,
   context: CanvasRenderingContext2D,
@@ -66,77 +78,68 @@ export const drawDocumentOnCanvas = (
 
   context.save();
 
+  // Scale from reference size to actual element size so all content
+  // scales uniformly when the element is resized
+  const sx = width / REF_W;
+  const sy = height / REF_H;
+  context.scale(sx, sy);
+
+  // From here on, draw at the fixed reference dimensions (REF_W × REF_H).
+  // The scale transform maps it to the real element size.
+
   // Draw background with rounded corners
-  drawRoundedRect(context, 0, 0, width, height, CORNER_RADIUS);
+  drawRoundedRect(context, 0, 0, REF_W, REF_H, CORNER_RADIUS);
   context.fillStyle = isDark ? DARK_BG : LIGHT_BG;
   context.fill();
 
   // Draw subtle border
   context.strokeStyle = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
-  context.lineWidth = 1;
+  context.lineWidth = 1 / Math.max(sx, sy); // keep border ~1px on screen
   context.stroke();
 
-  // Draw file type badge
+  // --- Right side: large file type badge ---
   const badgeColor = getBadgeColor(fileType);
   const extensionLabel = getExtensionLabel(fileType);
 
+  const badgePadH = 10;
+
   context.font = BADGE_FONT;
   const badgeTextWidth = context.measureText(extensionLabel).width;
-  const badgePadH = 6;
-  const badgePadV = 3;
   const badgeW = badgeTextWidth + badgePadH * 2;
-  const badgeH = 18;
-  const badgeX = 10;
-  const badgeY = height / 2 - 14;
+  const badgeH = 30;
+  const badgeX = REF_W - badgeW - 10;
+  const badgeY = (REF_H - badgeH) / 2;
 
-  drawRoundedRect(context, badgeX, badgeY, badgeW, badgeH, 4);
+  drawRoundedRect(context, badgeX, badgeY, badgeW, badgeH, 6);
   context.fillStyle = badgeColor;
   context.fill();
 
   // Badge text
   context.fillStyle = "#ffffff";
   context.textBaseline = "middle";
-  context.fillText(extensionLabel, badgeX + badgePadH, badgeY + badgeH / 2);
+  context.fillText(extensionLabel, badgeX + badgePadH, badgeY + badgeH / 2 + 1);
 
-  // Draw filename
-  context.font = FONT;
+  // --- Left side: filename without extension ---
+  context.font = NAME_FONT;
   context.fillStyle = isDark ? DARK_TEXT : LIGHT_TEXT;
   context.textBaseline = "middle";
 
-  const fileNameX = badgeX + badgeW + 10;
-  const fileNameY = height / 2 + 5;
-  const maxFileNameWidth = width - fileNameX - 20;
+  const nameX = 12;
+  const nameY = REF_H / 2;
+  const maxNameWidth = badgeX - nameX - 10;
 
-  let displayName = fileName;
-  if (context.measureText(displayName).width > maxFileNameWidth) {
+  let displayName = stripExtension(fileName);
+  if (context.measureText(displayName).width > maxNameWidth) {
     while (
       displayName.length > 0 &&
-      context.measureText(displayName + "...").width > maxFileNameWidth
+      context.measureText(displayName + "…").width > maxNameWidth
     ) {
       displayName = displayName.slice(0, -1);
     }
-    displayName += "...";
+    displayName += "…";
   }
 
-  context.fillText(displayName, fileNameX, fileNameY);
-
-  // Draw subtle document icon decoration (3 horizontal lines at bottom-right)
-  const lineColor = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)";
-  context.strokeStyle = lineColor;
-  context.lineWidth = 1.5;
-  context.lineCap = "round";
-
-  const decoX = width - 30;
-  const decoY = height - 24;
-  const decoWidth = 16;
-
-  for (let i = 0; i < 3; i++) {
-    const y = decoY + i * 5;
-    context.beginPath();
-    context.moveTo(decoX, y);
-    context.lineTo(decoX + decoWidth, y);
-    context.stroke();
-  }
+  context.fillText(displayName, nameX, nameY);
 
   context.restore();
 };

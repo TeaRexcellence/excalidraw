@@ -10789,6 +10789,8 @@ class App extends React.Component<AppProps, AppState> {
         !pointerDownState.drag.hasOccurred &&
         // not resized
         !this.state.isResizing &&
+        // not rotated
+        !isRotating &&
         // only hitting the bounding box of the previous hit element
         ((hitElement &&
           hitElementBoundingBoxOnly(

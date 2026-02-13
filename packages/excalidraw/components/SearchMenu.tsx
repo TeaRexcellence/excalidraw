@@ -2,6 +2,7 @@ import { round } from "@excalidraw/math";
 import clsx from "clsx";
 import debounce from "lodash.debounce";
 import { Fragment, memo, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   CLASSES,
@@ -35,6 +36,7 @@ import type {
 import { atom, useAtom } from "../editor-jotai";
 
 import { useStable } from "../hooks/useStable";
+import { useCreatePortalContainer } from "../hooks/useCreatePortalContainer";
 import { t } from "../i18n";
 
 import { useApp, useExcalidrawSetAppState } from "./App";
@@ -77,7 +79,7 @@ type SearchMatches = {
 
 type SearchQuery = string & { _brand: "SearchQuery" };
 
-export const SearchMenu = () => {
+export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
   const app = useApp();
   const setAppState = useExcalidrawSetAppState();
 
@@ -276,20 +278,18 @@ export const SearchMenu = () => {
     goToNextItem,
     goToPreviousItem,
     searchMatches,
+    onClose,
   });
 
   useEffect(() => {
     const eventHandler = (event: KeyboardEvent) => {
       if (
         event.key === KEYS.ESCAPE &&
-        !app.state.openDialog &&
         !app.state.openPopup
       ) {
         event.preventDefault();
         event.stopPropagation();
-        setAppState({
-          openSidebar: null,
-        });
+        stableState.onClose();
         return;
       }
 
@@ -297,16 +297,9 @@ export const SearchMenu = () => {
         event.preventDefault();
         event.stopPropagation();
 
-        if (app.state.openDialog) {
-          return;
-        }
-
-        if (!searchInputRef.current?.matches(":focus")) {
-          if (app.state.openDialog) {
-            setAppState({
-              openDialog: null,
-            });
-          }
+        if (searchInputRef.current?.matches(":focus")) {
+          stableState.onClose();
+        } else {
           searchInputRef.current?.focus();
           searchInputRef.current?.select();
         }
@@ -347,92 +340,109 @@ export const SearchMenu = () => {
       : t("search.multipleResults")
   }`;
 
-  return (
-    <div className="layer-ui__search">
-      <div className="layer-ui__search-header">
-        <TextField
-          className={CLASSES.SEARCH_MENU_INPUT_WRAPPER}
-          value={inputValue}
-          ref={searchInputRef}
-          placeholder={t("search.placeholder")}
-          icon={searchIcon}
-          onChange={(value) => {
-            setInputValue(value);
-            setIsSearching(true);
-            const searchQuery = value.trim() as SearchQuery;
-            handleSearch(searchQuery, app, (matchItems, index) => {
-              setSearchMatches({
-                nonce: randomInteger(),
-                items: matchItems,
-              });
-              setFocusIndex(index);
-              searchedQueryRef.current = searchQuery;
-              lastSceneNonceRef.current = app.scene.getSceneNonce();
-              setAppState({
-                searchMatches: matchItems.length
-                  ? {
-                      focusedId: null,
-                      matches: matchItems.map((searchMatch) => ({
-                        id: searchMatch.element.id,
-                        focus: false,
-                        matchedLines: searchMatch.matchedLines,
-                      })),
-                    }
-                  : null,
-              });
+  const portalContainer = useCreatePortalContainer({
+    className: "excalidraw-search-overlay-container",
+  });
 
-              setIsSearching(false);
-            });
-          }}
-          selectOnRender
-        />
-      </div>
+  if (!portalContainer) {
+    return null;
+  }
 
-      <div className="layer-ui__search-count">
-        {searchMatches.items.length > 0 && (
-          <>
-            {focusIndex !== null && focusIndex > -1 ? (
-              <div>
-                {focusIndex + 1} / {matchCount}
-              </div>
-            ) : (
-              <div>{matchCount}</div>
-            )}
-            <div className="result-nav">
-              <Button
-                onSelect={() => {
-                  goToNextItem();
-                }}
-                className="result-nav-btn"
-              >
-                {collapseDownIcon}
-              </Button>
-              <Button
-                onSelect={() => {
-                  goToPreviousItem();
-                }}
-                className="result-nav-btn"
-              >
-                {upIcon}
-              </Button>
-            </div>
-          </>
-        )}
-
-        {searchMatches.items.length === 0 &&
-          searchQuery &&
-          searchedQueryRef.current && (
-            <div style={{ margin: "1rem auto" }}>{t("search.noMatch")}</div>
-          )}
-      </div>
-
-      <MatchList
-        matches={searchMatches}
-        onItemClick={setFocusIndex}
-        focusIndex={focusIndex}
-        searchQuery={searchQuery}
+  return createPortal(
+    <div className="search-menu-overlay">
+      <div
+        className="search-menu-overlay__backdrop"
+        onClick={onClose}
       />
-    </div>
+      <div className="search-menu-overlay__content">
+        <div className="layer-ui__search">
+          <div className="layer-ui__search-header">
+            <TextField
+              className={CLASSES.SEARCH_MENU_INPUT_WRAPPER}
+              value={inputValue}
+              ref={searchInputRef}
+              placeholder={t("search.placeholder")}
+              icon={searchIcon}
+              onChange={(value) => {
+                setInputValue(value);
+                setIsSearching(true);
+                const searchQuery = value.trim() as SearchQuery;
+                handleSearch(searchQuery, app, (matchItems, index) => {
+                  setSearchMatches({
+                    nonce: randomInteger(),
+                    items: matchItems,
+                  });
+                  setFocusIndex(index);
+                  searchedQueryRef.current = searchQuery;
+                  lastSceneNonceRef.current = app.scene.getSceneNonce();
+                  setAppState({
+                    searchMatches: matchItems.length
+                      ? {
+                          focusedId: null,
+                          matches: matchItems.map((searchMatch) => ({
+                            id: searchMatch.element.id,
+                            focus: false,
+                            matchedLines: searchMatch.matchedLines,
+                          })),
+                        }
+                      : null,
+                  });
+
+                  setIsSearching(false);
+                });
+              }}
+              selectOnRender
+            />
+          </div>
+
+          <div className="layer-ui__search-count">
+            {searchMatches.items.length > 0 && (
+              <>
+                {focusIndex !== null && focusIndex > -1 ? (
+                  <div>
+                    {focusIndex + 1} / {matchCount}
+                  </div>
+                ) : (
+                  <div>{matchCount}</div>
+                )}
+                <div className="result-nav">
+                  <Button
+                    onSelect={() => {
+                      goToNextItem();
+                    }}
+                    className="result-nav-btn"
+                  >
+                    {collapseDownIcon}
+                  </Button>
+                  <Button
+                    onSelect={() => {
+                      goToPreviousItem();
+                    }}
+                    className="result-nav-btn"
+                  >
+                    {upIcon}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {searchMatches.items.length === 0 &&
+              searchQuery &&
+              searchedQueryRef.current && (
+                <div style={{ margin: "1rem auto" }}>{t("search.noMatch")}</div>
+              )}
+          </div>
+
+          <MatchList
+            matches={searchMatches}
+            onItemClick={setFocusIndex}
+            focusIndex={focusIndex}
+            searchQuery={searchQuery}
+          />
+        </div>
+      </div>
+    </div>,
+    portalContainer,
   );
 };
 

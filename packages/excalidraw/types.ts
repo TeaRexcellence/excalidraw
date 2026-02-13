@@ -373,7 +373,7 @@ export interface AppState {
   openSidebar: { name: SidebarName; tab?: SidebarTabName } | null;
   openDialog:
     | null
-    | { name: "imageExport" | "help" | "jsonExport" | "videoEmbed" | "tableCreate" | "codeBlockCreate" | "documentInsert" | "projectLinkCreate" }
+    | { name: "imageExport" | "help" | "jsonExport" | "videoEmbed" | "tableCreate" | "codeBlockCreate" | "documentInsert" | "projectLinkCreate" | "searchMenu" }
     | { name: "projectLinkEdit"; elementId: string }
     | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
     | { name: "commandPalette" }

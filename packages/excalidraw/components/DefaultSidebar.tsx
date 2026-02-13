@@ -1,7 +1,6 @@
 import clsx from "clsx";
 
 import {
-  CANVAS_SEARCH_TAB,
   DEFAULT_SIDEBAR,
   LIBRARY_SIDEBAR_TAB,
   PROJECTS_SIDEBAR_TAB,
@@ -18,10 +17,9 @@ import "../components/dropdownMenu/DropdownMenu.scss";
 import { useExcalidrawSetAppState } from "./App";
 import { LibraryMenu } from "./LibraryMenu";
 import { ProjectManager } from "./ProjectManager";
-import { SearchMenu } from "./SearchMenu";
 import { Sidebar } from "./Sidebar/Sidebar";
 import { withInternalFallback } from "./hoc/withInternalFallback";
-import { LibraryIcon, ProjectsIcon, searchIcon } from "./icons";
+import { LibraryIcon, ProjectsIcon } from "./icons";
 
 import type { SidebarProps, SidebarTriggerProps } from "./Sidebar/common";
 
@@ -76,21 +74,17 @@ export const DefaultSidebar = Object.assign(
 
       const { DefaultSidebarTabTriggersTunnel } = useTunnels();
 
-      const isForceDocked = appState.openSidebar?.tab === CANVAS_SEARCH_TAB;
-
       return (
         <Sidebar
           {...rest}
           name="default"
           key="default"
           className={clsx("default-sidebar", className)}
-          docked={
-            isForceDocked || (docked ?? appState.defaultSidebarDockedPreference)
-          }
+          docked={docked ?? appState.defaultSidebarDockedPreference}
           onDock={
             // `onDock=false` disables docking.
             // if `docked` passed, but no onDock passed, disable manual docking.
-            isForceDocked || onDock === false || (!onDock && docked != null)
+            onDock === false || (!onDock && docked != null)
               ? undefined
               : // compose to allow the host app to listen on default behavior
                 composeEventHandlers(onDock, (docked) => {
@@ -107,9 +101,6 @@ export const DefaultSidebar = Object.assign(
                 <Sidebar.TabTrigger tab={LIBRARY_SIDEBAR_TAB}>
                   {LibraryIcon}
                 </Sidebar.TabTrigger>
-                <Sidebar.TabTrigger tab={CANVAS_SEARCH_TAB}>
-                  {searchIcon}
-                </Sidebar.TabTrigger>
                 <DefaultSidebarTabTriggersTunnel.Out />
               </Sidebar.TabTriggers>
             </Sidebar.Header>
@@ -118,9 +109,6 @@ export const DefaultSidebar = Object.assign(
             </Sidebar.Tab>
             <Sidebar.Tab tab={LIBRARY_SIDEBAR_TAB}>
               <LibraryMenu />
-            </Sidebar.Tab>
-            <Sidebar.Tab tab={CANVAS_SEARCH_TAB}>
-              <SearchMenu />
             </Sidebar.Tab>
             {children}
           </Sidebar.Tabs>
