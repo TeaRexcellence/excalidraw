@@ -68,6 +68,8 @@ import {
   EmbedIcon,
   VideoIcon,
   TableIcon,
+  CodeBlockIcon,
+  DocumentInsertIcon,
   frameToolIcon,
   laserPointerToolIcon,
   LassoIcon,
@@ -1203,6 +1205,28 @@ export const ShapesSwitcher = ({
                 aria-label={t("toolBar.table")}
                 data-testid="toolbar-table"
                 onClick={() => app.setOpenDialog({ name: "tableCreate" })}
+              />,
+              <ToolButton
+                key="codeblock"
+                className="Shape"
+                type="button"
+                icon={CodeBlockIcon}
+                name="codeblock"
+                title={t("toolBar.codeBlock")}
+                aria-label={t("toolBar.codeBlock")}
+                data-testid="toolbar-codeblock"
+                onClick={() => app.setOpenDialog({ name: "codeBlockCreate" })}
+              />,
+              <ToolButton
+                key="document"
+                className="Shape"
+                type="button"
+                icon={DocumentInsertIcon}
+                name="document"
+                title={t("toolBar.document")}
+                aria-label={t("toolBar.document")}
+                data-testid="toolbar-document"
+                onClick={() => app.setOpenDialog({ name: "documentInsert" })}
               />,
             ];
           }

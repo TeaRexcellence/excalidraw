@@ -10,7 +10,7 @@ import {
   isShallowEqual,
 } from "@excalidraw/common";
 
-import { mutateElement } from "@excalidraw/element";
+import { mutateElement, isDocumentElement } from "@excalidraw/element";
 
 import { showSelectedShapeActions } from "@excalidraw/element";
 
@@ -64,6 +64,9 @@ import { JSONExportDialog } from "./JSONExportDialog";
 import { LaserPointerButton } from "./LaserPointerButton";
 import { VideoEmbedDialog } from "./VideoEmbedDialog";
 import { TableCreateDialog } from "./TableCreateDialog";
+import { CodeBlockCreateDialog } from "./CodeBlockCreateDialog";
+import { DocumentInsertDialog } from "./DocumentInsertDialog";
+import { DocumentViewerDialog } from "./DocumentViewerDialog";
 
 import "./LayerUI.scss";
 import "./Toolbar.scss";
@@ -565,6 +568,40 @@ const LayerUI = ({
           }}
         />
       )}
+      {appState.openDialog?.name === "codeBlockCreate" && (
+        <CodeBlockCreateDialog
+          onClose={() => {
+            setAppState({ openDialog: null });
+          }}
+        />
+      )}
+      {appState.openDialog?.name === "documentInsert" && (
+        <DocumentInsertDialog
+          onClose={() => {
+            setAppState({ openDialog: null });
+          }}
+        />
+      )}
+      {appState.openDialog?.name === "documentViewer" && (() => {
+        const docElement = app.scene
+          .getElementsIncludingDeleted()
+          .find(
+            (el) =>
+              el.id === (appState.openDialog as any).documentId &&
+              isDocumentElement(el),
+          );
+        if (!docElement || !isDocumentElement(docElement)) {
+          return null;
+        }
+        return (
+          <DocumentViewerDialog
+            element={docElement}
+            onClose={() => {
+              setAppState({ openDialog: null });
+            }}
+          />
+        );
+      })()}
       <ActiveConfirmDialog />
       {appState.openDialog?.name === "elementLinkSelector" && (
         <ElementLinkDialog

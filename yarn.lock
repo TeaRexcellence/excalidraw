@@ -2994,6 +2994,11 @@
   resolved "https://registry.yarnpkg.com/@types/pica/-/pica-5.1.3.tgz#5ef64529a1f83f7d6586a8bf75a8a00be32aca02"
   integrity sha512-13SEyETRE5psd9bE0AmN+0M1tannde2fwHfLVaVIljkbL9V0OfFvKwCicyeDvVYLkmjQWEydbAlsDsmjrdyTOg==
 
+"@types/prismjs@1.26.6":
+  version "1.26.6"
+  resolved "https://registry.yarnpkg.com/@types/prismjs/-/prismjs-1.26.6.tgz#6ea27c126d645319ae4f7055eda63a9e835c0187"
+  integrity sha512-vqlvI7qlMvcCBbVe0AKAb4f97//Hy0EBTaiW8AalRnG/xAN5zOiWWyrNqNXeq8+KAuvRewjCVY1+IPxk4RdNYw==
+
 "@types/react-dom@19.0.4":
   version "19.0.4"
   resolved "https://registry.yarnpkg.com/@types/react-dom/-/react-dom-19.0.4.tgz#bedba97f9346bd4c0fe5d39e689713804ec9ac89"
@@ -8123,6 +8128,11 @@ pretty-format@^29.7.0:
     "@jest/schemas" "^29.6.3"
     ansi-styles "^5.0.0"
     react-is "^18.0.0"
+
+prismjs@^1.29.0:
+  version "1.30.0"
+  resolved "https://registry.yarnpkg.com/prismjs/-/prismjs-1.30.0.tgz#d9709969d9d4e16403f6f348c63553b19f0975a9"
+  integrity sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==
 
 process-nextick-args@~2.0.0:
   version "2.0.1"

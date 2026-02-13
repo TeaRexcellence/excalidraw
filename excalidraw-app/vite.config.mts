@@ -295,6 +295,80 @@ function projectFilePlugin(): Plugin {
           return;
         }
 
+        // Pick a file using native OS dialog and return path + content
+        if (req.method === "POST" && urlPath === "/api/files/pick") {
+          const platform = process.platform;
+          let command: string;
+          if (platform === "win32") {
+            command = `powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.OpenFileDialog; $f.Filter = 'All files (*.*)|*.*'; if ($f.ShowDialog() -eq 'OK') { $f.FileName } else { '' }"`;
+          } else if (platform === "darwin") {
+            command = `osascript -e 'POSIX path of (choose file)'`;
+          } else {
+            command = `zenity --file-selection 2>/dev/null || kdialog --getopenfilename ~ 2>/dev/null`;
+          }
+          exec(command, { maxBuffer: 1024 * 1024 }, (err, stdout) => {
+            const filePath = (stdout || "").trim();
+            if (err || !filePath) {
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ cancelled: true }));
+              return;
+            }
+            try {
+              const fileContent = fs.readFileSync(filePath, "utf-8");
+              const fileName = path.basename(filePath);
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ filePath, fileName, fileContent }));
+            } catch (readErr) {
+              res.statusCode = 500;
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ error: "Failed to read file" }));
+            }
+          });
+          return;
+        }
+
+        // Open file location in file explorer (for document elements)
+        if (req.method === "POST" && urlPath === "/api/files/open-folder") {
+          const chunks: Buffer[] = [];
+          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("end", () => {
+            try {
+              const body = JSON.parse(Buffer.concat(chunks).toString());
+              const filePath = body.filePath;
+              if (!filePath) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: "filePath required" }));
+                return;
+              }
+              const folderPath = path.dirname(filePath);
+              const platform = process.platform;
+              let command: string;
+              if (platform === "win32") {
+                const winPath = path.resolve(folderPath);
+                command = `explorer "${winPath}"`;
+              } else if (platform === "darwin") {
+                command = `open "${folderPath}"`;
+              } else {
+                command = `xdg-open "${folderPath}"`;
+              }
+              exec(command, (err: Error | null) => {
+                if (err) {
+                  res.statusCode = 500;
+                  res.setHeader("Content-Type", "application/json");
+                  res.end(JSON.stringify({ error: "Failed to open folder" }));
+                } else {
+                  res.setHeader("Content-Type", "application/json");
+                  res.end(JSON.stringify({ opened: true }));
+                }
+              });
+            } catch {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: "Invalid JSON" }));
+            }
+          });
+          return;
+        }
+
         // Move project folder (when renamed or category changed)
         const moveMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/move$/);
         if (req.method === "POST" && moveMatch) {
@@ -863,6 +937,7 @@ export default defineConfig(({ mode }) => {
         },
 
         workbox: {
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB
           // don't precache fonts, locales and separate chunks
           globIgnores: [
             "fonts.css",

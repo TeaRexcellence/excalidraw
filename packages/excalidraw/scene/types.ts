@@ -177,4 +177,6 @@ export type ElementShapes = {
   frame: null;
   magicframe: null;
   table: null;
+  codeblock: null;
+  document: null;
 };

@@ -30,6 +30,8 @@ import type {
   ExcalidrawFlowchartNodeElement,
   ExcalidrawLinearElementSubType,
   ExcalidrawTableElement,
+  ExcalidrawCodeBlockElement,
+  ExcalidrawDocumentElement,
 } from "./types";
 
 export const isInitializedImageElement = (
@@ -207,6 +209,8 @@ export const isRectanguloidElement = (
       element.type === "frame" ||
       element.type === "magicframe" ||
       element.type === "table" ||
+      element.type === "codeblock" ||
+      element.type === "document" ||
       (element.type === "text" && !element.containerId))
   );
 };
@@ -226,7 +230,9 @@ export const isRectangularElement = (
       element.type === "frame" ||
       element.type === "magicframe" ||
       element.type === "freedraw" ||
-      element.type === "table")
+      element.type === "table" ||
+      element.type === "codeblock" ||
+      element.type === "document")
   );
 };
 
@@ -265,7 +271,9 @@ export const isExcalidrawElement = (
     case "magicframe":
     case "image":
     case "selection":
-    case "table": {
+    case "table":
+    case "codeblock":
+    case "document": {
       return true;
     }
     default: {
@@ -279,6 +287,18 @@ export const isTableElement = (
   element: ExcalidrawElement | null,
 ): element is ExcalidrawTableElement => {
   return element != null && element.type === "table";
+};
+
+export const isCodeBlockElement = (
+  element: ExcalidrawElement | null,
+): element is ExcalidrawCodeBlockElement => {
+  return element != null && element.type === "codeblock";
+};
+
+export const isDocumentElement = (
+  element: ExcalidrawElement | null,
+): element is ExcalidrawDocumentElement => {
+  return element != null && element.type === "document";
 };
 
 export const isFlowchartNodeElement = (

@@ -318,7 +318,27 @@
     "extraTools": "More tools",
     "mermaidToExcalidraw": "Mermaid to Excalidraw",
     "convertElementType": "Toggle shape type",
-    "table": "Table"
+    "table": "Table",
+    "codeBlock": "Code Block",
+    "document": "Insert Document"
+  },
+  "codeBlockDialog": {
+    "title": "Create Code Block",
+    "language": "Language",
+    "create": "Create"
+  },
+  "documentDialog": {
+    "insertTitle": "Insert Document",
+    "displayAsCodeBlock": "Display as Code Block",
+    "displayAsThumbnail": "Display as Thumbnail Card",
+    "selectFile": "Select a file...",
+    "viewerTitle": "Document Viewer",
+    "edit": "Edit",
+    "save": "Save"
+  },
+  "documentActions": {
+    "openFileLocation": "Open file location",
+    "viewContents": "View contents"
   },
   "element": {
     "rectangle": "Rectangle",
@@ -330,6 +350,8 @@
     "text": "Text",
     "image": "Image",
     "video": "Video",
+    "codeblock": "Code Block",
+    "document": "Document",
     "group": "Group",
     "frame": "Frame",
     "magicframe": "Wireframe to code",
@@ -357,7 +379,7 @@
     "uploadFile": "Upload CSV file",
     "csvPlaceholder": "Name, Age, City\nAlice, 30, NYC\nBob, 25, London",
     "csvEmpty": "No data found in CSV",
-    "csvTooLarge": "CSV too large (max 50 rows and 50 columns)"
+    "csvTooLarge": "CSV too large (max 500 rows and 500 columns)"
   },
   "tableActions": {
     "addRowBelow": "Add row below",

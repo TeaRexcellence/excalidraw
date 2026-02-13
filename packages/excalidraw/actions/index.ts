@@ -98,3 +98,8 @@ export {
   actionAddColumnLeft,
   actionDeleteColumn,
 } from "./actionTable";
+
+export {
+  actionOpenDocumentLocation,
+  actionViewDocumentContents,
+} from "./actionDocument";

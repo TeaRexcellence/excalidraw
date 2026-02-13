@@ -861,7 +861,9 @@ const _generateElementShape = (
     case "magicframe":
     case "text":
     case "image":
-    case "table": {
+    case "table":
+    case "codeblock":
+    case "document": {
       const shape: ElementShapes[typeof element.type] = null;
       // we return (and cache) `null` to make sure we don't regenerate
       // `element.canvas` on rerenders
@@ -961,6 +963,8 @@ export const getElementShape = <Point extends GlobalPoint | LocalPoint>(
     case "text":
     case "selection":
     case "table":
+    case "codeblock":
+    case "document":
       return getPolygonShape(element);
     case "arrow":
     case "line": {

@@ -367,6 +367,12 @@ export class API {
         // Table creation handled by newTableElement - skip in tests for now
         element = newElement({ type: "rectangle" as any, ...base, width, height }) as any;
         break;
+      case "codeblock":
+        element = newElement({ type: "rectangle" as any, ...base, width, height }) as any;
+        break;
+      case "document":
+        element = newElement({ type: "rectangle" as any, ...base, width, height }) as any;
+        break;
       default:
         assertNever(
           type,

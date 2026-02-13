@@ -41,6 +41,8 @@ export const distanceToElement = (
     case "frame":
     case "magicframe":
     case "table":
+    case "codeblock":
+    case "document":
       return distanceToRectanguloidElement(element, elementsMap, p);
     case "diamond":
       return distanceToDiamondElement(element, elementsMap, p);

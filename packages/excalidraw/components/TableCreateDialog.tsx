@@ -148,10 +148,6 @@ export const TableCreateDialog: React.FC<TableCreateDialogProps> = ({
       setError(t("tableDialog.csvEmpty"));
       return;
     }
-    if (parsed.length > 50 || (parsed[0] && parsed[0].length > 50)) {
-      setError(t("tableDialog.csvTooLarge"));
-      return;
-    }
     const colWidths = autoSizeColumns(parsed);
     insertTable(parsed.length, parsed[0].length, parsed, colWidths);
   }, [csvText, insertTable]);
@@ -247,10 +243,9 @@ export const TableCreateDialog: React.FC<TableCreateDialogProps> = ({
               <input
                 type="number"
                 min={1}
-                max={50}
                 value={rows}
                 onChange={(e) =>
-                  setRows(Math.max(1, Math.min(50, Number(e.target.value))))
+                  setRows(Math.max(1, Number(e.target.value)))
                 }
               />
             </label>
@@ -259,10 +254,9 @@ export const TableCreateDialog: React.FC<TableCreateDialogProps> = ({
               <input
                 type="number"
                 min={1}
-                max={50}
                 value={columns}
                 onChange={(e) =>
-                  setColumns(Math.max(1, Math.min(50, Number(e.target.value))))
+                  setColumns(Math.max(1, Number(e.target.value)))
                 }
               />
             </label>

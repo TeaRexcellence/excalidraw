@@ -37,6 +37,8 @@ import { getElementAbsoluteCoords } from "@excalidraw/element";
 import type {
   ExcalidrawElement,
   ExcalidrawTextElementWithContainer,
+  ExcalidrawCodeBlockElement,
+  ExcalidrawDocumentElement,
   NonDeletedExcalidrawElement,
 } from "@excalidraw/element/types";
 
@@ -821,6 +823,191 @@ const renderElementToSvg = (
         border.setAttribute("stroke", strokeColor);
         border.setAttribute("stroke-width", `${element.strokeWidth || 2}`);
         g.appendChild(border);
+
+        if (opacity !== 1) {
+          g.setAttribute("opacity", `${opacity}`);
+        }
+
+        addToRoot(g, element);
+      } else if (element.type === "codeblock") {
+        const codeEl = element as unknown as ExcalidrawCodeBlockElement;
+        const g = svgRoot.ownerDocument.createElementNS(SVG_NS, "g");
+        g.setAttribute(
+          "transform",
+          `translate(${offsetX || 0} ${
+            offsetY || 0
+          }) rotate(${degree} ${cx} ${cy})`,
+        );
+
+        // Clip to element bounds
+        const clipPathId = `codeblock-clip-${element.id}`;
+        const clipPath = svgRoot.ownerDocument.createElementNS(
+          SVG_NS,
+          "clipPath",
+        );
+        clipPath.setAttribute("id", clipPathId);
+        const clipRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        clipRect.setAttribute("x", "0");
+        clipRect.setAttribute("y", "0");
+        clipRect.setAttribute("width", `${element.width}`);
+        clipRect.setAttribute("height", `${element.height}`);
+        clipRect.setAttribute("rx", "8");
+        clipRect.setAttribute("ry", "8");
+        clipPath.appendChild(clipRect);
+        g.appendChild(clipPath);
+
+        const clippedGroup = svgRoot.ownerDocument.createElementNS(SVG_NS, "g");
+        clippedGroup.setAttribute("clip-path", `url(#${clipPathId})`);
+
+        // Background
+        const bgRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        bgRect.setAttribute("x", "0");
+        bgRect.setAttribute("y", "0");
+        bgRect.setAttribute("width", `${element.width}`);
+        bgRect.setAttribute("height", `${element.height}`);
+        bgRect.setAttribute("fill", "#1e1e2e");
+        bgRect.setAttribute("rx", "8");
+        bgRect.setAttribute("ry", "8");
+        clippedGroup.appendChild(bgRect);
+
+        // Code text lines
+        const code = codeEl.code || "";
+        const lines = code.replace(/\r\n?/g, "\n").split("\n");
+        const fontSize = 14;
+        const lineHeight = 20;
+        const scrollOffsetY = codeEl.scrollOffsetY || 0;
+        const padding = 12;
+        const showLineNumbers = codeEl.showLineNumbers;
+        const lineNumWidth = showLineNumbers
+          ? `${lines.length}`.length * 9 + 16
+          : 0;
+
+        for (let i = 0; i < lines.length; i++) {
+          const yPos = padding + i * lineHeight + fontSize - scrollOffsetY;
+
+          if (showLineNumbers) {
+            const lineNumText = svgRoot.ownerDocument.createElementNS(
+              SVG_NS,
+              "text",
+            );
+            lineNumText.textContent = `${i + 1}`;
+            lineNumText.setAttribute("x", `${padding}`);
+            lineNumText.setAttribute("y", `${yPos}`);
+            lineNumText.setAttribute(
+              "font-family",
+              "Consolas, Monaco, monospace",
+            );
+            lineNumText.setAttribute("font-size", `${fontSize}px`);
+            lineNumText.setAttribute("fill", "rgba(255,255,255,0.4)");
+            lineNumText.setAttribute("text-anchor", "start");
+            lineNumText.setAttribute("dominant-baseline", "alphabetic");
+            lineNumText.setAttribute("style", "white-space: pre;");
+            clippedGroup.appendChild(lineNumText);
+          }
+
+          const text = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+          text.textContent = lines[i];
+          text.setAttribute("x", `${padding + lineNumWidth}`);
+          text.setAttribute("y", `${yPos}`);
+          text.setAttribute("font-family", "Consolas, Monaco, monospace");
+          text.setAttribute("font-size", `${fontSize}px`);
+          text.setAttribute("fill", "#ffffff");
+          text.setAttribute("text-anchor", "start");
+          text.setAttribute("dominant-baseline", "alphabetic");
+          text.setAttribute("style", "white-space: pre;");
+          clippedGroup.appendChild(text);
+        }
+
+        g.appendChild(clippedGroup);
+
+        if (opacity !== 1) {
+          g.setAttribute("opacity", `${opacity}`);
+        }
+
+        addToRoot(g, element);
+      } else if (element.type === "document") {
+        const docEl = element as unknown as ExcalidrawDocumentElement;
+        const g = svgRoot.ownerDocument.createElementNS(SVG_NS, "g");
+        g.setAttribute(
+          "transform",
+          `translate(${offsetX || 0} ${
+            offsetY || 0
+          }) rotate(${degree} ${cx} ${cy})`,
+        );
+
+        // Background
+        const bgRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        bgRect.setAttribute("x", "0");
+        bgRect.setAttribute("y", "0");
+        bgRect.setAttribute("width", `${element.width}`);
+        bgRect.setAttribute("height", `${element.height}`);
+        bgRect.setAttribute("fill", "#f5f5f5");
+        bgRect.setAttribute("rx", "8");
+        bgRect.setAttribute("ry", "8");
+        g.appendChild(bgRect);
+
+        // File type badge
+        const ext = (docEl.fileType || "").toLowerCase();
+        const badgeColorMap: Record<string, string> = {
+          js: "#3178c6",
+          jsx: "#3178c6",
+          ts: "#3178c6",
+          tsx: "#3178c6",
+          py: "#3776ab",
+          cs: "#68217a",
+          cpp: "#00599c",
+          c: "#00599c",
+          h: "#00599c",
+          hpp: "#00599c",
+          md: "#e67e22",
+        };
+        const badgeColor = badgeColorMap[ext] || "#6c757d";
+        const badgeLabel = ext.toUpperCase() || "FILE";
+        const badgeWidth = Math.max(40, badgeLabel.length * 10 + 16);
+        const badgeHeight = 24;
+        const badgeX = element.width - badgeWidth - 10;
+        const badgeY = 10;
+
+        const badgeRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+        badgeRect.setAttribute("x", `${badgeX}`);
+        badgeRect.setAttribute("y", `${badgeY}`);
+        badgeRect.setAttribute("width", `${badgeWidth}`);
+        badgeRect.setAttribute("height", `${badgeHeight}`);
+        badgeRect.setAttribute("fill", badgeColor);
+        badgeRect.setAttribute("rx", "4");
+        badgeRect.setAttribute("ry", "4");
+        g.appendChild(badgeRect);
+
+        // Badge text
+        const badgeText = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+        badgeText.textContent = badgeLabel;
+        badgeText.setAttribute("x", `${badgeX + badgeWidth / 2}`);
+        badgeText.setAttribute("y", `${badgeY + badgeHeight / 2 + 1}`);
+        badgeText.setAttribute("font-family", "Arial, Helvetica, sans-serif");
+        badgeText.setAttribute("font-size", "11px");
+        badgeText.setAttribute("font-weight", "bold");
+        badgeText.setAttribute("fill", "#ffffff");
+        badgeText.setAttribute("text-anchor", "middle");
+        badgeText.setAttribute("dominant-baseline", "central");
+        g.appendChild(badgeText);
+
+        // Filename text
+        const fileName = docEl.fileName || "Untitled";
+        const fileNameText = svgRoot.ownerDocument.createElementNS(
+          SVG_NS,
+          "text",
+        );
+        fileNameText.textContent = fileName;
+        fileNameText.setAttribute("x", "16");
+        fileNameText.setAttribute("y", `${element.height / 2 + 4}`);
+        fileNameText.setAttribute(
+          "font-family",
+          "Arial, Helvetica, sans-serif",
+        );
+        fileNameText.setAttribute("font-size", "16px");
+        fileNameText.setAttribute("fill", "#333333");
+        fileNameText.setAttribute("dominant-baseline", "central");
+        g.appendChild(fileNameText);
 
         if (opacity !== 1) {
           g.setAttribute("opacity", `${opacity}`);

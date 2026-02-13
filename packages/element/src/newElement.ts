@@ -49,6 +49,9 @@ import type {
   ExcalidrawElbowArrowElement,
   ExcalidrawLineElement,
   ExcalidrawTableElement,
+  ExcalidrawCodeBlockElement,
+  CodeBlockLanguage,
+  ExcalidrawDocumentElement,
 } from "./types";
 
 export type ElementConstructorOpts = MarkOptional<
@@ -590,5 +593,48 @@ export const newTableElement = (
     rowHeights,
     headerRow: opts.headerRow ?? true,
     scrollOffsetY: 0,
+  };
+};
+
+export const newCodeBlockElement = (
+  opts: {
+    code?: string;
+    language?: CodeBlockLanguage;
+    showLineNumbers?: boolean;
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawCodeBlockElement> => {
+  return {
+    ..._newElementBase<ExcalidrawCodeBlockElement>("codeblock", {
+      ...opts,
+      width: opts.width || 400,
+      height: opts.height || 250,
+    }),
+    type: "codeblock",
+    code: opts.code ?? "",
+    language: opts.language ?? "javascript",
+    showLineNumbers: opts.showLineNumbers ?? true,
+    scrollOffsetY: 0,
+  };
+};
+
+export const newDocumentElement = (
+  opts: {
+    fileName?: string;
+    fileType?: string;
+    filePath?: string;
+    fileContent?: string;
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawDocumentElement> => {
+  return {
+    ..._newElementBase<ExcalidrawDocumentElement>("document", {
+      ...opts,
+      width: opts.width || 200,
+      height: opts.height || 80,
+    }),
+    type: "document",
+    fileName: opts.fileName ?? "Untitled",
+    fileType: opts.fileType ?? "txt",
+    filePath: opts.filePath ?? "",
+    fileContent: opts.fileContent ?? "",
   };
 };

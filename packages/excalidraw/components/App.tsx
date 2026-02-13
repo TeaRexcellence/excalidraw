@@ -144,6 +144,7 @@ import {
   isFrameLikeElement,
   isImageElement,
   isTableElement,
+  isCodeBlockElement,
   isEmbeddableElement,
   isInitializedImageElement,
   isLinearElement,
@@ -281,6 +282,7 @@ import type {
   SceneElementsMap,
   ExcalidrawBindableElement,
   ExcalidrawTableElement,
+  ExcalidrawCodeBlockElement,
 } from "@excalidraw/element/types";
 
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
@@ -316,6 +318,8 @@ import {
   actionToggleLinearEditor,
   actionToggleObjectsSnapMode,
   actionToggleCropEditor,
+  actionOpenDocumentLocation,
+  actionViewDocumentContents,
 } from "../actions";
 import { actionWrapTextInContainer } from "../actions/actionBoundText";
 import { actionToggleHandTool, zoomToFit } from "../actions/actionCanvas";
@@ -412,6 +416,7 @@ import { LaserTrails } from "../laser-trails";
 import { withBatchedUpdates, withBatchedUpdatesThrottled } from "../reactUtils";
 import { textWysiwyg } from "../wysiwyg/textWysiwyg";
 import { openTableSpreadsheetEditor } from "../wysiwyg/tableSpreadsheetEditor";
+import { openCodeBlockEditor } from "../wysiwyg/codeBlockEditor";
 import { isOverScrollBars } from "../scene/scrollbars";
 
 import { isMaybeMermaidDefinition } from "../mermaid";
@@ -2021,6 +2026,7 @@ class App extends React.Component<AppProps, AppState> {
 
                         <div className="excalidraw-textEditorContainer" />
                         <div className="excalidraw-tableEditorContainer" />
+                        <div className="excalidraw-codeBlockEditorContainer" />
                         <div className="excalidraw-contextMenuContainer" />
                         <div className="excalidraw-eye-dropper-container" />
                         <SVGLayer
@@ -4083,6 +4089,7 @@ class App extends React.Component<AppProps, AppState> {
 
   private cancelInProgressAnimation: (() => void) | null = null;
   private tableSpreadsheetCloseHandler: (() => void) | null = null;
+  private codeBlockEditorCloseHandler: (() => void) | null = null;
 
   scrollToContent = (
     /**
@@ -5775,6 +5782,20 @@ class App extends React.Component<AppProps, AppState> {
     });
   };
 
+  private startCodeBlockEditing = (element: ExcalidrawCodeBlockElement) => {
+    if (this.codeBlockEditorCloseHandler) {
+      this.codeBlockEditorCloseHandler();
+    }
+    this.codeBlockEditorCloseHandler = openCodeBlockEditor({
+      element,
+      excalidrawContainer: this.excalidrawContainerRef.current,
+      scene: this.scene,
+      onClose: () => {
+        this.codeBlockEditorCloseHandler = null;
+      },
+    });
+  };
+
   private startTextEditing = ({
     sceneX,
     sceneY,
@@ -6080,6 +6101,18 @@ class App extends React.Component<AppProps, AppState> {
           });
           this.startTableCellEditing(tableEl, cell.row, cell.col);
         }
+        return;
+      }
+    }
+
+    // Handle double-click on codeblock elements
+    {
+      const hitElement = this.getElementAtPosition(sceneX, sceneY);
+      if (hitElement && isCodeBlockElement(hitElement)) {
+        this.setState({
+          selectedElementIds: { [hitElement.id]: true },
+        });
+        this.startCodeBlockEditing(hitElement as ExcalidrawCodeBlockElement);
         return;
       }
     }
@@ -12054,6 +12087,9 @@ class App extends React.Component<AppProps, AppState> {
       CONTEXT_MENU_SEPARATOR,
       actionLink,
       actionCopyElementLink,
+      CONTEXT_MENU_SEPARATOR,
+      actionOpenDocumentLocation,
+      actionViewDocumentContents,
       CONTEXT_MENU_SEPARATOR,
       actionDuplicateSelection,
       actionToggleElementLock,

@@ -148,7 +148,9 @@ export type ActionName =
   | "deleteRow"
   | "addColumnRight"
   | "addColumnLeft"
-  | "deleteColumn";
+  | "deleteColumn"
+  | "openDocumentLocation"
+  | "viewDocumentContents";
 
 export type PanelComponentProps = {
   elements: readonly ExcalidrawElement[];

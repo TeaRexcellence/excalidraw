@@ -204,6 +204,32 @@ export type ExcalidrawTableElement = _ExcalidrawElementBase &
     scrollOffsetY: number;
   }>;
 
+export type CodeBlockLanguage =
+  | "javascript"
+  | "python"
+  | "csharp"
+  | "cpp"
+  | "markdown"
+  | "plaintext";
+
+export type ExcalidrawCodeBlockElement = _ExcalidrawElementBase &
+  Readonly<{
+    type: "codeblock";
+    code: string;
+    language: CodeBlockLanguage;
+    showLineNumbers: boolean;
+    scrollOffsetY: number;
+  }>;
+
+export type ExcalidrawDocumentElement = _ExcalidrawElementBase &
+  Readonly<{
+    type: "document";
+    fileName: string;
+    fileType: string;
+    filePath: string;
+    fileContent: string;
+  }>;
+
 /**
  * These are elements that don't have any additional properties.
  */
@@ -227,7 +253,9 @@ export type ExcalidrawRectanguloidElement =
   | ExcalidrawFrameLikeElement
   | ExcalidrawEmbeddableElement
   | ExcalidrawSelectionElement
-  | ExcalidrawTableElement;
+  | ExcalidrawTableElement
+  | ExcalidrawCodeBlockElement
+  | ExcalidrawDocumentElement;
 
 /**
  * ExcalidrawElement should be JSON serializable and (eventually) contain
@@ -245,7 +273,9 @@ export type ExcalidrawElement =
   | ExcalidrawMagicFrameElement
   | ExcalidrawIframeElement
   | ExcalidrawEmbeddableElement
-  | ExcalidrawTableElement;
+  | ExcalidrawTableElement
+  | ExcalidrawCodeBlockElement
+  | ExcalidrawDocumentElement;
 
 export type ExcalidrawNonSelectionElement = Exclude<
   ExcalidrawElement,

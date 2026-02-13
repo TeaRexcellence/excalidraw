@@ -62,6 +62,8 @@ import {
   isImageElement,
 } from "./typeChecks";
 import { drawTableOnCanvas } from "./renderTable";
+import { drawCodeBlockOnCanvas } from "./renderCodeBlock";
+import { drawDocumentOnCanvas } from "./renderDocument";
 import { getContainingFrame } from "./frame";
 import { getCornerRadius } from "./utils";
 
@@ -78,6 +80,8 @@ import type {
   NonDeletedSceneElementsMap,
   ElementsMap,
   ExcalidrawTableElement,
+  ExcalidrawCodeBlockElement,
+  ExcalidrawDocumentElement,
 } from "./types";
 
 import type { RoughCanvas } from "roughjs/bin/canvas";
@@ -437,6 +441,22 @@ const drawElementOnCanvas = (
     case "table": {
       drawTableOnCanvas(
         element as ExcalidrawTableElement,
+        context,
+        renderConfig,
+      );
+      break;
+    }
+    case "codeblock": {
+      drawCodeBlockOnCanvas(
+        element as ExcalidrawCodeBlockElement,
+        context,
+        renderConfig,
+      );
+      break;
+    }
+    case "document": {
+      drawDocumentOnCanvas(
+        element as ExcalidrawDocumentElement,
         context,
         renderConfig,
       );
@@ -828,7 +848,9 @@ export const renderElement = (
     case "text":
     case "iframe":
     case "embeddable":
-    case "table": {
+    case "table":
+    case "codeblock":
+    case "document": {
       if (renderConfig.isExporting) {
         const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
         const cx = (x1 + x2) / 2 + appState.scrollX;

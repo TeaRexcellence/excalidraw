@@ -510,6 +510,20 @@ export const restoreElement = (
         headerRow: (element as any).headerRow ?? true,
         scrollOffsetY: (element as any).scrollOffsetY ?? 0,
       });
+    case "codeblock":
+      return restoreElementWithProperties(element, {
+        code: (element as any).code ?? "",
+        language: (element as any).language ?? "javascript",
+        showLineNumbers: (element as any).showLineNumbers ?? true,
+        scrollOffsetY: (element as any).scrollOffsetY ?? 0,
+      });
+    case "document":
+      return restoreElementWithProperties(element, {
+        fileName: (element as any).fileName ?? "Untitled",
+        fileType: (element as any).fileType ?? "txt",
+        filePath: (element as any).filePath ?? "",
+        fileContent: (element as any).fileContent ?? "",
+      });
 
     // Don't use default case so as to catch a missing an element type case.
     // We also don't want to throw, but instead return void so we filter
