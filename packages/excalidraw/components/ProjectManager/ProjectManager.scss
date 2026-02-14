@@ -5,7 +5,7 @@
 :root {
   --pm-radius-sm: 6px;
   --pm-radius-md: 8px;
-  --pm-radius-lg: 12px;
+  --pm-radius-lg: 6px;
   --pm-radius-full: 999px;
   --pm-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --pm-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
@@ -28,6 +28,7 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  position: relative;
   padding: 1rem;
   overflow: hidden;
   gap: 0;
@@ -69,33 +70,39 @@
   }
 
   &__zoomControls {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
-    gap: 1px;
+    gap: 4px;
     background: var(--color-surface-mid);
-    border-radius: var(--pm-radius-sm);
-    padding: 1px;
+    border-radius: 6px;
+    padding: 4px;
+    z-index: 10;
+    box-shadow: var(--pm-shadow-md);
   }
 
   &__zoomBtn {
-    width: 24px;
-    height: 24px;
+    width: 37px;
+    height: 37px;
     display: flex;
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: calc(var(--pm-radius-sm) - 1px);
+    border-radius: 6px;
     background: transparent;
-    color: var(--color-gray-60);
-    font-size: 0.875rem;
+    color: var(--color-on-surface);
+    font-size: 1rem;
     font-weight: 500;
+    font-family: var(--ui-font);
     cursor: pointer;
     transition: all var(--pm-transition);
     line-height: 1;
 
     &:hover:not(:disabled) {
       background: var(--color-surface-high);
-      color: var(--color-on-surface);
     }
 
     &:active:not(:disabled) {
@@ -764,6 +771,7 @@
   &__info {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     padding: 6px 8px;
     min-height: 28px;
     gap: 2px;
@@ -886,7 +894,7 @@
     overflow-x: auto;
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) transparent;
-    padding: 2px 0 4px;
+    padding: 10px 0px;
 
     &::-webkit-scrollbar {
       height: 3px;
@@ -1039,6 +1047,61 @@
       &:hover {
         background: var(--pm-danger-light) !important;
       }
+    }
+  }
+}
+
+// ─── Category Bar Dark Mode ──────────────────────────────────────
+.excalidraw.theme--dark .CategoryBar {
+  &__scroll button {
+    height: 37px;
+    background: #232329;
+    border: 0;
+    border-radius: 6px;
+    font-family: var(--ui-font);
+  }
+
+  .CategoryBar__pill--active {
+    background: #a8a5ff !important;
+  }
+
+  &__fadeLeft {
+    background: linear-gradient(to right, #121212, transparent);
+  }
+
+  &__fadeRight {
+    background: linear-gradient(to left, #121212, transparent);
+  }
+}
+
+.excalidraw.theme--dark .ProjectManager__actionBtn {
+  height: 37px;
+  background: #232329;
+  border: 0;
+  border-radius: 6px;
+  font-family: var(--ui-font);
+
+  &:active {
+    background: #a8a5ff;
+    color: #232329;
+  }
+}
+
+.excalidraw.theme--dark .ProjectManager__zoomControls {
+  background: #1a1a1f;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  .ProjectManager__zoomBtn {
+    background: #232329;
+    color: #e0e0e0;
+
+    &:hover:not(:disabled) {
+      background: #2e2e36;
+    }
+
+    &:active:not(:disabled) {
+      background: #a8a5ff;
+      color: #232329;
     }
   }
 }

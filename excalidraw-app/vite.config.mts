@@ -350,6 +350,19 @@ function projectFilePlugin(): Plugin {
           } else {
             command = `zenity --file-selection 2>/dev/null || kdialog --getopenfilename ~ 2>/dev/null`;
           }
+          const BINARY_EXTENSIONS = new Set([
+            // Images
+            "png", "jpg", "jpeg", "gif", "bmp", "svg", "webp", "ico", "tiff", "tif", "avif", "heic",
+            // Video
+            "mp4", "webm", "avi", "mov", "mkv", "flv", "wmv", "m4v", "ogv",
+            // Audio
+            "mp3", "wav", "flac", "aac", "ogg", "wma", "m4a",
+            // Archives & binary
+            "zip", "rar", "7z", "tar", "gz", "exe", "dll", "so", "bin", "dat",
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "db", "sqlite",
+          ]);
+          const MAX_CODEBLOCK_SIZE = 512 * 1024; // 512KB
+
           exec(command, { maxBuffer: 1024 * 1024 }, (err, stdout) => {
             const filePath = (stdout || "").trim();
             if (err || !filePath) {
@@ -358,10 +371,19 @@ function projectFilePlugin(): Plugin {
               return;
             }
             try {
-              const fileContent = fs.readFileSync(filePath, "utf-8");
               const fileName = path.basename(filePath);
+              const ext = fileName.split(".").pop()?.toLowerCase() || "";
+              const stats = fs.statSync(filePath);
+              const fileSize = stats.size;
+              const isBinary = BINARY_EXTENSIONS.has(ext);
+
+              let fileContent: string | null = null;
+              if (!isBinary && fileSize <= MAX_CODEBLOCK_SIZE) {
+                fileContent = fs.readFileSync(filePath, "utf-8");
+              }
+
               res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify({ filePath, fileName, fileContent }));
+              res.end(JSON.stringify({ filePath, fileName, fileContent, fileSize }));
             } catch (readErr) {
               res.statusCode = 500;
               res.setHeader("Content-Type", "application/json");

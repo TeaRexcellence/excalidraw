@@ -1256,24 +1256,6 @@ export const ProjectManager: React.FC = () => {
       <div className="ProjectManager__header">
         <div className="ProjectManager__title">{t("projectManager.title")}</div>
         <div className="ProjectManager__headerControls">
-          <div className="ProjectManager__zoomControls">
-            <button
-              className="ProjectManager__zoomBtn"
-              onClick={handleZoomOut}
-              disabled={cardSize <= MIN_CARD_SIZE}
-              title="Zoom out"
-            >
-              −
-            </button>
-            <button
-              className="ProjectManager__zoomBtn"
-              onClick={handleZoomIn}
-              disabled={cardSize >= MAX_CARD_SIZE}
-              title="Zoom in"
-            >
-              +
-            </button>
-          </div>
           <div className="ProjectManager__settings" ref={settingsRef}>
             <button
               className="ProjectManager__settingsBtn"
@@ -1698,6 +1680,25 @@ export const ProjectManager: React.FC = () => {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="ProjectManager__zoomControls">
+        <button
+          className="ProjectManager__zoomBtn"
+          onClick={handleZoomOut}
+          disabled={cardSize <= MIN_CARD_SIZE}
+          title="Zoom out"
+        >
+          −
+        </button>
+        <button
+          className="ProjectManager__zoomBtn"
+          onClick={handleZoomIn}
+          disabled={cardSize >= MAX_CARD_SIZE}
+          title="Zoom in"
+        >
+          +
+        </button>
       </div>
     </div>
   );

@@ -50,9 +50,25 @@
       background: var(--color-primary-light);
     }
 
+    &--disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+
+      &:hover {
+        border-color: var(--default-border-color);
+        background: var(--island-bg-color);
+      }
+    }
+
     span {
       font-size: 13px;
       text-align: center;
     }
+  }
+
+  &__reason {
+    font-size: 11px;
+    color: var(--color-gray-60);
+    font-style: italic;
   }
 }

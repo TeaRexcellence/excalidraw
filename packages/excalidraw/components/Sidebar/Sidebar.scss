@@ -21,7 +21,7 @@
     overflow: hidden;
     border-radius: 0;
 
-    border-left: 1px solid var(--sidebar-border-color);
+    border-left: 2px solid var(--sidebar-border-color);
 
     :root[dir="rtl"] & {
       left: 0;
@@ -37,7 +37,7 @@
     }
 
     :root[dir="rtl"] & {
-      border-right: 1px solid var(--sidebar-border-color);
+      border-right: 2px solid var(--sidebar-border-color);
       border-left: 0;
     }
   }
@@ -51,11 +51,17 @@
     cursor: ew-resize;
     background: transparent;
     z-index: 10;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, width 0.15s ease;
 
-    &:hover,
+    &:hover {
+      background-color: var(--sidebar-border-color);
+      width: 3px;
+    }
+
     &:active {
-      background-color: var(--color-primary);
+      background-color: var(--text-primary-color);
+      opacity: 0.3;
+      width: 3px;
     }
 
     :root[dir="rtl"] & {
@@ -106,7 +112,7 @@
       }
 
       &:hover {
-        background: var(--button-hover-bg, var(--island-bg-color));
+        background: var(--sidebar-button-hover-bg, var(--island-bg-color));
       }
     }
 
@@ -154,16 +160,16 @@
   .sidebar-tab-trigger {
     --button-width: auto;
     --button-bg: transparent;
-    --button-hover-bg: transparent;
-    --button-active-bg: var(--color-primary);
-    --button-hover-color: var(--color-primary);
-    --button-hover-border: var(--color-primary);
+    --button-hover-bg: var(--sidebar-button-hover-bg, transparent);
+    --button-active-bg: var(--sidebar-button-active-bg, var(--color-primary));
+    --button-hover-color: var(--sidebar-button-active-bg, var(--color-primary));
+    --button-hover-border: var(--sidebar-button-active-bg, var(--color-primary));
 
     &[data-state="active"] {
-      --button-bg: var(--color-primary);
-      --button-hover-bg: var(--color-primary-darker);
+      --button-bg: var(--sidebar-button-active-bg, var(--color-primary));
+      --button-hover-bg: var(--sidebar-button-active-bg, var(--color-primary-darker));
       --button-hover-color: var(--color-icon-white);
-      --button-border: var(--color-primary);
+      --button-border: var(--sidebar-button-active-bg, var(--color-primary));
       color: var(--color-icon-white);
     }
   }
