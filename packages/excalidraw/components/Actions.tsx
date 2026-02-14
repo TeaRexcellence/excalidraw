@@ -82,6 +82,8 @@ import {
   DotsHorizontalIcon,
   SelectionIcon,
   pencilIcon,
+  LockedIcon,
+  UnlockedIcon,
 } from "./icons";
 
 import { Island } from "./Island";
@@ -1043,11 +1045,13 @@ export const ShapesSwitcher = ({
   setAppState,
   app,
   UIOptions,
+  onLockToggle,
 }: {
   activeTool: UIAppState["activeTool"];
   setAppState: React.Component<any, AppState>["setState"];
   app: AppClassProperties;
   UIOptions: AppProps["UIOptions"];
+  onLockToggle?: () => void;
 }) => {
   const stylesPanelMode = useStylesPanelMode();
   const isFullStylesPanel = stylesPanelMode === "full";
@@ -1122,7 +1126,7 @@ export const ShapesSwitcher = ({
             );
           }
 
-          return (
+          const toolButton = (
             <ToolButton
               className={clsx("Shape", { fillable })}
               key={value}
@@ -1162,6 +1166,46 @@ export const ShapesSwitcher = ({
               }}
             />
           );
+
+          // Wrap selection tool with hover dropdown containing the lock toggle
+          if (
+            (value === "selection" || value === "lasso") &&
+            !isCompactStylesPanel &&
+            onLockToggle
+          ) {
+            return (
+              <div
+                key={value}
+                className="tool-hover-dropdown"
+              >
+                {toolButton}
+                <div className="tool-hover-dropdown__panel">
+                  <label
+                    className={clsx(
+                      "ToolIcon ToolIcon__lock tool-hover-dropdown__lock",
+                      {
+                        "is-locked": activeTool.locked,
+                      },
+                    )}
+                    title={`${t("toolBar.lock")} — Q`}
+                  >
+                    <input
+                      className="ToolIcon_type_checkbox"
+                      type="checkbox"
+                      onChange={onLockToggle}
+                      checked={activeTool.locked}
+                      aria-label={t("toolBar.lock")}
+                    />
+                    <div className="ToolIcon__icon">
+                      {activeTool.locked ? LockedIcon : UnlockedIcon}
+                    </div>
+                  </label>
+                </div>
+              </div>
+            );
+          }
+
+          return toolButton;
         })
         .flatMap((element, index, array) => {
           // Insert Video and Embed buttons right after Image (index 8)

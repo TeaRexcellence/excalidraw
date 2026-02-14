@@ -206,3 +206,44 @@
   --button-hover-bg: #363541;
   --button-bg: var(--color-surface-high);
 }
+
+.tool-hover-dropdown {
+  position: relative;
+  display: inline-flex;
+
+  .tool-hover-dropdown__panel {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding-top: 4px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: var(--zIndex-layerUI);
+
+    .ToolIcon__lock {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--island-bg-color);
+      box-shadow: var(--shadow-island);
+      border-radius: var(--border-radius-lg);
+      cursor: pointer;
+
+      .ToolIcon__icon {
+        width: var(--default-button-size);
+        height: var(--default-button-size);
+      }
+
+      &.is-locked .ToolIcon__icon {
+        background: var(--color-primary-light);
+      }
+    }
+  }
+
+  &:hover .tool-hover-dropdown__panel {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
