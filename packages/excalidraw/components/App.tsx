@@ -2039,7 +2039,6 @@ class App extends React.Component<AppProps, AppState> {
                         </LayerUI>
 
                         <div className="excalidraw-textEditorContainer" />
-                        <div className="excalidraw-tableEditorContainer" />
                         <div className="excalidraw-codeBlockEditorContainer" />
                         <div className="excalidraw-contextMenuContainer" />
                         <div className="excalidraw-eye-dropper-container" />
@@ -6228,6 +6227,17 @@ class App extends React.Component<AppProps, AppState> {
         this.setState({
           activeEmbeddable: { element: hitElement, state: "active" },
         });
+        return;
+      }
+
+      // Don't create text on top of non-text elements that aren't
+      // text-bindable containers (e.g. custom elements like table,
+      // codeblock, document, projectLink, etc.)
+      if (
+        hitElement &&
+        !isTextElement(hitElement) &&
+        !isTextBindableContainer(hitElement, false)
+      ) {
         return;
       }
 

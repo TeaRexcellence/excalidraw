@@ -258,10 +258,17 @@ export const ProjectManager: React.FC = () => {
   }, [refreshTrigger]);
 
   // Keep ProjectManagerData cache in sync with local index
-  // This prevents divergence between auto-save and manual operations
+  // This prevents divergence between auto-save and manual operations.
+  // IMPORTANT: Skip while loading — the initial DEFAULT_PROJECTS_INDEX has
+  // currentProjectId=null, which would clobber cachedIndex before
+  // initializeScene has a chance to call loadCurrentProject().  That causes
+  // loadCurrentProject() to see currentProjectId=null, return null, and the
+  // app falls back to stale localStorage data.
   useEffect(() => {
-    ProjectManagerData.updateCachedIndex(index);
-  }, [index]);
+    if (!isLoading) {
+      ProjectManagerData.updateCachedIndex(index);
+    }
+  }, [index, isLoading]);
 
   // Track pending save trigger (if triggered before loading completes)
   const pendingSaveTriggerRef = useRef(0);
@@ -300,7 +307,8 @@ export const ProjectManager: React.FC = () => {
         : "Uncategorized";
       const categoryFolder = sanitizeFolderName(category);
       const projectFolder = sanitizeFolderName(project.title);
-      return `/projects/${categoryFolder}/${projectFolder}/preview.png`;
+      // Folder on disk uses the ID-suffixed format: {title}_{id}
+      return `/projects/${categoryFolder}/${projectFolder}_${projectId}/preview.png`;
     },
     [previewCache, index.projects, index.groups, sanitizeFolderName],
   );
@@ -358,6 +366,7 @@ export const ProjectManager: React.FC = () => {
       const elements = app.scene.getElementsIncludingDeleted();
       const appState = app.state;
       const files = app.files;
+
 
       const sceneData = {
         type: "excalidraw",
@@ -1700,24 +1709,26 @@ export const ProjectManager: React.FC = () => {
         )}
       </div>
 
-      <div className="ProjectManager__zoomControls">
-        <button
-          className="ProjectManager__zoomBtn"
-          onClick={handleZoomOut}
-          disabled={cardSize <= MIN_CARD_SIZE}
-          title="Zoom out"
-        >
-          −
-        </button>
-        <button
-          className="ProjectManager__zoomBtn"
-          onClick={handleZoomIn}
-          disabled={cardSize >= MAX_CARD_SIZE}
-          title="Zoom in"
-        >
-          +
-        </button>
-      </div>
+      {index.projects.length > 0 && (
+        <div className="ProjectManager__zoomControls">
+          <button
+            className="ProjectManager__zoomBtn"
+            onClick={handleZoomOut}
+            disabled={cardSize <= MIN_CARD_SIZE}
+            title="Zoom out"
+          >
+            −
+          </button>
+          <button
+            className="ProjectManager__zoomBtn"
+            onClick={handleZoomIn}
+            disabled={cardSize >= MAX_CARD_SIZE}
+            title="Zoom in"
+          >
+            +
+          </button>
+        </div>
+      )}
     </div>
   );
 };

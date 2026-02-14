@@ -67,12 +67,17 @@ const api = {
   },
 
   async saveScene(projectId: string, sceneData: any): Promise<void> {
-    await fetch(`/api/projects/${projectId}/scene`, {
+    const res = await fetch(`/api/projects/${projectId}/scene`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sceneData),
       keepalive: true,
     });
+    if (!res.ok) {
+      throw new Error(
+        `Save failed: HTTP ${res.status} for project ${projectId}`,
+      );
+    }
   },
 
   async savePreview(projectId: string, blob: Blob): Promise<string> {
@@ -93,19 +98,27 @@ let previewGenerator: ((projectId: string) => Promise<void>) | null = null;
 
 export class ProjectManagerData {
   private static switchingProject = false;
+  // After a project switch, suppress empty-element auto-saves until
+  // real content arrives.  This prevents the multiple React re-renders
+  // triggered by syncActionResult (including the showWelcomeScreen
+  // setState in componentDidUpdate) from writing empty elements to disk.
+  private static skipEmptySavesAfterSwitch = false;
 
   /**
    * Begin a project switch — suppresses auto-saves until endProjectSwitch()
    */
   static beginProjectSwitch(): void {
     this.switchingProject = true;
+    this.skipEmptySavesAfterSwitch = false;
     this.cancelPendingSave();
   }
 
   /**
-   * End a project switch — re-enables auto-saves
+   * End a project switch — re-enables auto-saves, but empty-element
+   * saves remain suppressed until real content is seen (see save()).
    */
   static endProjectSwitch(): void {
+    this.skipEmptySavesAfterSwitch = true;
     this.switchingProject = false;
   }
 
@@ -130,6 +143,12 @@ export class ProjectManagerData {
           },
           files,
         };
+
+        if (elements.length === 0) {
+          console.warn(
+            `[ProjectManagerData] Auto-saving EMPTY elements for project ${projectId}`,
+          );
+        }
 
         await api.saveScene(projectId, sceneData);
 
@@ -248,6 +267,18 @@ export class ProjectManagerData {
     if (this.switchingProject) {
       return;
     }
+    // After a project switch, suppress empty-element saves.  The canvas
+    // clear from syncActionResult can trigger multiple React re-renders
+    // (e.g. the showWelcomeScreen setState), each calling onChange with
+    // elements=[].  We already saved the scene explicitly during the
+    // switch, so these empty saves are redundant and destructive.
+    if (this.skipEmptySavesAfterSwitch) {
+      if (elements.length === 0) {
+        return;
+      }
+      // Real content arrived — resume normal saves.
+      this.skipEmptySavesAfterSwitch = false;
+    }
     if (cachedIndex?.currentProjectId) {
       this.saveDebounced(cachedIndex.currentProjectId, elements, appState, files);
     }
@@ -261,7 +292,8 @@ export class ProjectManagerData {
   }
 
   /**
-   * Cancel any pending debounced save (e.g., before switching projects)
+   * Cancel any pending debounced save (e.g., before switching projects
+   * or after clearing the canvas during project creation)
    */
   static cancelPendingSave(): void {
     this.saveDebounced.cancel();
@@ -298,6 +330,8 @@ export class ProjectManagerData {
    * Called after the server-side reset to ensure no stale data remains.
    */
   static resetAll(): void {
+    this.switchingProject = false;
+    this.skipEmptySavesAfterSwitch = false;
     this.cancelPendingSave();
     cachedIndex = null;
     try {

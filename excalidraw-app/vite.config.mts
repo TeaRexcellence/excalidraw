@@ -64,7 +64,10 @@ function projectFilePlugin(): Plugin {
     }
   };
 
-  // Get the folder path for a project based on its category and title
+  // Get the folder path for a project based on its category and title.
+  // Prefers the new ID-suffixed format, falls back to legacy format if
+  // the folder already exists there. Never renames — that would steal
+  // data from other projects that sanitize to the same folder name.
   const getProjectPath = (projectId: string): string | null => {
     const index = getIndex();
     const project = index.projects.find((p: any) => p.id === projectId);
@@ -77,40 +80,29 @@ function projectFilePlugin(): Plugin {
     const safeCategoryName = sanitizeFolderName(categoryName);
     const safeProjectTitle = sanitizeFolderName(project.title);
 
-    // Include project ID in folder name to prevent collisions when
-    // different titles sanitize to the same string
+    // New format: includes ID to prevent collisions
     const newPath = path.join(projectsDir, safeCategoryName, `${safeProjectTitle}_${projectId}`);
-
-    // Auto-migrate old folders (without ID suffix) to new format
-    if (!fs.existsSync(newPath)) {
-      const legacyPath = path.join(projectsDir, safeCategoryName, safeProjectTitle);
-      if (fs.existsSync(legacyPath)) {
-        try {
-          fs.renameSync(legacyPath, newPath);
-        } catch {
-          // If rename fails, fall back to legacy path
-          return legacyPath;
-        }
-      }
+    if (fs.existsSync(newPath)) {
+      return newPath;
     }
 
+    // Legacy format: without ID suffix
+    const legacyPath = path.join(projectsDir, safeCategoryName, safeProjectTitle);
+    if (fs.existsSync(legacyPath)) {
+      return legacyPath;
+    }
+
+    // Neither exists — use new format (folder created on first save)
     return newPath;
   };
 
-  // Get the URL path for a project (for serving static files)
+  // Get the URL path for a project (for serving static files).
+  // Must match the actual folder returned by getProjectPath.
   const getProjectUrlPath = (projectId: string): string | null => {
-    const index = getIndex();
-    const project = index.projects.find((p: any) => p.id === projectId);
-    if (!project) return null;
-
-    const categoryName = project.groupId
-      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
-      : "Uncategorized";
-
-    const safeCategoryName = sanitizeFolderName(categoryName);
-    const safeProjectTitle = sanitizeFolderName(project.title);
-
-    return `/projects/${safeCategoryName}/${safeProjectTitle}`;
+    const projectDir = getProjectPath(projectId);
+    if (!projectDir) return null;
+    // Return the path relative to projectsDir, prefixed with /projects/
+    return `/projects/${path.relative(projectsDir, projectDir).replace(/\\/g, "/")}`;
   };
 
   return {
@@ -215,12 +207,10 @@ function projectFilePlugin(): Plugin {
           }
 
           if (!fs.existsSync(projectDir)) {
-            // Don't auto-create — the folder should have been created when
-            // the project was first saved. Recreating it here would resurrect
-            // deleted projects when a stale auto-save fires.
-            res.statusCode = 404;
-            res.end(JSON.stringify({ error: "Project folder missing" }));
-            return;
+            // Safe to auto-create: getProjectPath already verified this
+            // project exists in the index, so it's not a stale save for a
+            // deleted project (those return null at the check above).
+            fs.mkdirSync(projectDir, { recursive: true });
           }
 
           const scenePath = path.join(projectDir, "scene.excalidraw");
@@ -766,7 +756,8 @@ function videoFilePlugin(): Plugin {
     }
   };
 
-  // Get the folder path for a project based on its category and title
+  // Get the folder path for a project — same logic as projectFilePlugin:
+  // prefer new ID-suffixed folder, fall back to legacy, never rename.
   const getProjectPath = (projectId: string): string | null => {
     const index = getIndex();
     const project = index.projects.find((p: any) => p.id === projectId);
@@ -779,23 +770,24 @@ function videoFilePlugin(): Plugin {
     const safeCategoryName = sanitizeFolderName(categoryName);
     const safeProjectTitle = sanitizeFolderName(project.title);
 
-    return path.join(projectsDir, safeCategoryName, `${safeProjectTitle}_${projectId}`);
+    const newPath = path.join(projectsDir, safeCategoryName, `${safeProjectTitle}_${projectId}`);
+    if (fs.existsSync(newPath)) {
+      return newPath;
+    }
+
+    const legacyPath = path.join(projectsDir, safeCategoryName, safeProjectTitle);
+    if (fs.existsSync(legacyPath)) {
+      return legacyPath;
+    }
+
+    return newPath;
   };
 
-  // Get the URL path for a project
+  // Get the URL path for a project — must match actual folder on disk.
   const getProjectUrlPath = (projectId: string): string | null => {
-    const index = getIndex();
-    const project = index.projects.find((p: any) => p.id === projectId);
-    if (!project) return null;
-
-    const categoryName = project.groupId
-      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
-      : "Uncategorized";
-
-    const safeCategoryName = sanitizeFolderName(categoryName);
-    const safeProjectTitle = sanitizeFolderName(project.title);
-
-    return `/projects/${safeCategoryName}/${safeProjectTitle}_${projectId}`;
+    const projectDir = getProjectPath(projectId);
+    if (!projectDir) return null;
+    return `/projects/${path.relative(projectsDir, projectDir).replace(/\\/g, "/")}`;
   };
 
   return {

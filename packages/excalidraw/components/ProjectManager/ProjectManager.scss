@@ -962,10 +962,14 @@
     }
 
     &--add {
+      width: 37px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       border-style: dashed;
       color: var(--color-gray-40);
-      padding: 4px 10px;
-      font-size: 0.75rem;
+      font-size: 0.875rem;
 
       &:hover {
         color: var(--color-on-surface);
