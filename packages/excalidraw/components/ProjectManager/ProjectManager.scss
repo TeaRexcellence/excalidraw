@@ -19,7 +19,7 @@
   --pm-warning-bg: rgba(250, 204, 21, 0.08);
   --pm-warning-border: rgba(250, 204, 21, 0.3);
   --pm-warning-solid: #eab308;
-  --pm-star: #f59e0b;
+  --pm-star: #a8a5ff;
 }
 
 // ─── Project Manager Container ───────────────────────────────────
@@ -521,12 +521,14 @@
   }
 
   &__chevron {
-    font-size: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: var(--color-gray-40);
     transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
-    width: 12px;
-    text-align: center;
+    width: 16px;
+    height: 16px;
 
     &.expanded {
       transform: rotate(90deg);
@@ -667,8 +669,8 @@
     position: absolute;
     top: 6px;
     right: 6px;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -699,7 +701,7 @@
       color: var(--pm-star);
 
       &:hover {
-        color: #fbbf24;
+        color: #bbb8ff;
       }
     }
   }
@@ -924,6 +926,9 @@
     padding: 4px 12px;
     border: 0;
     border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     background: var(--color-surface-mid);
     color: var(--color-gray-50);
     font-size: 0.6875rem;
@@ -948,6 +953,10 @@
       background: #a8a5ff;
       color: #fff;
       font-weight: 600;
+
+      .CategoryBar__pill__star {
+        color: #fff;
+      }
 
       &:hover {
         background: #a8a5ff;
@@ -981,8 +990,8 @@
       display: inline-flex;
       align-items: center;
       color: var(--pm-star);
-      margin-right: 3px;
       flex-shrink: 0;
+      transform: translateY(0.5px);
     }
   }
 
@@ -1070,6 +1079,10 @@
   .CategoryBar__pill--active:hover {
     background: #a8a5ff;
     color: #232329;
+
+    .CategoryBar__pill__star {
+      color: #232329;
+    }
   }
 
   &__fadeLeft {
