@@ -272,6 +272,9 @@ export const ProjectManager: React.FC = () => {
 
   // Track pending save trigger (if triggered before loading completes)
   const pendingSaveTriggerRef = useRef(0);
+  // Track the last saveTrigger value we actually processed, so dependency
+  // changes (like saveCurrentProject getting a new ref) don't re-fire the badge
+  const lastProcessedSaveTriggerRef = useRef(0);
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
   // Sanitize name for folder path (must match server-side sanitization in vite.config.mts)
@@ -792,12 +795,15 @@ export const ProjectManager: React.FC = () => {
   // Handle external save trigger (must be after saveCurrentProject is defined)
   useEffect(() => {
     if (saveTrigger === 0) return; // Skip initial render
+    if (saveTrigger === lastProcessedSaveTriggerRef.current) return; // Already handled
 
     if (isLoading) {
       // Store for later when loading completes
       pendingSaveTriggerRef.current = saveTrigger;
       return;
     }
+
+    lastProcessedSaveTriggerRef.current = saveTrigger;
 
     if (index.currentProjectId === null) {
       // Not saved yet - show save modal
@@ -825,6 +831,7 @@ export const ProjectManager: React.FC = () => {
   // Handle pending save trigger after loading completes
   useEffect(() => {
     if (!isLoading && pendingSaveTriggerRef.current > 0) {
+      lastProcessedSaveTriggerRef.current = pendingSaveTriggerRef.current;
       pendingSaveTriggerRef.current = 0;
 
       if (index.currentProjectId === null) {
