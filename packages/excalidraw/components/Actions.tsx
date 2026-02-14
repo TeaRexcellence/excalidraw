@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 
 import {
@@ -84,6 +84,13 @@ import {
   pencilIcon,
   LockedIcon,
   UnlockedIcon,
+  RectangleIcon,
+  DiamondIcon,
+  EllipseIcon,
+  ArrowIcon,
+  LineIcon,
+  ImageIcon,
+  EraserIcon,
 } from "./icons";
 
 import { Island } from "./Island";
@@ -1070,6 +1077,88 @@ export const ShapesSwitcher = ({
     },
   ] as const;
 
+  const SHAPE_GROUP_TYPES = ["rectangle", "diamond", "ellipse", "arrow", "line"] as const;
+
+  const SHAPE_GROUP = [
+    { type: "ellipse", icon: EllipseIcon, label: t("toolBar.ellipse") },
+    { type: "rectangle", icon: RectangleIcon, label: t("toolBar.rectangle") },
+    { type: "diamond", icon: DiamondIcon, label: t("toolBar.diamond") },
+    { type: "arrow", icon: ArrowIcon, label: t("toolBar.arrow") },
+    { type: "line", icon: LineIcon, label: t("toolBar.line") },
+  ] as const;
+
+  const [preferredShape, setPreferredShape] = useState<string>("ellipse");
+
+  // Sync preferred shape when active tool changes (e.g. via keyboard shortcut)
+  useEffect(() => {
+    if (
+      (SHAPE_GROUP_TYPES as readonly string[]).includes(activeTool.type)
+    ) {
+      setPreferredShape(activeTool.type);
+    }
+  }, [activeTool.type]);
+
+  // If the active tool is one of the grouped shapes, show that one
+  const displayedShape =
+    SHAPE_GROUP.find((s) => s.type === activeTool.type) ||
+    SHAPE_GROUP.find((s) => s.type === preferredShape) ||
+    SHAPE_GROUP[0];
+
+  const INSERT_GROUP = [
+    {
+      type: "image",
+      icon: ImageIcon,
+      label: t("toolBar.image"),
+      action: () => app.setActiveTool({ type: "image" }),
+    },
+    {
+      type: "video",
+      icon: VideoIcon,
+      label: t("toolBar.video"),
+      action: () => app.setOpenDialog({ name: "videoEmbed" as const }),
+    },
+    {
+      type: "embeddable",
+      icon: EmbedIcon,
+      label: t("toolBar.embeddable"),
+      action: () => app.setActiveTool({ type: "embeddable" }),
+    },
+    {
+      type: "table",
+      icon: TableIcon,
+      label: t("toolBar.table"),
+      action: () => app.setOpenDialog({ name: "tableCreate" as const }),
+    },
+    {
+      type: "codeblock",
+      icon: CodeBlockIcon,
+      label: t("toolBar.codeBlock"),
+      action: () => app.setOpenDialog({ name: "codeBlockCreate" as const }),
+    },
+    {
+      type: "document",
+      icon: DocumentInsertIcon,
+      label: t("toolBar.document"),
+      action: () => app.setOpenDialog({ name: "documentInsert" as const }),
+    },
+    {
+      type: "projectLink",
+      icon: ProjectLinkIcon,
+      label: t("toolBar.projectLink"),
+      action: () => app.setOpenDialog({ name: "projectLinkCreate" as const }),
+    },
+  ];
+
+  const [preferredInsert, setPreferredInsert] = useState<string>("image");
+
+  const displayedInsert =
+    INSERT_GROUP.find((s) => s.type === activeTool.type) ||
+    INSERT_GROUP.find((s) => s.type === preferredInsert) ||
+    INSERT_GROUP[0];
+
+  // Track whether we already rendered the shape group (skip duplicates)
+  let shapeGroupRendered = false;
+
   return (
     <>
       {getToolbarTools(app).map(
@@ -1082,6 +1171,127 @@ export const ShapesSwitcher = ({
               >
             ] === false
           ) {
+            return null;
+          }
+
+          // Shape group dropdown (rectangle, diamond, ellipse, line)
+          if (
+            (SHAPE_GROUP_TYPES as readonly string[]).includes(value) &&
+            !isCompactStylesPanel
+          ) {
+            if (shapeGroupRendered) {
+              return null;
+            }
+            shapeGroupRendered = true;
+
+            const isGroupActive = SHAPE_GROUP_TYPES.includes(
+              activeTool.type as any,
+            );
+
+            return (
+              <div key="shape-group" className="tool-hover-dropdown">
+                <ToolButton
+                  className={clsx("Shape", { fillable: true })}
+                  type="radio"
+                  icon={displayedShape.icon}
+                  checked={isGroupActive}
+                  name="editor-current-shape"
+                  title={capitalizeString(displayedShape.label)}
+                  aria-label={capitalizeString(displayedShape.label)}
+                  data-testid={`toolbar-${displayedShape.type}`}
+                  onChange={() => {
+                    if (activeTool.type !== displayedShape.type) {
+                      trackEvent("toolbar", displayedShape.type, "ui");
+                    }
+                    app.setActiveTool({ type: displayedShape.type as any });
+                  }}
+                />
+                <div className="tool-hover-dropdown__panel">
+                  <div className="tool-hover-dropdown__shapes">
+                    {SHAPE_GROUP.filter(
+                      (shape) => shape.type !== displayedShape.type,
+                    ).map((shape) => (
+                      <ToolButton
+                        key={shape.type}
+                        className={clsx("Shape", {
+                          fillable: true,
+                          active: activeTool.type === shape.type,
+                        })}
+                        type="radio"
+                        icon={shape.icon}
+                        checked={activeTool.type === shape.type}
+                        name="shape-group-option"
+                        title={capitalizeString(shape.label)}
+                        aria-label={capitalizeString(shape.label)}
+                        data-testid={`toolbar-shape-${shape.type}`}
+                        onChange={() => {
+                          if (activeTool.type !== shape.type) {
+                            trackEvent("toolbar", shape.type, "ui");
+                          }
+                          app.setActiveTool({ type: shape.type as any });
+                          setPreferredShape(shape.type);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Insert group dropdown (image, video, embeddable, document, projectLink)
+          if (value === "image" && !isCompactStylesPanel) {
+            const isInsertGroupActive = INSERT_GROUP.some(
+              (s) => s.type === activeTool.type,
+            );
+
+            return (
+              <div key="insert-group" className="tool-hover-dropdown">
+                <ToolButton
+                  className={clsx("Shape", { fillable: false })}
+                  type="radio"
+                  icon={displayedInsert.icon}
+                  checked={isInsertGroupActive}
+                  name="editor-current-shape"
+                  title={capitalizeString(displayedInsert.label)}
+                  aria-label={capitalizeString(displayedInsert.label)}
+                  data-testid={`toolbar-${displayedInsert.type}`}
+                  onChange={() => {
+                    displayedInsert.action();
+                    trackEvent("toolbar", displayedInsert.type, "ui");
+                  }}
+                />
+                <div className="tool-hover-dropdown__panel">
+                  <div className="tool-hover-dropdown__shapes">
+                    {INSERT_GROUP.filter(
+                      (item) => item.type !== displayedInsert.type,
+                    ).map((item) => (
+                      <ToolButton
+                        key={item.type}
+                        className={clsx("Shape", {
+                          active: activeTool.type === item.type,
+                        })}
+                        type="button"
+                        icon={item.icon}
+                        name={`insert-group-${item.type}`}
+                        title={capitalizeString(item.label)}
+                        aria-label={capitalizeString(item.label)}
+                        data-testid={`toolbar-insert-${item.type}`}
+                        onClick={() => {
+                          item.action();
+                          setPreferredInsert(item.type);
+                          trackEvent("toolbar", item.type, "ui");
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Skip eraser in the map — rendered manually after frame
+          if (value === "eraser" && !isCompactStylesPanel) {
             return null;
           }
 
@@ -1206,87 +1416,6 @@ export const ShapesSwitcher = ({
           }
 
           return toolButton;
-        })
-        .flatMap((element, index, array) => {
-          // Insert Video and Embed buttons right after Image (index 8)
-          if (index === 8) {
-            return [
-              element,
-              <ToolButton
-                key="video"
-                className="Shape"
-                type="button"
-                icon={VideoIcon}
-                name="video"
-                title={t("toolBar.video")}
-                aria-label={t("toolBar.video")}
-                data-testid="toolbar-video"
-                onClick={() => app.setOpenDialog({ name: "videoEmbed" })}
-              />,
-              <ToolButton
-                key="embeddable"
-                className="Shape"
-                type="radio"
-                icon={EmbedIcon}
-                checked={activeTool.type === "embeddable"}
-                name="editor-current-shape"
-                title={capitalizeString(t("toolBar.embeddable"))}
-                aria-label={capitalizeString(t("toolBar.embeddable"))}
-                data-testid="toolbar-embeddable"
-                onChange={() => {
-                  if (app.state.activeTool.type !== "embeddable") {
-                    trackEvent("toolbar", "embeddable", "ui");
-                  }
-                  app.setActiveTool({ type: "embeddable" });
-                }}
-              />,
-              <ToolButton
-                key="table"
-                className="Shape"
-                type="button"
-                icon={TableIcon}
-                name="table"
-                title={t("toolBar.table")}
-                aria-label={t("toolBar.table")}
-                data-testid="toolbar-table"
-                onClick={() => app.setOpenDialog({ name: "tableCreate" })}
-              />,
-              <ToolButton
-                key="codeblock"
-                className="Shape"
-                type="button"
-                icon={CodeBlockIcon}
-                name="codeblock"
-                title={t("toolBar.codeBlock")}
-                aria-label={t("toolBar.codeBlock")}
-                data-testid="toolbar-codeblock"
-                onClick={() => app.setOpenDialog({ name: "codeBlockCreate" })}
-              />,
-              <ToolButton
-                key="document"
-                className="Shape"
-                type="button"
-                icon={DocumentInsertIcon}
-                name="document"
-                title={t("toolBar.document")}
-                aria-label={t("toolBar.document")}
-                data-testid="toolbar-document"
-                onClick={() => app.setOpenDialog({ name: "documentInsert" })}
-              />,
-              <ToolButton
-                key="projectLink"
-                className="Shape"
-                type="button"
-                icon={ProjectLinkIcon}
-                name="projectLink"
-                title={t("toolBar.projectLink")}
-                aria-label={t("toolBar.projectLink")}
-                data-testid="toolbar-project-link"
-                onClick={() => app.setOpenDialog({ name: "projectLinkCreate" })}
-              />,
-            ];
-          }
-          return element;
         })}
       {/* Frame tool */}
       <ToolButton
@@ -1304,6 +1433,24 @@ export const ShapesSwitcher = ({
             trackEvent("toolbar", "frame", "ui");
           }
           app.setActiveTool({ type: "frame" });
+        }}
+      />
+      {/* Eraser tool */}
+      <ToolButton
+        className="Shape"
+        type="radio"
+        icon={EraserIcon}
+        checked={activeTool.type === "eraser"}
+        name="editor-current-shape"
+        title={`${capitalizeString(t("toolBar.eraser"))} — ${KEYS.E.toLocaleUpperCase()}`}
+        keyBindingLabel={KEYS.E.toLocaleUpperCase()}
+        aria-label={capitalizeString(t("toolBar.eraser"))}
+        data-testid="toolbar-eraser"
+        onChange={() => {
+          if (app.state.activeTool.type !== "eraser") {
+            trackEvent("toolbar", "eraser", "ui");
+          }
+          app.setActiveTool({ type: "eraser" });
         }}
       />
       {/* Laser tool */}

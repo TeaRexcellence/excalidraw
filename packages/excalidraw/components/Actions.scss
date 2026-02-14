@@ -240,6 +240,16 @@
         background: var(--color-primary-light);
       }
     }
+
+    .tool-hover-dropdown__shapes {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      background: var(--island-bg-color);
+      box-shadow: var(--shadow-island);
+      border-radius: var(--border-radius-lg);
+      padding: 0.25rem;
+    }
   }
 
   &:hover .tool-hover-dropdown__panel {

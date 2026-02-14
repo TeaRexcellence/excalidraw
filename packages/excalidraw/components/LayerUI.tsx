@@ -18,7 +18,11 @@ import { ShapeCache } from "@excalidraw/element";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
-import { actionToggleStats } from "../actions";
+import {
+  actionToggleStats,
+  actionToggleGridMode,
+  actionToggleObjectsSnapMode,
+} from "../actions";
 import { trackEvent } from "../analytics";
 import { isHandToolActive } from "../appState";
 import { TunnelsContext, useInitializeTunnels } from "../context/tunnels";
@@ -39,14 +43,13 @@ import { PasteChartDialog } from "./PasteChartDialog";
 import { Section } from "./Section";
 import Stack from "./Stack";
 import { UserList } from "./UserList";
-import { PenModeButton } from "./PenModeButton";
 import Footer from "./footer/Footer";
 import { isSidebarDockedAtom, sidebarWidthAtom } from "./Sidebar/Sidebar";
 import MainMenu from "./main-menu/MainMenu";
 import { ActiveConfirmDialog } from "./ActiveConfirmDialog";
 import { useEditorInterface, useStylesPanelMode } from "./App";
 import { OverwriteConfirmDialog } from "./OverwriteConfirm/OverwriteConfirm";
-import { sidebarRightIcon } from "./icons";
+import { sidebarRightIcon, gridIcon, magnetIcon } from "./icons";
 import { DefaultSidebar } from "./DefaultSidebar";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
 import { Stats } from "./Stats";
@@ -55,6 +58,7 @@ import { ErrorDialog } from "./ErrorDialog";
 import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
 import { FixedSideContainer } from "./FixedSideContainer";
 import { HandButton } from "./HandButton";
+import { ToolButton } from "./ToolButton";
 import { HelpDialog } from "./HelpDialog";
 import { HintViewer } from "./HintViewer";
 import { ImageExportDialog } from "./ImageExportDialog";
@@ -352,16 +356,6 @@ const LayerUI = ({
                           />
                           {heading}
                           <Stack.Row gap={spacing.toolbarInnerRowGap}>
-                            <PenModeButton
-                              zenModeEnabled={appState.zenModeEnabled}
-                              checked={appState.penMode}
-                              onChange={() => onPenModeToggle(null)}
-                              title={t("toolBar.penMode")}
-                              penDetected={appState.penDetected}
-                            />
-
-                            <div className="App-toolbar__divider" />
-
                             <HandButton
                               checked={isHandToolActive(appState)}
                               onChange={() => onHandToolToggle()}
@@ -375,6 +369,43 @@ const LayerUI = ({
                               UIOptions={UIOptions}
                               app={app}
                               onLockToggle={onLockToggle}
+                            />
+                          </Stack.Row>
+                        </Island>
+                        <Island
+                          padding={spacing.islandPadding}
+                          className={clsx("App-toolbar", {
+                            "zen-mode": appState.zenModeEnabled,
+                          })}
+                        >
+                          <Stack.Row gap={spacing.toolbarInnerRowGap}>
+                            <ToolButton
+                              className="Shape"
+                              type="button"
+                              icon={gridIcon}
+                              selected={appState.gridModeEnabled}
+                              title={`${t("labels.toggleGrid")} — Ctrl+'`}
+                              aria-label={t("labels.toggleGrid")}
+                              data-testid="toolbar-grid"
+                              onClick={() => {
+                                actionManager.executeAction(
+                                  actionToggleGridMode,
+                                );
+                              }}
+                            />
+                            <ToolButton
+                              className="Shape"
+                              type="button"
+                              icon={magnetIcon}
+                              selected={appState.objectsSnapModeEnabled}
+                              title={`${t("buttons.objectsSnapMode")} — Alt+S`}
+                              aria-label={t("buttons.objectsSnapMode")}
+                              data-testid="toolbar-snap"
+                              onClick={() => {
+                                actionManager.executeAction(
+                                  actionToggleObjectsSnapMode,
+                                );
+                              }}
                             />
                           </Stack.Row>
                         </Island>
