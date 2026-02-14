@@ -1,8 +1,6 @@
 # Excalidraw (Local Fork)
 
-An all-in-one idea flow manager built on top of [Excalidraw](https://github.com/excalidraw/excalidraw), rewired for local-first personal use. No cloud, no accounts, no collaboration — just your files, your folders, your machine.
-
-The core idea: your whiteboard is deeply connected to your local filesystem. Embed documents, videos, and code from your disk directly onto the canvas. Open files and folders from within Excalidraw. Link projects together with clickable cards and navigate between them without leaving the app — building your own interconnected web of organized thoughts. Everything is saved as plain files in a folder structure you control, so your work is always yours.
+Featuring project manager and local first infrastructure, with interlinking projects, tools that interact with file system, custom tools, video support, csv/table support,etc. This is an all-in-one idea flow manager built on top of [Excalidraw](https://github.com/excalidraw/excalidraw), rewired for local-first personal use. This whiteboard is deeply connected to your local filesystem. Embed documents, videos, and code from your disk directly onto the canvas. Open files and folders from within Excalidraw. Link projects together with clickable cards and navigate between them without leaving the app — building your own interconnected web of organized thoughts. Everything is saved as plain files in a folder structure you control, so your work is always yours.
 
 Shape libraries still work. Online collaboration, cloud storage, sharing, and telemetry have all been removed.
 
