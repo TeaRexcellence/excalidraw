@@ -348,8 +348,21 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
     return null;
   }
 
+  // Detect docked sidebar to offset the overlay
+  const sidebarEl = document.querySelector(".sidebar.sidebar--docked");
+  const sidebarOffset = sidebarEl
+    ? sidebarEl.getBoundingClientRect().width
+    : 0;
+
   return createPortal(
-    <div className="search-menu-overlay">
+    <div
+      className="search-menu-overlay"
+      style={
+        sidebarOffset > 0
+          ? { width: `calc(100% - ${sidebarOffset}px)` }
+          : undefined
+      }
+    >
       <div
         className="search-menu-overlay__backdrop"
         onClick={onClose}
