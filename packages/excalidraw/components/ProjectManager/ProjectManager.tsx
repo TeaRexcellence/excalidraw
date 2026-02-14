@@ -1238,6 +1238,10 @@ export const ProjectManager: React.FC = () => {
   const favoriteProjects = index.projects.filter((p) => p.isFavorite);
   const ungroupedProjects = index.projects.filter((p) => p.groupId === null);
   const availableGroups = index.groups.map((g) => ({ id: g.id, name: g.name }));
+  const groupCounts: Record<string, number> = {};
+  for (const g of index.groups) {
+    groupCounts[g.id] = index.projects.filter((p) => p.groupId === g.id).length;
+  }
 
   if (isLoading) {
     return (
@@ -1322,6 +1326,7 @@ export const ProjectManager: React.FC = () => {
         activeFilter={activeFilter}
         favoriteCount={favoriteProjects.length}
         uncategorizedCount={ungroupedProjects.length}
+        groupCounts={groupCounts}
         onFilterChange={setActiveFilter}
         onCreateCategory={handleCreateCategory}
         onRenameCategory={handleRenameGroup}
@@ -1650,7 +1655,7 @@ export const ProjectManager: React.FC = () => {
                   group={null}
                   sectionId="favorites"
                   label="Favorites"
-                  icon="★"
+                  icon="star"
                   projects={favoriteProjects}
                   showCategoryBadge
                   {...groupSharedProps}

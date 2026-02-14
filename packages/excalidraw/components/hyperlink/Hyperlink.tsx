@@ -31,6 +31,7 @@ import {
   viewportCoordsToSceneCoords,
   wrapEvent,
   isLocalLink,
+  isLocalFilePath,
   normalizeLink,
 } from "@excalidraw/common";
 
@@ -511,10 +512,23 @@ export const Hyperlink = ({
           />
         ) : element.link ? (
           <a
-            href={normalizeLink(element.link || "")}
+            href={isLocalFilePath(element.link) ? "#" : normalizeLink(element.link || "")}
             className="excalidraw-hyperlinkContainer-link"
             target={isLocalLink(element.link) ? "_self" : "_blank"}
             onClick={(event) => {
+              if (element.link && isLocalFilePath(element.link)) {
+                event.preventDefault();
+                let localPath = element.link.trim();
+                if (localPath.startsWith("file:///")) {
+                  localPath = localPath.slice(8).replace(/\//g, "\\");
+                }
+                fetch("/api/open-local", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ path: localPath }),
+                }).catch((err) => console.error("Failed to open local path:", err));
+                return;
+              }
               if (element.link && onLinkOpen) {
                 const customEvent = wrapEvent(
                   EVENT.EXCALIDRAW_LINK,

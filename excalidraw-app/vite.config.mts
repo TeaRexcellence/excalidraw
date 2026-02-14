@@ -295,6 +295,50 @@ function projectFilePlugin(): Plugin {
           return;
         }
 
+        // Open any local file or folder with the OS default handler
+        if (req.method === "POST" && urlPath === "/api/open-local") {
+          const chunks: Buffer[] = [];
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
+          req.on("end", () => {
+            try {
+              const body = JSON.parse(Buffer.concat(chunks).toString());
+              const localPath = body.path;
+              if (!localPath || typeof localPath !== "string") {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: "path required" }));
+                return;
+              }
+
+              const resolved = path.resolve(localPath);
+              const platform = process.platform;
+              let command: string;
+              if (platform === "win32") {
+                command = `start "" "${resolved}"`;
+              } else if (platform === "darwin") {
+                command = `open "${resolved}"`;
+              } else {
+                command = `xdg-open "${resolved}"`;
+              }
+
+              exec(command, (err: Error | null) => {
+                if (err) {
+                  console.error("Failed to open local path:", err);
+                  res.statusCode = 500;
+                  res.setHeader("Content-Type", "application/json");
+                  res.end(JSON.stringify({ error: "Failed to open path" }));
+                } else {
+                  res.setHeader("Content-Type", "application/json");
+                  res.end(JSON.stringify({ opened: true }));
+                }
+              });
+            } catch {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: "Invalid JSON" }));
+            }
+          });
+          return;
+        }
+
         // Pick a file using native OS dialog and return path + content
         if (req.method === "POST" && urlPath === "/api/files/pick") {
           const platform = process.platform;

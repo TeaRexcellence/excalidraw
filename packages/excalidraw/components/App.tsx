@@ -59,6 +59,7 @@ import {
   ARROW_TYPE,
   DEFAULT_REDUCED_GLOBAL_ALPHA,
   isLocalLink,
+  isLocalFilePath,
   normalizeLink,
   toValidURL,
   getGridPoint,
@@ -6339,12 +6340,25 @@ class App extends React.Component<AppProps, AppState> {
           );
         }
         if (!customEvent?.defaultPrevented) {
-          const target = isLocalLink(url) ? "_self" : "_blank";
-          const newWindow = window.open(undefined, target);
-          // https://mathiasbynens.github.io/rel-noopener/
-          if (newWindow) {
-            newWindow.opener = null;
-            newWindow.location = url;
+          if (isLocalFilePath(url)) {
+            // Open local file/folder via server API
+            let localPath = url;
+            if (localPath.startsWith("file:///")) {
+              localPath = localPath.slice(8).replace(/\//g, "\\");
+            }
+            fetch("/api/open-local", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path: localPath }),
+            }).catch((err) => console.error("Failed to open local path:", err));
+          } else {
+            const target = isLocalLink(url) ? "_self" : "_blank";
+            const newWindow = window.open(undefined, target);
+            // https://mathiasbynens.github.io/rel-noopener/
+            if (newWindow) {
+              newWindow.opener = null;
+              newWindow.location = url;
+            }
           }
         }
       }
