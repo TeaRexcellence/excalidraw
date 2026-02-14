@@ -1210,6 +1210,9 @@ export const ProjectManager: React.FC = () => {
         throw new Error("Reset failed");
       }
 
+      // Nuke all client-side caches: pending saves, cachedIndex, localStorage
+      ProjectManagerData.resetAll();
+
       // Clear the canvas
       app.syncActionResult({
         elements: [],
@@ -1220,8 +1223,9 @@ export const ProjectManager: React.FC = () => {
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
 
-      // Refresh the project list (should be empty now)
+      // Refresh the project list (should be empty now) and sync cache
       const newIndex = await api.getIndex();
+      ProjectManagerData.updateCachedIndex(newIndex);
       setIndex(newIndex);
       setPreviewCache({});
 

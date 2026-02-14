@@ -77,11 +77,10 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    background: var(--color-surface-mid);
+    background: transparent;
     border-radius: 6px;
-    padding: 4px;
+    padding: 0;
     z-index: 10;
-    box-shadow: var(--pm-shadow-md);
   }
 
   &__zoomBtn {
@@ -106,6 +105,8 @@
     }
 
     &:active:not(:disabled) {
+      background: #a8a5ff;
+      color: #232329;
       transform: scale(0.92);
     }
 
@@ -247,24 +248,26 @@
 
   &__actionBtn {
     flex: 1;
+    height: 37px;
     padding: 7px 14px;
-    border: 1px dashed var(--color-border-outline-variant);
-    border-radius: var(--pm-radius-md);
-    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    background: var(--color-surface-mid);
     color: var(--color-gray-50);
     font-size: 0.8125rem;
     font-weight: 500;
+    font-family: var(--ui-font);
     cursor: pointer;
     transition: all var(--pm-transition);
 
     &:hover {
-      background: var(--color-surface-mid);
-      border-color: var(--color-gray-40);
-      border-style: solid;
+      background: var(--color-surface-high);
       color: var(--color-on-surface);
     }
 
     &:active {
+      background: #a8a5ff;
+      color: #232329;
       transform: scale(0.98);
     }
   }
@@ -369,6 +372,7 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    padding-bottom: 56px;
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) transparent;
 
@@ -916,37 +920,38 @@
 
   &__pill {
     flex-shrink: 0;
+    height: 37px;
     padding: 4px 12px;
-    border: 1px solid var(--color-border-outline-variant);
-    border-radius: var(--pm-radius-full);
-    background: transparent;
+    border: 0;
+    border-radius: 6px;
+    background: var(--color-surface-mid);
     color: var(--color-gray-50);
     font-size: 0.6875rem;
     font-weight: 500;
+    font-family: var(--ui-font);
     cursor: pointer;
     white-space: nowrap;
     transition: all var(--pm-transition);
 
     &:hover {
-      background: var(--color-surface-mid);
-      border-color: var(--color-gray-40);
+      background: var(--color-surface-high);
       color: var(--color-on-surface);
     }
 
     &:active {
+      background: #a8a5ff;
+      color: #232329;
       transform: scale(0.96);
     }
 
     &--active {
-      background: var(--color-on-surface);
-      border-color: var(--color-on-surface);
-      color: var(--island-bg-color);
+      background: #a8a5ff;
+      color: #fff;
       font-weight: 600;
 
       &:hover {
-        background: var(--color-on-surface);
-        border-color: var(--color-on-surface);
-        color: var(--island-bg-color);
+        background: #a8a5ff;
+        color: #fff;
         opacity: 0.88;
       }
     }
@@ -1051,18 +1056,16 @@
   }
 }
 
-// ─── Category Bar Dark Mode ──────────────────────────────────────
+// ─── Dark Mode Colors Only ──────────────────────────────────────
 .excalidraw.theme--dark .CategoryBar {
   &__scroll button {
-    height: 37px;
     background: #232329;
-    border: 0;
-    border-radius: 6px;
-    font-family: var(--ui-font);
   }
 
-  .CategoryBar__pill--active {
-    background: #a8a5ff !important;
+  .CategoryBar__pill--active,
+  .CategoryBar__pill--active:hover {
+    background: #a8a5ff;
+    color: #232329;
   }
 
   &__fadeLeft {
@@ -1075,33 +1078,16 @@
 }
 
 .excalidraw.theme--dark .ProjectManager__actionBtn {
-  height: 37px;
   background: #232329;
-  border: 0;
-  border-radius: 6px;
-  font-family: var(--ui-font);
-
-  &:active {
-    background: #a8a5ff;
-    color: #232329;
-  }
 }
 
 .excalidraw.theme--dark .ProjectManager__zoomControls {
-  background: #1a1a1f;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-
   .ProjectManager__zoomBtn {
     background: #232329;
     color: #e0e0e0;
 
     &:hover:not(:disabled) {
       background: #2e2e36;
-    }
-
-    &:active:not(:disabled) {
-      background: #a8a5ff;
-      color: #232329;
     }
   }
 }

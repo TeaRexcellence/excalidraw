@@ -292,4 +292,19 @@ export class ProjectManagerData {
   static updateCachedIndex(index: ProjectsIndex): void {
     cachedIndex = index;
   }
+
+  /**
+   * Full reset: cancel pending saves, clear cached index, clear localStorage.
+   * Called after the server-side reset to ensure no stale data remains.
+   */
+  static resetAll(): void {
+    this.cancelPendingSave();
+    cachedIndex = null;
+    try {
+      localStorage.removeItem("excalidraw");
+      localStorage.removeItem("excalidraw-state");
+    } catch {
+      // localStorage may be unavailable
+    }
+  }
 }
