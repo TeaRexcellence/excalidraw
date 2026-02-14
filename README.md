@@ -1,982 +1,419 @@
-# Excalidraw Fork - Custom Features Documentation
+# Excalidraw (Local Fork)
 
-This document provides comprehensive documentation for all custom features added to this Excalidraw fork.
+An all-in-one idea flow manager built on top of [Excalidraw](https://github.com/excalidraw/excalidraw), rewired for local-first personal use. No cloud, no accounts, no collaboration — just your files, your folders, your machine.
 
----
+The core idea: your whiteboard is deeply connected to your local filesystem. Embed documents, videos, and code from your disk directly onto the canvas. Open files and folders from within Excalidraw. Link projects together with clickable cards and navigate between them without leaving the app — building your own interconnected web of organized thoughts. Everything is saved as plain files in a folder structure you control, so your work is always yours.
 
-## Table of Contents
-
-1. [Architecture Overview](#1-architecture-overview)
-2. [Video Player Support](#2-video-player-support)
-3. [Video Controls Panel](#3-video-controls-panel)
-4. [Local Project Manager](#4-local-project-manager)
-5. [Project Export/Import](#5-project-exportimport)
-6. [Grid Opacity Control](#6-grid-opacity-control)
-7. [UI Debloat](#7-ui-debloat)
-8. [Video Thumbnail Export](#8-video-thumbnail-export)
-9. [Main Menu](#9-main-menu)
-10. [File Structure](#10-file-structure)
-11. [API Reference](#11-api-reference)
-12. [State Management](#12-state-management)
-13. [Code Patterns & Gotchas](#13-code-patterns--gotchas)
-14. [Internationalization](#14-internationalization)
-15. [Development](#15-development)
+Shape libraries still work. Online collaboration, cloud storage, sharing, and telemetry have all been removed.
 
 ---
 
-## 1. Architecture Overview
+## Features at a Glance
 
-### Monorepo Structure
+| Feature | Description |
+|---------|-------------|
+| [Project Manager](#project-manager) | File-based project save/load with categories, favorites, export/import |
+| [Video Embed](#video-embed) | YouTube, direct URL, and local video file embedding with playback controls |
+| [Table Element](#table-element) | Spreadsheet-style tables with editable cells, resizable columns, CSV import |
+| [Code Block Element](#code-block-element) | Syntax-highlighted code blocks with 6 language modes |
+| [Document Element](#document-element) | Embed local files as code blocks or thumbnail cards |
+| [Project Link Card](#project-link-card) | Clickable cards that navigate between projects |
+| [Search](#search) | Find text elements and frames on the canvas (`Ctrl+F`) |
+| [Image Viewer](#image-viewer) | Full-size image viewer on double-click |
+| [Local Hyperlinks](#local-hyperlinks) | Support for local file paths and localhost URLs in hyperlinks |
+| [Grid Opacity](#grid-opacity) | Adjustable grid transparency via context menu slider |
+| [UI Debloat](#ui-debloat) | Cleaned-up interface with no cloud/collab clutter |
 
+---
+
+## Project Manager
+
+A complete project management system backed by local files. Replaces the default browser localStorage approach with organized, folder-based persistence.
+
+### How It Works
+
+Projects live in `public/projects/` on disk:
 ```
-excalidraw/
-├── packages/                    # Core library (reusable, published to npm)
-│   ├── excalidraw/             # Main React component library
-│   │   ├── components/         # UI components (VideoPlayer, ProjectManager, etc.)
-│   │   ├── actions/            # Redux-like actions (clearCanvas, etc.)
-│   │   ├── renderer/           # Canvas/SVG rendering
-│   │   └── scene/              # Scene management, export
-│   ├── element/                # Element types and utilities
-│   ├── common/                 # Shared constants and utilities
-│   └── math/                   # Math utilities
-│
-├── excalidraw-app/             # THIS APP (custom fork)
-│   ├── components/             # App-specific components (AppMainMenu, etc.)
-│   ├── data/                   # Data layer (ProjectManagerData)
-│   └── vite.config.mts         # Dev server with custom APIs
-│
-└── public/projects/            # Project storage (created at runtime)
+public/projects/
+├── projects.json                 # Master index
+├── Work Projects/
+│   └── My Diagram/
+│       ├── scene.excalidraw      # Canvas data
+│       ├── preview.png           # Auto-generated thumbnail
+│       └── videos/               # Uploaded videos
+│           └── demo.mp4
+└── Uncategorized/
+    └── Quick Sketch/
+        └── scene.excalidraw
 ```
-
-### Key Principle
-
-- **`packages/excalidraw/`** = Generic, reusable library code
-- **`excalidraw-app/`** = App-specific customizations (menus, project management, APIs)
-
-When adding features:
-- UI components that could be reused → `packages/excalidraw/components/`
-- App-specific glue code, menus, APIs → `excalidraw-app/`
-
----
-
-## 2. Video Player Support
-
-### Overview
-Full video embedding support including YouTube videos, direct video URLs, and local video file uploads. Videos are persisted to disk within the project folder structure.
 
 ### Features
 
-#### YouTube Video Embedding
-- Paste any YouTube URL (regular, shorts, playlists) and it will be converted to an embedded player
-- Supports timestamp parameters (`?t=`, `?start=`)
-- Automatic thumbnail extraction for exports
+- **Categories** — Organize projects into named groups. Create, rename, reorder, expand/collapse.
+- **Favorites** — Star projects for quick access with a dedicated filter.
+- **Auto-save** — Debounced 1-second auto-save with preview regeneration.
+- **Custom previews** — Upload a cover image or use the auto-generated canvas thumbnail.
+- **Context menu** — Right-click any project card for: open in new tab, rename, move to category, set custom preview, open folder in file explorer, delete.
+- **Card size slider** — Adjust project card thumbnail size (100px–300px).
 
-#### Direct Video URL Support
-- Supports `.mp4`, `.webm`, `.ogg`, `.mov`, `.avi`, `.mkv`, `.m4v` formats
-- Videos can be hosted anywhere on the web
-- Automatic dimension detection
+### Export / Import
 
-#### Local Video Upload
-- Upload videos directly from your computer
-- Videos are stored in the project's `/videos/` subfolder
-- Automatic file sanitization for safe filenames
+Access via the **⋮** (dots) button in the Project Manager header.
 
-### Video Player Component
+**Export** zips the entire project folder and downloads it:
+```
+MyProject.zip
+├── scene.excalidraw      # Canvas data (required)
+├── preview.png           # Thumbnail
+└── videos/               # Any uploaded videos
+    ├── demo.mp4
+    └── clip.webm
+```
 
-**Location:** `packages/excalidraw/components/VideoPlayer.tsx`
+**Import** accepts a `.zip` file:
+1. Validates the zip contains a `scene.excalidraw` file (rejects if missing).
+2. Adds the project to the **Uncategorized** group.
+3. If a project with the same name already exists, appends `(1)`, `(2)`, etc.
 
-The custom video player supports:
-- **Custom start/end times** - Set specific playback ranges
-- **Loop control** - Loop entire video or custom range
-- **Autoplay** - Start playing automatically
-- **Muted playback** - For autoplay compatibility
+**Reset Project Manager** — permanently deletes all projects. Requires typing `CONFIRM` to enable the delete button.
 
-### Video Options Format
+### Access
 
-Video options are encoded in the URL hash:
+- **Sidebar** — "Projects" tab is docked by default.
+- **Main menu** — "Save Project", "Open Project Folder", "Start New Project".
+- **Settings** — Dots menu (⋮) in Project Manager header for export/import/reset.
+
+---
+
+## Video Embed
+
+Full video embedding with YouTube, direct URLs, and local file uploads. Videos are stored inside the project folder.
+
+### Supported Sources
+
+| Source | Example |
+|--------|---------|
+| YouTube | Any youtube.com/youtu.be URL (regular, shorts, playlists, timestamps) |
+| Direct URL | `https://example.com/video.mp4` (.mp4, .webm, .ogg, .mov, .avi, .mkv, .m4v) |
+| Local upload | Browse and upload a file — copied into the project's `videos/` folder |
+
+### Playback Controls
+
+Hover over a video element to get the expanded controls panel:
+
+| Control | Description |
+|---------|-------------|
+| Play / Pause | Toggle playback |
+| Current time | Live position display (M:SS) |
+| Loop | Loop entire video or custom range |
+| Start / End time | Set playback range (accepts `1:30` or `90` seconds) |
+| Autoplay | Start playing automatically on load |
+| Mute | Toggle audio |
+
+Options are persisted in the URL hash:
 ```
 #excalidraw-video=loop,autoplay,muted,start:30,end:120,dim:1920x1080
 ```
 
-| Option | Description |
-|--------|-------------|
-| `loop` | Enable video looping |
-| `autoplay` | Start playing automatically |
-| `muted` | Mute audio |
-| `start:N` | Start time in seconds |
-| `end:N` | End time in seconds |
-| `dim:WxH` | Video dimensions |
-
-### Video Embed Dialog
-
-**Location:** `packages/excalidraw/components/VideoEmbedDialog.tsx`
-
-A multi-step dialog for inserting videos:
-
-1. **Project Check** - Verifies a project is saved (required for local uploads)
-2. **Save Prompt** - If no project exists, prompts user to save first ("OOPS!" message)
-3. **Video Input** - URL input or file browser for local videos
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `packages/element/src/embeddable.ts` | Video URL detection, options parsing, thumbnail extraction |
-| `packages/excalidraw/components/VideoPlayer.tsx` | Custom video player component |
-| `packages/excalidraw/components/VideoEmbedDialog.tsx` | Video insertion dialog |
-| `packages/excalidraw/components/VideoEmbedDialog.scss` | Dialog styling |
-
----
-
-## 3. Video Controls Panel
-
-### Overview
-
-When hovering over a video embed element, an expanded hyperlink popup appears with comprehensive video playback controls. This allows fine-grained control over video behavior without needing to interact with the native video controls.
-
-**Location:** `packages/excalidraw/components/hyperlink/Hyperlink.tsx`
-
-### Features
-
-| Control | Description |
-|---------|-------------|
-| **Play/Pause** | Toggle video playback with real-time state sync |
-| **Current Time** | Live display of current playback position (M:SS format) |
-| **Loop Toggle** | Enable/disable video looping (respects custom start/end times) |
-| **Start Time** | Set custom start position (accepts "M:SS" or seconds) |
-| **End Time** | Set custom end position (auto-populated with video duration) |
-| **Autoplay** | Checkbox to enable auto-start on load |
-| **Mute Toggle** | Toggle audio on/off |
-
-### Time Input Format
-
-The start/end time inputs accept multiple formats:
-- `1:30` or `1:30:00` - Minutes:Seconds or Hours:Minutes:Seconds
-- `90` - Raw seconds
-- Empty end time - Uses full video duration
-
-### Video Duration Detection
-
-When a video is loaded, the system automatically:
-1. Detects the video duration via the `loadedmetadata` event
-2. Populates the end time placeholder with the full duration
-3. Handles CORS-blocked videos gracefully with a 10-second timeout
-
-### Key Functions
-
-**Location:** `packages/element/src/embeddable.ts`
-
-```typescript
-// Parse time string ("1:30" or "90") to seconds
-parseTimeString(timeStr: string): number
-
-// Format seconds to "M:SS" display
-formatTimeDisplay(seconds: number): string
-
-// Parse video options from URL hash
-parseVideoOptions(url: string): VideoOptions
-
-// Update video options in URL
-updateVideoOptionsInUrl(url: string, options: VideoOptions): string
-```
-
----
-
-## 4. Local Project Manager
-
-### Overview
-A complete project management system that replaces browser localStorage with file-based persistence. Projects are organized into categories and stored in the `public/projects/` directory.
-
-### Features
-
-#### Project Organization
-- **Categories (Groups)** - Organize projects into named categories
-- **Favorites** - Star projects for quick access (shown at top)
-- **Custom Previews** - Upload custom cover images for projects
-- **Auto-Generated Previews** - Automatic thumbnail generation on save
-
-#### Project Operations
-- Create new blank projects
-- Save current canvas as a project
-- Rename projects (updates folder name)
-- Delete projects (cleans up files)
-- Move projects between categories
-- Open project folder in file explorer
-- Open project in new browser tab
-- **Start New Project** - Close current project and start fresh (via main menu)
-
-#### UI Features
-- **Zoom Controls** - Adjust project card size (100px - 300px)
-- **Tooltips** - Hover to see full project name
-- **"Saved!" Badge** - Visual confirmation after manual save
-- **Unsaved Canvas Banner** - Prompts to save when canvas has content
-
-### Project Card Context Menu
-
-Right-click any project card to access:
-- Open in new tab
-- Rename
-- Open project folder (opens in system file explorer)
-- Set custom preview
-- Remove custom preview
-- Move to category (submenu)
-- Delete
-
-### Data Model
-
-**Location:** `packages/excalidraw/components/ProjectManager/types.ts`
-
-```typescript
-interface Project {
-  id: string;              // Unique nanoid
-  title: string;           // Display name
-  groupId: string | null;  // Category ID (null = Uncategorized)
-  createdAt: number;       // Unix timestamp
-  updatedAt: number;       // Unix timestamp
-  hasCustomPreview?: boolean;
-  isFavorite?: boolean;
-}
-
-interface ProjectGroup {
-  id: string;
-  name: string;
-  order: number;
-  expanded: boolean;
-}
-
-interface ProjectsIndex {
-  projects: Project[];
-  groups: ProjectGroup[];
-  currentProjectId: string | null;
-}
-```
-
-### Auto-Save System
-
-**Location:** `excalidraw-app/data/ProjectManagerData.ts`
-
-The `ProjectManagerData` class provides:
-- **Debounced auto-save** (1 second debounce)
-- **Automatic preview generation** on save
-- **Cached index** to prevent race conditions
-- **Flush on unload** for data safety
-- **Cancel pending saves** on project switch to prevent data corruption
-- **Error handling** with console logging for debugging
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` | Main component |
-| `packages/excalidraw/components/ProjectManager/ProjectCard.tsx` | Individual project card |
-| `packages/excalidraw/components/ProjectManager/ProjectGroup.tsx` | Category/group container |
-| `packages/excalidraw/components/ProjectManager/types.ts` | TypeScript interfaces |
-| `packages/excalidraw/components/ProjectManager/ProjectManager.scss` | Styling |
-| `excalidraw-app/data/ProjectManagerData.ts` | Data layer with auto-save |
-| `excalidraw-app/vite.config.mts` | Server-side file APIs |
-
----
-
-## 5. Project Export/Import
-
-### Overview
-
-Projects can be exported as zip files and imported back, allowing for backup, sharing, and migration between installations.
-
-### Settings Menu
-
-Access export/import via the **⋮** (dots) button in the Project Manager header:
-
-| Option | Description |
-|--------|-------------|
-| **Export Project** | Downloads the current project as a zip file |
-| **Import Project** | Opens modal to import a project from zip |
-| **Reset Project Manager** | Deletes ALL projects (requires typing CONFIRM) |
-
 ### Export
 
-Exports the current project folder as a zip file containing:
+Videos display their thumbnails in PNG/SVG exports:
+- **YouTube** — Fetches `img.youtube.com` thumbnail
+- **Local/Direct** — Captures a frame at 1 second (or video midpoint)
 
-```
-MyProject.zip
-├── scene.excalidraw     # Canvas data (required)
-├── preview.png          # Project thumbnail
-└── videos/              # Any uploaded videos
-    ├── video1.mp4
-    └── video2.webm
-```
+### Access
 
-- Only enabled when a project is currently open
-- Downloads directly to your browser's download folder
-- Filename matches project name
-
-### Import
-
-1. Click "Import Project" in settings dropdown
-2. Select a `.zip` file exported from this system
-3. Project is validated (must contain `scene.excalidraw`)
-4. Imported to `Uncategorized` folder
-5. Duplicate names get `(1)`, `(2)` suffix automatically
-
-### Reset Project Manager
-
-**Danger zone** - Permanently deletes all projects:
-
-1. Click "Reset Project Manager" (red text)
-2. Modal shows the projects directory path
-3. Type `CONFIRM` exactly to enable delete button
-4. All project folders are deleted, index is reset
-5. Canvas is cleared
+- Toolbar: Video icon (after the Image tool)
 
 ---
 
-## 6. Grid Opacity Control
+## Table Element
 
-### Overview
-Adjustable grid opacity (10% - 100%) accessible from the canvas context menu.
+Spreadsheet-style tables rendered directly on the canvas.
 
-### Implementation
+### Features
 
-**Location:** `packages/excalidraw/components/GridOpacitySlider.tsx`
+- **Grid picker** — Click-drag to select table size (up to 8×8) in the creation dialog.
+- **CSV import** — Upload a CSV file and it auto-creates a table with smart column widths.
+- **Inline editing** — Double-click a table to open the spreadsheet editor (powered by jspreadsheet-ce). Supports tab/enter navigation, cell selection, copy/paste.
+- **Header row** — Toggle to style the first row as a header.
+- **Resizable** — Column widths and row heights are individually adjustable.
+- **Context menu actions** — Add/delete rows and columns from the right-click menu:
+  - Add row above / below
+  - Delete row
+  - Add column left / right
+  - Delete column
 
-A slider component added to the context menu that controls `appState.gridOpacity`.
+### Properties
 
-### App State Changes
+| Property | Default | Description |
+|----------|---------|-------------|
+| `columns` | User-selected | Number of columns |
+| `rows` | User-selected | Number of rows |
+| `cells` | Empty 2D array | Cell text content `[row][col]` |
+| `columnWidths` | 120px each | Pixel width per column |
+| `rowHeights` | 36px each | Pixel height per row |
+| `headerRow` | false | Render first row as header |
 
-Added to `packages/excalidraw/appState.ts`:
-```typescript
-gridOpacity: 100  // 10-100, default 100
-```
+### Access
 
-### Usage
-1. Right-click on canvas to open context menu
-2. Find "Grid opacity" slider
-3. Drag to adjust (10% minimum, 100% maximum)
-
----
-
-## 7. UI Debloat
-
-### Overview
-Removed unnecessary UI elements and simplified the interface for a cleaner experience.
-
-### Removed Elements
-
-| Component | Removed Items |
-|-----------|---------------|
-| **App Footer** | Excalidraw+ promos, collaboration hints |
-| **Main Menu** | AI features, cloud save options, Excalidraw+ links |
-| **Sidebar** | Unused tabs and promotional content |
-| **Welcome Screen** | Tutorials, promotional links |
-| **Actions Panel** | Redundant action buttons |
-
-### Files Modified
-
-- `excalidraw-app/App.tsx` - Removed ~200 lines of promotional/AI code
-- `excalidraw-app/components/AppFooter.tsx` - Simplified footer
-- `excalidraw-app/components/AppMainMenu.tsx` - Cleaned up menu items
-- `excalidraw-app/components/AppSidebar.tsx` - Removed unused sidebar content
-- `excalidraw-app/components/AppWelcomeScreen.tsx` - Simplified welcome screen
+- Toolbar: Table icon (after Embed tool)
 
 ---
 
-## 8. Video Thumbnail Export
+## Code Block Element
 
-### Overview
-Videos now display their thumbnails in PNG/SVG exports instead of black boxes or placeholder text.
+Syntax-highlighted code blocks with inline editing.
 
-### How It Works
+### Supported Languages
 
-1. **Before export** - The system prefetches thumbnails for all video embeds:
-   - **YouTube** - Fetches from `img.youtube.com/vi/{id}/hqdefault.jpg`
-   - **Local/Direct videos** - Captures a frame at 1 second (or video midpoint)
+JavaScript, Python, C#, C++, Markdown, Plain Text
 
-2. **During export** - Thumbnails are drawn in place of video embeds:
-   - Canvas export uses `HTMLImageElement` objects
-   - SVG export embeds thumbnails as data URLs
+### Features
 
-### Key Functions
+- **Syntax highlighting** — Powered by Prism.js with language-specific coloring.
+- **Line numbers** — Toggle line number display.
+- **Inline editing** — Double-click to open the code editor overlay with a language selector toolbar.
+- **Copy to clipboard** — Quick copy button in the editor.
+- **Auto-detection** — Language auto-detected from file extension when inserted via Document tool.
 
-**Location:** `packages/element/src/embeddable.ts`
+### Access
 
-```typescript
-// Extract YouTube video ID
-getYouTubeVideoId(url: string): string | null
-
-// Get YouTube thumbnail URL
-getYouTubeThumbnailUrl(videoId: string, quality: string): string
-
-// Capture a frame from a video
-captureVideoFrame(videoSrc: string, seekTime?: number): Promise<Blob | null>
-
-// Get thumbnail for any video type
-getVideoThumbnail(url: string): Promise<string | null>
-```
-
-**Location:** `packages/excalidraw/scene/videoThumbnails.ts`
-
-```typescript
-// Prefetch thumbnails as HTMLImageElement (for canvas)
-prefetchVideoThumbnails(elements): Promise<Map<string, HTMLImageElement>>
-
-// Prefetch thumbnails as data URLs (for SVG)
-prefetchVideoThumbnailsAsDataUrls(elements): Promise<Map<string, string>>
-```
-
-### Modified Renderers
-
-| File | Changes |
-|------|---------|
-| `packages/excalidraw/renderer/staticScene.ts` | Draws video thumbnails on canvas export |
-| `packages/excalidraw/renderer/staticSvgScene.ts` | Embeds thumbnails in SVG export |
-| `packages/excalidraw/scene/export.ts` | Calls prefetch before render |
-| `packages/excalidraw/scene/types.ts` | Added `videoThumbnails` to render configs |
+- Toolbar: Code Block icon (after Table tool)
 
 ---
 
-## 9. Main Menu
+## Document Element
 
-**Location:** `excalidraw-app/components/AppMainMenu.tsx`
+Embed local files from your filesystem onto the canvas.
 
-Custom menu items added to the hamburger menu:
+### Display Modes
 
-| Menu Item | Description |
-|-----------|-------------|
-| **Save Project** | Opens sidebar to Projects tab, triggers save modal |
-| **Open Project Folder** | Opens current project's folder in system file explorer |
-| **Start New Project** | Closes current project, clears canvas, starts fresh (with confirmation) |
-| **Reset the canvas** | Clears canvas content but keeps current project selected |
+1. **Code block** — Renders file content with syntax highlighting (same engine as Code Block element).
+2. **Thumbnail card** — Compact card showing filename and file type.
 
-### Start New Project vs Reset Canvas
+### Features
 
-These two options are different:
+- **File picker** — Uses a system file picker dialog (via server API).
+- **Auto language detection** — Detects programming language from file extension.
+- **Context menu** — "Open file location" (opens folder in explorer) and "View contents" (opens viewer dialog).
 
-- **Start New Project** → Deselects project + clears canvas = blank slate, no auto-save
-- **Reset the canvas** → Keeps project selected + clears canvas = empty project (will auto-save empty)
+### Properties
 
----
+| Property | Description |
+|----------|-------------|
+| `fileName` | Name of the file |
+| `fileType` | MIME type or extension |
+| `filePath` | Absolute path on disk |
+| `fileContent` | Full text content of the file |
 
-## 10. File Structure
+### Access
 
-### Project Storage Layout
-
-```
-public/projects/
-├── projects.json                    # Master index file
-├── {CategoryName}/
-│   ├── {ProjectTitle}/
-│   │   ├── scene.excalidraw        # Canvas data (JSON)
-│   │   ├── preview.png             # Project thumbnail
-│   │   └── videos/
-│   │       ├── video1.mp4          # Uploaded videos
-│   │       └── video2.webm
-│   └── {AnotherProject}/
-│       └── ...
-└── Uncategorized/
-    └── {UngroupedProject}/
-        └── ...
-```
-
-### Index File Format
-
-`projects.json`:
-```json
-{
-  "projects": [
-    {
-      "id": "abc123xyz",
-      "title": "My Project",
-      "groupId": "group456",
-      "createdAt": 1705190400000,
-      "updatedAt": 1705190500000,
-      "hasCustomPreview": false,
-      "isFavorite": true
-    }
-  ],
-  "groups": [
-    {
-      "id": "group456",
-      "name": "Work Projects",
-      "order": 0,
-      "expanded": true
-    }
-  ],
-  "currentProjectId": "abc123xyz"
-}
-```
+- Toolbar: Document icon (after Code Block tool)
 
 ---
 
-## 11. API Reference
+## Project Link Card
 
-### Server-Side APIs
+Interactive cards that link between projects — useful for building a network of related diagrams.
 
-The Vite development server provides these APIs (defined in `excalidraw-app/vite.config.mts`):
+### Features
 
-#### Project APIs
+- **Project selector** — Pick any project from the Project Manager.
+- **Custom card** — Set a title, description, and preview image.
+- **Navigation** — Click "Navigate to project" to switch to the linked project.
+- **Editable** — Right-click → "Edit project link" to update card properties.
+
+### Properties
+
+| Property | Description |
+|----------|-------------|
+| `title` | Card title |
+| `description` | Short description text |
+| `projectId` | ID of the linked project |
+| `projectName` | Name of the linked project |
+| `imageBase64` | Optional preview image (base64) |
+
+### Access
+
+- Toolbar: Project Link icon (after Document tool)
+
+---
+
+## Search
+
+Find text elements and frames on the canvas by keyword.
+
+### Features
+
+- **Debounced search** (350ms) for performance.
+- **Match count** — Shows "X results" indicator.
+- **Keyboard navigation** — Arrow up/down to cycle through matches, Enter to jump and zoom.
+- **Smart zoom** — Zooms to make matched text legible (minimum 14px threshold).
+- **Escape** to close.
+
+### Access
+
+- Keyboard: `Ctrl+F` / `Cmd+F`
+- Main menu: "Find on canvas"
+
+---
+
+## Image Viewer
+
+Full-size image viewer modal.
+
+### Access
+
+- Double-click any image element on the canvas.
+- Close with the X button or Escape.
+
+---
+
+## Local Hyperlinks
+
+Extended hyperlink support beyond web URLs.
+
+### Supported Formats
+
+| Format | Example |
+|--------|---------|
+| Web URLs | `https://example.com` |
+| Windows paths | `C:\path\to\file` or `C:/path/to/file` |
+| UNC paths | `\\server\share\folder` |
+| File protocol | `file:///path/to/file` |
+| Localhost | `localhost:3000/page` or `127.0.0.1:8080` |
+| Relative paths | `/path/to/file` (resolved against origin) |
+
+Local paths bypass the standard URL sanitizer and are handled natively.
+
+---
+
+## Grid Opacity
+
+Adjustable grid transparency from 10% to 100%.
+
+### Access
+
+- Right-click the canvas → Grid opacity slider.
+- Slider range: 10%–100% in 10% steps.
+- Real-time preview as you drag.
+
+---
+
+## UI Debloat
+
+Stripped-out cloud and collaboration features for a clean, local-only experience.
+
+### Removed
+
+- Live collaboration UI and sharing links
+- Excalidraw+ promotions and sign-in
+- Cloud save/load options
+- AI features (Text-to-Diagram)
+- Firebase/WebSocket integrations
+- Promotional content in welcome screen and sidebar
+
+### Added to Main Menu
+
+| Item | Description |
+|------|-------------|
+| Save Project | Open sidebar to Projects, trigger save |
+| Open Project Folder | Open current project's folder in file explorer |
+| Start New Project | Close current project + clear canvas (with confirmation) |
+| Reset the canvas | Clear canvas content, keep project selected |
+
+---
+
+## Toolbar Layout
+
+The shape toolbar includes all standard Excalidraw tools plus custom additions:
+
+```
+Selection | Rectangle | Diamond | Ellipse | Arrow | Line | Draw | Text | Image
+  | Video | Embed | Table | Code Block | Document | Project Link |
+Frame | Laser
+```
+
+---
+
+## Development
+
+### Commands
+
+```bash
+yarn start              # Dev server on port 3000
+yarn test:typecheck     # TypeScript type checking
+yarn test:update        # Run tests with snapshot updates
+yarn fix                # Auto-fix formatting and linting
+```
+
+### Server APIs
+
+The Vite dev server exposes local APIs for project and file management:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/projects/list` | GET | Get projects index |
 | `/api/projects/save` | POST | Save projects index |
-| `/api/projects/{id}/scene` | GET | Get project scene data |
-| `/api/projects/{id}/scene` | POST | Save project scene data |
-| `/api/projects/{id}/preview` | POST | Save project preview image |
+| `/api/projects/{id}/scene` | GET/POST | Get/save project scene data |
+| `/api/projects/{id}/preview` | POST | Save preview image |
 | `/api/projects/{id}` | DELETE | Delete project |
-| `/api/projects/{id}/open-folder` | POST | Open project folder in file explorer |
+| `/api/projects/{id}/open-folder` | POST | Open folder in file explorer |
 | `/api/projects/{id}/move` | POST | Move/rename project folder |
-| `/api/projects/rename-category` | POST | Rename category folder |
-| `/api/projects/{id}/export` | POST | Export project as zip (returns zip file) |
-| `/api/projects/import` | POST | Import project from zip file |
-| `/api/projects/path` | GET | Get projects directory path |
-| `/api/projects/reset` | POST | Delete all projects and reset index |
-
-#### Video APIs
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/videos/upload?projectId=X&filename=Y` | POST | Upload video file |
+| `/api/projects/{id}/export` | POST | Export as zip |
+| `/api/projects/import` | POST | Import from zip |
+| `/api/projects/reset` | POST | Delete all projects |
+| `/api/videos/upload` | POST | Upload video file |
 | `/api/videos/{path}` | DELETE | Delete video file |
-| `/api/videos/list?projectId=X` | GET | List project videos |
+| `/api/files/pick` | POST | System file picker dialog |
 
-### Client-Side Helpers
+### Architecture
 
-**VideoEmbedDialog.tsx:**
-```typescript
-getCurrentProjectId(): Promise<string | null>
-uploadVideoFile(file: File): Promise<{ url, width, height }>
-saveAsNewProject(name, elements, appState, files): Promise<string>
-deleteVideoFile(videoUrl: string): Promise<void>
+```
+excalidraw/
+├── packages/
+│   ├── excalidraw/          # Main React component library
+│   │   ├── components/      # UI: ProjectManager, VideoPlayer, dialogs, etc.
+│   │   ├── actions/         # Actions: table, codeBlock, document, projectLink, etc.
+│   │   ├── renderer/        # Canvas/SVG rendering
+│   │   └── wysiwyg/         # Inline editors: text, table spreadsheet, code block
+│   ├── element/             # Element types, rendering, collision, type checks
+│   ├── common/              # Shared constants, URL utilities
+│   └── math/                # Math utilities
+├── excalidraw-app/          # App shell: menus, data layer, Vite server config
+│   ├── components/          # AppMainMenu, AppWelcomeScreen, etc.
+│   ├── data/                # ProjectManagerData (auto-save, caching)
+│   └── vite.config.mts      # Server-side file/project/video APIs
+└── public/projects/          # Runtime project storage (gitignored)
 ```
 
-**ProjectManagerData.ts:**
-```typescript
-ProjectManagerData.getIndex(): Promise<ProjectsIndex>
-ProjectManagerData.getCurrentProjectId(): Promise<string | null>
-ProjectManagerData.loadCurrentProject(): Promise<SceneData | null>
-ProjectManagerData.save(elements, appState, files): void
-ProjectManagerData.flushSave(): void
-ProjectManagerData.cancelPendingSave(): void
-ProjectManagerData.setCurrentProjectId(id): Promise<void>
-```
+### Custom Element Types
 
----
+| Type | Type Guard | Factory | Renderer |
+|------|-----------|---------|----------|
+| `table` | `isTableElement()` | `newTableElement()` | `renderTable.ts` |
+| `codeBlock` | `isCodeBlockElement()` | `newCodeBlockElement()` | `renderCodeBlock.ts` |
+| `document` | `isDocumentElement()` | `newDocumentElement()` | `renderDocument.ts` |
+| `projectLink` | `isProjectLinkElement()` | `newProjectLinkElement()` | `renderProjectLink.ts` |
 
-## 12. State Management
-
-### Key State Locations
-
-| State | Location | Purpose |
-|-------|----------|---------|
-| `appState.gridOpacity` | Excalidraw appState | Grid transparency (10-100) |
-| `cachedIndex` | `ProjectManagerData.ts` | Cached project index for auto-save |
-| `index` state | `ProjectManager.tsx` | UI state for project list |
-| `indexRef` | `ProjectManager.tsx` | Ref to avoid stale closures |
-| `operationInProgress` | `ProjectManager.tsx` | Lock to prevent concurrent operations |
-| `currentProjectId` | In `projects.json` | Which project is currently open |
-
-### State Sync Pattern
-
-The `ProjectManager` component maintains local `index` state that must stay in sync with `ProjectManagerData.cachedIndex`:
-
-```typescript
-// In ProjectManager.tsx
-const indexRef = useRef(index);
-useEffect(() => { indexRef.current = index; }, [index]);
-
-// Keep cache in sync
-useEffect(() => {
-  ProjectManagerData.updateCachedIndex(index);
-}, [index]);
-```
-
----
-
-## 13. Code Patterns & Gotchas
-
-### Stale Closure Prevention
-
-When using `useCallback` with async operations, the callback captures state at creation time. Use refs to always get fresh values:
-
-```typescript
-// ❌ BAD - stale closure
-const handleClick = useCallback(async () => {
-  if (projectId === index.currentProjectId) return; // index may be stale!
-}, [index]);
-
-// ✅ GOOD - use ref
-const indexRef = useRef(index);
-useEffect(() => { indexRef.current = index; }, [index]);
-
-const handleClick = useCallback(async () => {
-  const currentIndex = indexRef.current; // always fresh
-  if (projectId === currentIndex.currentProjectId) return;
-}, []); // no index dependency needed
-```
-
-### Async Operation Timeouts
-
-Always add timeouts to video/image loading operations to prevent hanging:
-
-```typescript
-// ✅ GOOD - with timeout and cleanup
-const loadVideo = () => new Promise((resolve) => {
-  const video = document.createElement("video");
-  let resolved = false;
-
-  const cleanup = () => { video.src = ""; };
-  const safeResolve = (result) => {
-    if (!resolved) { resolved = true; cleanup(); resolve(result); }
-  };
-
-  const timeout = setTimeout(() => safeResolve(null), 10000);
-
-  video.onloadedmetadata = () => { clearTimeout(timeout); safeResolve(video); };
-  video.onerror = () => { clearTimeout(timeout); safeResolve(null); };
-  video.src = url;
-});
-```
-
-### Operation Locking
-
-Prevent concurrent async operations with a ref-based lock:
-
-```typescript
-const operationInProgress = useRef(false);
-
-const handleOperation = useCallback(async () => {
-  if (operationInProgress.current) return;
-  operationInProgress.current = true;
-
-  try {
-    await doAsyncWork();
-  } finally {
-    operationInProgress.current = false;
-  }
-}, []);
-```
-
-### Debounce Cancellation
-
-Cancel pending debounced saves before switching contexts:
-
-```typescript
-// Before switching projects
-ProjectManagerData.cancelPendingSave();
-await saveCurrentProject();
-// Now safe to load new project
-```
-
----
-
-## 14. Internationalization
-
-### Overview
-
-The fork adds new translation keys for video and project manager features. All strings are localized in the standard Excalidraw i18n system.
-
-**Location:** `packages/excalidraw/locales/en.json`
-
-### New Translation Keys
-
-#### Video Dialog (`videoDialog.*`)
-```json
-{
-  "title": "Insert Video",
-  "urlLabel": "Video URL",
-  "urlPlaceholder": "Paste YouTube URL or direct video file URL",
-  "hint": "Supports YouTube links and direct video URLs (.mp4, .webm, etc.)",
-  "or": "or",
-  "browseFiles": "Browse local files",
-  "insert": "Insert",
-  "errorEmptyUrl": "Please enter a video URL"
-}
-```
-
-#### Video Controls (`videoControls.*`)
-```json
-{
-  "play": "Play",
-  "pause": "Pause",
-  "loop": "Loop",
-  "autoplay": "Autoplay",
-  "autoplayLabel": "Auto-play",
-  "mute": "Mute",
-  "unmute": "Unmute",
-  "start": "Start",
-  "end": "End"
-}
-```
-
-#### Project Manager (`projectManager.*`)
-```json
-{
-  "title": "Projects",
-  "newProject": "New Project",
-  "newGroup": "New Category",
-  "empty": "No projects yet. Create your first project to get started.",
-  "createFirst": "Create First Project",
-  "openInNewTab": "Open in new tab",
-  "rename": "Rename",
-  "delete": "Delete",
-  "moveToGroup": "Move to category",
-  "ungrouped": "Uncategorized"
-}
-```
-
-#### Other New Keys
-- `labels.gridOpacity` - "Grid opacity" label for context menu
-- `toolBar.video` - "Insert video" toolbar button
-- `buttons.startNewProject` - "Start new project" button
-- `alerts.startNewProject` - Confirmation message for starting new project
-
----
-
-## 15. Development
-
-### Commands
-
-```bash
-yarn start              # Start dev server on port 3000
-yarn test:typecheck     # TypeScript type checking (run before commits)
-yarn test:update        # Run tests with snapshot updates
-yarn fix                # Auto-fix formatting and linting
-```
-
-### Before Committing
-
-Always run:
-```bash
-yarn test:typecheck
-```
-
-### Dev Server Notes
-
-- Server runs on **port 3000 only**
-- Custom APIs defined in `excalidraw-app/vite.config.mts`
-- Project files stored in `public/projects/`
-
-### Killing Orphaned Servers (Windows)
-
-```bash
-netstat -ano | findstr ":3000" | findstr "LISTENING"
-taskkill //F //PID <pid>
-```
-
----
-
-### Visual Debug (Dev Mode Only)
-
-In development mode (`isDevEnv() === true`), a "Visual Debug" option appears in the main menu. This toggles `window.visualDebug` for debugging rendering and element visualization.
-
-**Location:** `excalidraw-app/components/AppMainMenu.tsx` (lines 81-99)
-
-### Random Project Name Generator
-
-When creating new projects or categories, the system generates creative placeholder names using adjective + noun combinations:
-
-```typescript
-// Example names: "Swift Canvas", "Bright Sketch", "Cool Design", etc.
-const adjectives = ["Swift", "Bright", "Cool", "Fresh", "Bold", "Calm", "Wild", "Neat", "Soft", "Sharp"];
-const nouns = ["Canvas", "Sketch", "Draft", "Design", "Board", "Space", "Flow", "Wave", "Spark", "Frame"];
-```
-
-**Location:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` (lines 172-178)
-
----
-
-## Commit History
-
-| Commit | Description |
-|--------|-------------|
-| `6e48ab51` | Add Reset Project Manager option with confirmation |
-| `56c95c97` | Add project export/import & fix sanitization mismatch |
-| `f470e022` | Fix client/server sanitization mismatch & consolidate types |
-| `958c078d` | Fix critical bugs (19 total) & add "Start New Project" menu option |
-| `e931a3c4` | Video thumbnail export & improved local video workflow |
-| `10bbf123` | Make project folders match project manager structure |
-| `88753953` | Add favorites, custom previews, tooltips, UI improvements |
-| `14a0639d` | Fix project manager bugs, add custom preview |
-| `4266a6d6` | Force project manager, video in project folder, project support |
-| `f7750b12` | Custom video icon, untrack projects folder |
-| `177b3d31` | Working project manager, file explorer, create new project |
-| `742dd1bb` | Local Project Manager initial implementation |
-| `c8ca318e` | Grid opacity slider and UI debloat |
-| `84316b0f` | Video Player Support - YouTube, video URL, local upload |
+All custom element types follow the standard pattern: types.ts → typeChecks.ts → newElement.ts → shape.ts → distance.ts → collision.ts → render[Type].ts → restore.ts.
 
 ---
 
 ## Getting Started
 
-1. Run the development server:
-   ```bash
-   yarn start
-   ```
-
-2. The Project Manager appears in the sidebar by default
-
-3. Create your first project:
-   - Click "+ New Project" in the sidebar
-   - Enter a name and click Create
-   - Start drawing!
-
-4. To add a video:
-   - Click the video icon in the toolbar (or use the hyperlink panel)
-   - Paste a YouTube URL or upload a local video
-   - Videos are stored in your project's folder
-
-5. Organize with categories:
-   - Click "+ New Category" to create groups
-   - Right-click projects to move them between categories
-   - Star projects to mark as favorites
-
----
-
-*Documentation generated from commit analysis. Last comprehensive review: 2026-01-14*
-
-
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-
-- END
----
-
-- START
-
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-
-# ORIGINAL README FROM EXCALIDRAW:
-
-<a href="https://excalidraw.com/" target="_blank" rel="noopener">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" alt="Excalidraw" srcset="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github/excalidraw_github_cover_2_dark.png" />
-    <img alt="Excalidraw" src="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github/excalidraw_github_cover_2.png" />
-  </picture>
-</a>
-
-<h4 align="center">
-  <a href="https://excalidraw.com">Excalidraw Editor</a> |
-  <a href="https://plus.excalidraw.com/blog">Blog</a> |
-  <a href="https://docs.excalidraw.com">Documentation</a> |
-  <a href="https://plus.excalidraw.com">Excalidraw+</a>
-</h4>
-
-<div align="center">
-  <h2>
-    An open source virtual hand-drawn style whiteboard. </br>
-    Collaborative and end-to-end encrypted. </br>
-  <br />
-  </h2>
-</div>
-
-<br />
-<p align="center">
-  <a href="https://github.com/excalidraw/excalidraw/blob/master/LICENSE">
-    <img alt="Excalidraw is released under the MIT license." src="https://img.shields.io/badge/license-MIT-blue.svg"  /></a>
-  <a href="https://www.npmjs.com/package/@excalidraw/excalidraw">
-    <img alt="npm downloads/month" src="https://img.shields.io/npm/dm/@excalidraw/excalidraw"  /></a>
-  <a href="https://docs.excalidraw.com/docs/introduction/contributing">
-    <img alt="PRs welcome!" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat"  /></a>
-  <a href="https://discord.gg/UexuTaE">
-    <img alt="Chat on Discord" src="https://img.shields.io/discord/723672430744174682?color=738ad6&label=Chat%20on%20Discord&logo=discord&logoColor=ffffff&widge=false"/></a>
-  <a href="https://deepwiki.com/excalidraw/excalidraw">
-    <img alt="Ask DeepWiki" src="https://deepwiki.com/badge.svg" /></a>
-  <a href="https://twitter.com/excalidraw">
-    <img alt="Follow Excalidraw on Twitter" src="https://img.shields.io/twitter/follow/excalidraw.svg?label=follow+@excalidraw&style=social&logo=twitter"/></a>
-</p>
-
-<div align="center">
-  <figure>
-    <a href="https://excalidraw.com" target="_blank" rel="noopener">
-      <img src="https://excalidraw.nyc3.cdn.digitaloceanspaces.com/github%2Fproduct_showcase.png" alt="Product showcase" />
-    </a>
-    <figcaption>
-      <p align="center">
-        Create beautiful hand-drawn like diagrams, wireframes, or whatever you like.
-      </p>
-    </figcaption>
-  </figure>
-</div>
-
-## Features
-
-The Excalidraw editor (npm package) supports:
-
-- 💯&nbsp;Free & open-source.
-- 🎨&nbsp;Infinite, canvas-based whiteboard.
-- ✍️&nbsp;Hand-drawn like style.
-- 🌓&nbsp;Dark mode.
-- 🏗️&nbsp;Customizable.
-- 📷&nbsp;Image support.
-- 😀&nbsp;Shape libraries support.
-- 🌐&nbsp;Localization (i18n) support.
-- 🖼️&nbsp;Export to PNG, SVG & clipboard.
-- 💾&nbsp;Open format - export drawings as an `.excalidraw` json file.
-- ⚒️&nbsp;Wide range of tools - rectangle, circle, diamond, arrow, line, free-draw, eraser...
-- ➡️&nbsp;Arrow-binding & labeled arrows.
-- 🔙&nbsp;Undo / Redo.
-- 🔍&nbsp;Zoom and panning support.
-
-## Excalidraw.com
-
-The app hosted at [excalidraw.com](https://excalidraw.com) is a minimal showcase of what you can build with Excalidraw. Its [source code](https://github.com/excalidraw/excalidraw/tree/master/excalidraw-app) is part of this repository as well, and the app features:
-
-- 📡&nbsp;PWA support (works offline).
-- 🤼&nbsp;Real-time collaboration.
-- 🔒&nbsp;End-to-end encryption.
-- 💾&nbsp;Local-first support (autosaves to the browser).
-- 🔗&nbsp;Shareable links (export to a readonly link you can share with others).
-
-We'll be adding these features as drop-in plugins for the npm package in the future.
-
-## Quick start
-
-**Note:** following instructions are for installing the Excalidraw [npm package](https://www.npmjs.com/package/@excalidraw/excalidraw) when integrating Excalidraw into your own app. To run the repository locally for development, please refer to our [Development Guide](https://docs.excalidraw.com/docs/introduction/development).
-
-Use `npm` or `yarn` to install the package.
-
 ```bash
-npm install react react-dom @excalidraw/excalidraw
-# or
-yarn add react react-dom @excalidraw/excalidraw
+yarn start    # Dev server on http://localhost:3000
 ```
 
-Check out our [documentation](https://docs.excalidraw.com/docs/@excalidraw/excalidraw/installation) for more details!
+1. The **Project Manager** opens in the sidebar by default.
+2. Click **"+ New Project"** to create your first project and start drawing.
+3. Projects auto-save as you work. Use the toolbar to add videos, tables, code blocks, documents, or project links.
+4. Right-click project cards to rename, move between categories, export, or open the folder on disk.
 
-## Contributing
+---
 
-- Missing something or found a bug? [Report here](https://github.com/excalidraw/excalidraw/issues).
-- Want to contribute? Check out our [contribution guide](https://docs.excalidraw.com/docs/introduction/contributing) or let us know on [Discord](https://discord.gg/UexuTaE).
-- Want to help with translations? See the [translation guide](https://docs.excalidraw.com/docs/introduction/contributing#translating).
+## Based On
 
-## Integrations
-
-- [VScode extension](https://marketplace.visualstudio.com/items?itemName=pomdtr.excalidraw-editor)
-- [npm package](https://www.npmjs.com/package/@excalidraw/excalidraw)
-
-## Who's integrating Excalidraw
-
-[Google Cloud](https://googlecloudcheatsheet.withgoogle.com/architecture) • [Meta](https://meta.com/) • [CodeSandbox](https://codesandbox.io/) • [Obsidian Excalidraw](https://github.com/zsviczian/obsidian-excalidraw-plugin) • [Replit](https://replit.com/) • [Slite](https://slite.com/) • [Notion](https://notion.so/) • [HackerRank](https://www.hackerrank.com/) • and many others
-
-## Sponsors & support
-
-If you like the project, you can become a sponsor at [Open Collective](https://opencollective.com/excalidraw) or use [Excalidraw+](https://plus.excalidraw.com/).
-
-## Thank you for supporting Excalidraw
-
-[<img src="https://opencollective.com/excalidraw/tiers/sponsors/0/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/0/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/1/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/1/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/2/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/2/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/3/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/3/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/4/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/4/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/5/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/5/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/6/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/6/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/7/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/7/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/8/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/8/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/9/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/9/website) [<img src="https://opencollective.com/excalidraw/tiers/sponsors/10/avatar.svg?avatarHeight=120"/>](https://opencollective.com/excalidraw/tiers/sponsors/10/website)
-
-<a href="https://opencollective.com/excalidraw#category-CONTRIBUTE" target="_blank"><img src="https://opencollective.com/excalidraw/tiers/backers.svg?avatarHeight=32"/></a>
-
-Last but not least, we're thankful to these companies for offering their services for free:
-
-[![Vercel](./.github/assets/vercel.svg)](https://vercel.com) [![Sentry](./.github/assets/sentry.svg)](https://sentry.io) [![Crowdin](./.github/assets/crowdin.svg)](https://crowdin.com)
+[Excalidraw](https://github.com/excalidraw/excalidraw) — an open-source virtual hand-drawn style whiteboard. MIT licensed.
