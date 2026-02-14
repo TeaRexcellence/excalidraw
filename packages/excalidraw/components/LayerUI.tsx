@@ -348,12 +348,6 @@ const LayerUI = ({
                             "App-toolbar--compact": isCompactStylesPanel,
                           })}
                         >
-                          <HintViewer
-                            appState={appState}
-                            isMobile={editorInterface.formFactor === "phone"}
-                            editorInterface={editorInterface}
-                            app={app}
-                          />
                           {heading}
                           <Stack.Row gap={spacing.toolbarInnerRowGap}>
                             <HandButton
@@ -431,6 +425,12 @@ const LayerUI = ({
                         )}
                       </Stack.Row>
                     </Stack.Col>
+                    <HintViewer
+                      appState={appState}
+                      isMobile={editorInterface.formFactor === "phone"}
+                      editorInterface={editorInterface}
+                      app={app}
+                    />
                   </div>
                 )}
               </Section>

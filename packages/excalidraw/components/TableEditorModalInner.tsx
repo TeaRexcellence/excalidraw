@@ -17,6 +17,9 @@ registerAllModules();
 
 const DEFAULT_COL_WIDTH = 120;
 const DEFAULT_ROW_HEIGHT = 36;
+const INITIAL_ROWS = 100;
+const INITIAL_COLS = 26;
+const MIN_SPARE_ROWS = 20;
 
 interface TableEditorModalInnerProps {
   elementId: string;
@@ -38,10 +41,10 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
 
   const [headerRow, setHeaderRow] = useState(element?.headerRow ?? true);
 
-  // Build initial data from element
+  // Build initial data from element — minRows/minCols will expand the grid
   const initialData = useCallback((): string[][] => {
     if (!element) {
-      return [["", "", ""], ["", "", ""], ["", "", ""]];
+      return [[""]];
     }
     const data: string[][] = [];
     for (let r = 0; r < element.rows; r++) {
@@ -54,14 +57,18 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     return data;
   }, [element]);
 
-  const initialColWidths = useCallback((): number[] => {
-    if (!element) {
-      return [DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH];
-    }
-    return element.columnWidths.map((w) => Math.max(w || DEFAULT_COL_WIDTH, 50));
-  }, [element]);
+  // Column width function — returns existing widths for loaded columns, default for the rest
+  const getColWidth = useCallback(
+    (index: number): number => {
+      if (element && index < element.columnWidths.length) {
+        return Math.max(element.columnWidths[index] || DEFAULT_COL_WIDTH, 50);
+      }
+      return DEFAULT_COL_WIDTH;
+    },
+    [element],
+  );
 
-  // Sync data back to element and close
+  // Sync data back to element and close — trims to used range
   const handleDone = useCallback(() => {
     const hot = hotRef.current?.hotInstance;
     if (!hot || !element) {
@@ -69,32 +76,51 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
       return;
     }
 
-    const newData = hot.getData() as string[][];
-    const newRows = newData.length;
-    const newCols = newData.length > 0 ? newData[0].length : element.columns;
+    const rawData = hot.getData() as string[][];
 
-    // Build cells
+    // Find the used range (last row/col with any non-empty content)
+    let maxRow = -1;
+    let maxCol = -1;
+    for (let r = 0; r < rawData.length; r++) {
+      for (let c = 0; c < (rawData[r]?.length ?? 0); c++) {
+        const val = rawData[r][c];
+        if (val !== null && val !== undefined && String(val).trim() !== "") {
+          if (r > maxRow) {
+            maxRow = r;
+          }
+          if (c > maxCol) {
+            maxCol = c;
+          }
+        }
+      }
+    }
+
+    // Ensure at least 1x1
+    const usedRows = Math.max(maxRow + 1, 1);
+    const usedCols = Math.max(maxCol + 1, 1);
+
+    // Build trimmed cells
     const newCells: string[][] = [];
-    for (let r = 0; r < newRows; r++) {
+    for (let r = 0; r < usedRows; r++) {
       const row: string[] = [];
-      for (let c = 0; c < newCols; c++) {
-        row.push(String(newData[r]?.[c] ?? ""));
+      for (let c = 0; c < usedCols; c++) {
+        row.push(String(rawData[r]?.[c] ?? ""));
       }
       newCells.push(row);
     }
 
-    // Read column widths
+    // Read column widths (only for used columns)
     const newColumnWidths: number[] = [];
-    for (let c = 0; c < newCols; c++) {
+    for (let c = 0; c < usedCols; c++) {
       const w = hot.getColWidth(c);
       newColumnWidths.push(
         typeof w === "number" && w > 0 ? w : DEFAULT_COL_WIDTH,
       );
     }
 
-    // Read row heights
+    // Read row heights (only for used rows)
     const newRowHeights: number[] = [];
-    for (let r = 0; r < newRows; r++) {
+    for (let r = 0; r < usedRows; r++) {
       const h = hot.getRowHeight(r);
       newRowHeights.push(
         typeof h === "number" && h > 0 ? h : DEFAULT_ROW_HEIGHT,
@@ -109,8 +135,8 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     if (freshElement) {
       app.scene.mutateElement(freshElement as any, {
         cells: newCells,
-        rows: newRows,
-        columns: newCols,
+        rows: usedRows,
+        columns: usedCols,
         columnWidths: newColumnWidths,
         rowHeights: newRowHeights,
         headerRow,
@@ -188,6 +214,12 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
   const isDark =
     document.querySelector(".excalidraw.theme--dark") !== null;
 
+  // Detect docked sidebar to offset the modal
+  const sidebarEl = document.querySelector(".sidebar.sidebar--docked");
+  const sidebarWidth = sidebarEl
+    ? sidebarEl.getBoundingClientRect().width
+    : 0;
+
   if (!element) {
     onClose();
     return null;
@@ -196,6 +228,11 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
   return (
     <div
       className="TableEditorModal-backdrop"
+      style={
+        sidebarWidth > 0
+          ? { width: `calc(100% - ${sidebarWidth}px)` }
+          : undefined
+      }
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) {
           handleDone();
@@ -249,8 +286,11 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
           <HotTable
             ref={hotRef}
             data={initialData()}
-            colWidths={initialColWidths()}
+            colWidths={getColWidth}
             rowHeights={DEFAULT_ROW_HEIGHT}
+            minRows={INITIAL_ROWS}
+            minCols={INITIAL_COLS}
+            minSpareRows={MIN_SPARE_ROWS}
             contextMenu={true}
             manualColumnResize={true}
             manualRowResize={true}

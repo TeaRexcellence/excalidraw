@@ -129,6 +129,7 @@
   // ── Spreadsheet area ─────────────────────────────────────────────
   &__sheet {
     flex: 1;
+    min-height: 0; // Critical: allows flex child to shrink below content size
     overflow: hidden;
     position: relative;
 
@@ -136,111 +137,134 @@
       font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 14px;
     }
-
-    // Ensure the table fills the container
-    .ht_master .wtHolder {
-      width: 100% !important;
-      height: 100% !important;
-    }
   }
 }
 
-// ── Dark mode ─────────────────────────────────────────────────────────
+// ── Dark mode — uses Excalidraw theme variables for consistency ───────
 .TableEditorModal--dark {
-  background: #1e1e2e;
+  background: var(--island-bg-color, #232329);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
 
   .TableEditorModal__toolbar {
-    background: #181825;
-    border-bottom-color: #333;
+    background: var(--default-bg-color, #121212);
+    border-bottom-color: var(--color-border-outline-variant, #46464f);
   }
 
   .TableEditorModal__title {
-    color: #d4d4d4;
+    color: var(--color-on-surface, #e3e3e8);
   }
 
   .TableEditorModal__headerToggle {
-    color: #aaa;
+    color: var(--color-gray-50, #999);
   }
 
   .TableEditorModal__btn {
-    color: #d4d4d4;
-    border-color: #555;
+    color: var(--color-on-surface, #e3e3e8);
+    border-color: var(--color-border-outline-variant, #46464f);
 
     &:hover {
-      background: #333;
-      border-color: #777;
+      background: var(--color-surface-high, #2e2d39);
+      border-color: var(--color-border-outline, #8e8d9c);
     }
 
     &--primary {
       color: #fff;
-      background: var(--color-primary, #6c63ff);
-      border-color: var(--color-primary, #6c63ff);
+      background: var(--color-primary, #a8a5ff);
+      border-color: var(--color-primary, #a8a5ff);
 
       &:hover {
-        background: var(--color-primary, #6c63ff);
-        border-color: var(--color-primary, #6c63ff);
+        background: var(--color-primary-hover, #bbb8ff);
+        border-color: var(--color-primary-hover, #bbb8ff);
       }
     }
   }
 
   .TableEditorModal__sheet {
-    // Handsontable dark overrides
     .handsontable {
-      color: #e4e4e4;
+      color: var(--color-on-surface, #e3e3e8);
+      background: var(--island-bg-color, #232329);
+
+      // Override white backgrounds on frozen header clone containers
+      .ht_clone_left,
+      .ht_clone_top,
+      .ht_clone_top_inline_start_corner {
+        background: var(--color-surface-high, #2e2d39);
+      }
 
       th,
       td {
-        background: #1e1e2e;
-        border-color: #444;
-        color: #e4e4e4;
+        background: var(--island-bg-color, #232329);
+        border-color: var(--color-border-outline-variant, #46464f);
+        color: var(--color-on-surface, #e3e3e8);
       }
 
       // Header cells (row/col)
       thead th,
       .ht__highlight {
-        background: #2a2a3a;
-        color: #aaa;
+        background: var(--color-surface-high, #2e2d39);
+        color: var(--color-gray-50, #999);
       }
 
       // Row header
       th {
-        background: #2a2a3a;
-        color: #aaa;
-        border-color: #444;
+        background: var(--color-surface-high, #2e2d39);
+        color: var(--color-gray-50, #999);
+        border-color: var(--color-border-outline-variant, #46464f);
       }
 
       // Selection highlight
       .area {
-        background: rgba(108, 99, 255, 0.15);
+        background: rgba(168, 165, 255, 0.15);
       }
 
       // Active cell border
       .current {
-        border-color: var(--color-primary, #6c63ff);
+        border-color: var(--color-primary, #a8a5ff);
       }
 
       // Cell editor
       .handsontableInput {
-        background: #1e1e2e;
-        color: #e4e4e4;
-        border-color: var(--color-primary, #6c63ff);
+        background: var(--island-bg-color, #232329);
+        color: var(--color-on-surface, #e3e3e8);
+        border-color: var(--color-primary, #a8a5ff);
       }
 
       // Context menu
       .htContextMenu {
         .ht_master table {
-          background: #2a2a3a;
-          border-color: #444;
+          background: var(--color-surface-high, #2e2d39);
+          border-color: var(--color-border-outline-variant, #46464f);
 
           td {
-            background: #2a2a3a;
-            color: #e4e4e4;
+            background: var(--color-surface-high, #2e2d39);
+            color: var(--color-on-surface, #e3e3e8);
 
             &:hover,
             &.current,
             &.area {
-              background: rgba(108, 99, 255, 0.15);
+              background: rgba(168, 165, 255, 0.15);
             }
+          }
+        }
+      }
+
+      // Scrollbar styling for dark mode
+      .wtHolder {
+        &::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: var(--color-gray-70, #5c5c5c);
+          border-radius: 4px;
+
+          &:hover {
+            background: var(--color-gray-60, #7a7a7a);
           }
         }
       }
@@ -248,7 +272,7 @@
   }
 }
 
-// Also handle dark mode from parent excalidraw container
+// Darker backdrop overlay in dark mode
 .excalidraw.theme--dark {
   .TableEditorModal-backdrop {
     background: rgba(0, 0, 0, 0.7);
