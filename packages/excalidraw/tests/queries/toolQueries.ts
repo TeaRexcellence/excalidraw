@@ -6,7 +6,16 @@ import type { ToolType } from "@excalidraw/excalidraw/types";
 
 const _getAllByToolName = (container: HTMLElement, tool: ToolType | "lock") => {
   const toolTitle = tool === "lock" ? "lock" : TOOL_TYPE[tool];
-  return queries.getAllByTestId(container, `toolbar-${toolTitle}`);
+  // Try top-level toolbar button first, then shape-group dropdown, then insert-group dropdown
+  try {
+    return queries.getAllByTestId(container, `toolbar-${toolTitle}`);
+  } catch {
+    try {
+      return queries.getAllByTestId(container, `toolbar-shape-${toolTitle}`);
+    } catch {
+      return queries.getAllByTestId(container, `toolbar-insert-${toolTitle}`);
+    }
+  }
 };
 
 const getMultipleError = (_container: any, tool: any) =>

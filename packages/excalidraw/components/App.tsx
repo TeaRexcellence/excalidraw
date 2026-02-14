@@ -424,7 +424,7 @@ import { ImageViewButton } from "../components/ImageViewButton";
 import { LaserTrails } from "../laser-trails";
 import { withBatchedUpdates, withBatchedUpdatesThrottled } from "../reactUtils";
 import { textWysiwyg } from "../wysiwyg/textWysiwyg";
-import { openTableSpreadsheetEditor } from "../wysiwyg/tableSpreadsheetEditor";
+// Table editor is now handled via TableEditorModal dialog
 import { openCodeBlockEditor } from "../wysiwyg/codeBlockEditor";
 import { isOverScrollBars } from "../scene/scrollbars";
 
@@ -4111,7 +4111,6 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   private cancelInProgressAnimation: (() => void) | null = null;
-  private tableSpreadsheetCloseHandler: (() => void) | null = null;
   private codeBlockEditorCloseHandler: (() => void) | null = null;
 
   scrollToContent = (
@@ -5809,16 +5808,9 @@ class App extends React.Component<AppProps, AppState> {
     _row: number,
     _col: number,
   ) => {
-    if (this.tableSpreadsheetCloseHandler) {
-      return;
-    }
-    this.tableSpreadsheetCloseHandler = openTableSpreadsheetEditor({
-      tableElement,
-      app: this,
-      excalidrawContainer: this.excalidrawContainerRef.current,
-      onClose: () => {
-        this.tableSpreadsheetCloseHandler = null;
-      },
+    this.setState({
+      selectedElementIds: { [tableElement.id]: true },
+      openDialog: { name: "tableEditor", elementId: tableElement.id },
     });
   };
 

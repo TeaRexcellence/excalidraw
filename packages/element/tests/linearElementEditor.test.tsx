@@ -1201,7 +1201,7 @@ describe("Test Linear Elements", () => {
       expect({ width: container.width, height: container.height })
         .toMatchInlineSnapshot(`
           {
-            "height": 130,
+            "height": 126,
             "width": "366.11716",
           }
         `);
@@ -1215,7 +1215,7 @@ describe("Test Linear Elements", () => {
       ).toMatchInlineSnapshot(`
         {
           "x": "271.11716",
-          "y": 45,
+          "y": 47,
         }
       `);
       expect(
@@ -1230,11 +1230,11 @@ describe("Test Linear Elements", () => {
       ).toMatchInlineSnapshot(`
         [
           20,
-          35,
+          37,
           "501.11716",
-          95,
+          93,
           "205.45894",
-          "52.50000",
+          "53.50000",
         ]
       `);
     });
@@ -1268,7 +1268,7 @@ describe("Test Linear Elements", () => {
       expect({ width: container.width, height: container.height })
         .toMatchInlineSnapshot(`
           {
-            "height": 130,
+            "height": 126,
             "width": 340,
           }
         `);
@@ -1277,7 +1277,7 @@ describe("Test Linear Elements", () => {
         .toMatchInlineSnapshot(`
           {
             "x": 75,
-            "y": -5,
+            "y": -3,
           }
         `);
       expect(textElement.text).toMatchSnapshot();

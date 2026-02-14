@@ -391,21 +391,12 @@
     "selectedShapeActions": "Selected shape actions",
     "shapes": "Shapes"
   },
-  "tableDialog": {
-    "title": "Insert Table",
-    "createNew": "Create New",
+  "tableEditor": {
+    "title": "Table Editor",
+    "done": "Done (Esc)",
     "importCSV": "Import CSV",
-    "selectSize": "Select size",
-    "orManual": "or enter size manually",
-    "rows": "Rows",
-    "columns": "Columns",
-    "insert": "Insert",
-    "import": "Import",
-    "back": "Back",
-    "uploadFile": "Upload CSV file",
-    "csvPlaceholder": "Name, Age, City\nAlice, 30, NYC\nBob, 25, London",
-    "csvEmpty": "No data found in CSV",
-    "csvTooLarge": "CSV too large (max 500 rows and 500 columns)"
+    "headerRow": "Header row",
+    "csvEmpty": "No data found in CSV"
   },
   "tableActions": {
     "addRowBelow": "Add row below",

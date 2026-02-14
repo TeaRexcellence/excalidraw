@@ -20,6 +20,8 @@ import {
   isArrowElement,
   hasStrokeColor,
   toolIsArrow,
+  newTableElement,
+  CaptureUpdateAction,
 } from "@excalidraw/element";
 
 import type {
@@ -1127,7 +1129,50 @@ export const ShapesSwitcher = ({
       type: "table",
       icon: TableIcon,
       label: t("toolBar.table"),
-      action: () => app.setOpenDialog({ name: "tableCreate" as const }),
+      action: () => {
+        const DEFAULT_CELL_WIDTH = 120;
+        const DEFAULT_CELL_HEIGHT = 36;
+        const cols = 3;
+        const rows = 3;
+        const colWidths = Array(cols).fill(DEFAULT_CELL_WIDTH);
+        const rowHeights = Array(rows).fill(DEFAULT_CELL_HEIGHT);
+        const totalWidth = colWidths.reduce((s: number, w: number) => s + w, 0);
+        const totalHeight = rowHeights.reduce((s: number, h: number) => s + h, 0);
+
+        const viewportCenterX =
+          -app.state.scrollX + app.state.width / 2 / app.state.zoom.value;
+        const viewportCenterY =
+          -app.state.scrollY + app.state.height / 2 / app.state.zoom.value;
+
+        const element = newTableElement({
+          x: viewportCenterX - totalWidth / 2,
+          y: viewportCenterY - totalHeight / 2,
+          rows,
+          columns: cols,
+          columnWidths: colWidths,
+          rowHeights,
+          headerRow: true,
+          strokeColor: app.state.currentItemStrokeColor,
+          backgroundColor: "transparent",
+          fillStyle: app.state.currentItemFillStyle,
+          strokeWidth: app.state.currentItemStrokeWidth,
+          strokeStyle: app.state.currentItemStrokeStyle,
+          roughness: 0,
+          opacity: app.state.currentItemOpacity,
+          locked: false,
+        });
+
+        app.scene.insertElement(element);
+
+        app.syncActionResult({
+          appState: {
+            ...app.state,
+            selectedElementIds: { [element.id]: true },
+            openDialog: { name: "tableEditor", elementId: element.id },
+          },
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
+      },
     },
     {
       type: "codeblock",
@@ -1405,6 +1450,7 @@ export const ShapesSwitcher = ({
                       onChange={onLockToggle}
                       checked={activeTool.locked}
                       aria-label={t("toolBar.lock")}
+                      data-testid="toolbar-lock"
                     />
                     <div className="ToolIcon__icon">
                       {activeTool.locked ? LockedIcon : UnlockedIcon}

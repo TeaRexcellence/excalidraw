@@ -221,6 +221,9 @@ export const actionResetZoom = register({
   viewMode: true,
   trackEvent: { category: "canvas" },
   perform: (_elements, appState, _, app) => {
+    // Toggle: if already at 100%, go to 200%; otherwise reset to 100%
+    const currentZoom = appState.zoom.value;
+    const nextZoom = Math.round(currentZoom * 100) === 100 ? 2 : 1;
     return {
       appState: {
         ...appState,
@@ -228,7 +231,7 @@ export const actionResetZoom = register({
           {
             viewportX: appState.width / 2 + appState.offsetLeft,
             viewportY: appState.height / 2 + appState.offsetTop,
-            nextZoom: getNormalizedZoom(1),
+            nextZoom: getNormalizedZoom(nextZoom),
           },
           appState,
         ),

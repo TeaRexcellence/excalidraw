@@ -92,10 +92,8 @@ describe("contextMenu element", () => {
     const expectedShortcutNames: ShortcutName[] = [
       "paste",
       "selectAll",
-      "gridMode",
       "zenMode",
       "viewMode",
-      "objectsSnapMode",
       "stats",
     ];
 

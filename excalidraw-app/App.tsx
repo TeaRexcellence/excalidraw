@@ -269,7 +269,9 @@ const initializeScene = async (opts: {
       repairBindings: true,
       deleteInvisibleElements: true,
     }),
-    appState: restoreAppState(dataSource?.appState, null),
+    appState: {
+      ...restoreAppState(dataSource?.appState, null),
+    },
     files: projectData?.files,
   };
 

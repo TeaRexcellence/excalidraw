@@ -683,7 +683,7 @@ exports[`<Excalidraw/> > Test UIOptions prop > Test canvasActions > should rende
               style="width: 1px; height: 1rem; margin: 0px auto;"
             />
             <button
-              aria-controls="radix-:rs:"
+              aria-controls="radix-:rl:"
               aria-expanded="false"
               aria-haspopup="dialog"
               aria-label="Canvas background"

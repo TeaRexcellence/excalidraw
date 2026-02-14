@@ -229,15 +229,21 @@
       background: var(--island-bg-color);
       box-shadow: var(--shadow-island);
       border-radius: var(--border-radius-lg);
+      padding: 0.25rem;
       cursor: pointer;
 
       .ToolIcon__icon {
-        width: var(--default-button-size);
-        height: var(--default-button-size);
+        width: var(--lg-button-size);
+        height: var(--lg-button-size);
+        border-radius: var(--border-radius-lg);
       }
 
       &.is-locked .ToolIcon__icon {
-        background: var(--color-primary-light);
+        background: var(--color-surface-primary-container);
+
+        svg {
+          color: var(--color-on-primary-container);
+        }
       }
     }
 

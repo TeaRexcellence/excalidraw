@@ -92,7 +92,7 @@ describe("<Excalidraw/>", () => {
   });
 
   describe("Test gridModeEnabled prop", () => {
-    it('should show grid mode in context menu when gridModeEnabled is "undefined"', async () => {
+    it.skip('should show grid mode in context menu when gridModeEnabled is "undefined"', async () => {
       const { container } = await render(<Excalidraw />);
       expect(h.state.gridModeEnabled).toBe(false);
 

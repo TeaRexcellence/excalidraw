@@ -1031,7 +1031,7 @@ describe("textWysiwyg", () => {
       expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
         [
           85,
-          "5.00000",
+          "6.00000",
         ]
       `);
 
@@ -1051,7 +1051,7 @@ describe("textWysiwyg", () => {
       expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
         [
           15,
-          65,
+          67,
         ]
       `);
 
@@ -1383,7 +1383,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             15,
-            45,
+            46,
           ]
         `);
       });
@@ -1395,7 +1395,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             30,
-            45,
+            46,
           ]
         `);
       });
@@ -1407,7 +1407,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             45,
-            45,
+            46,
           ]
         `);
       });
@@ -1419,7 +1419,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             15,
-            65,
+            67,
           ]
         `);
       });
@@ -1430,7 +1430,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             30,
-            65,
+            67,
           ]
         `);
       });
@@ -1441,7 +1441,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             45,
-            65,
+            67,
           ]
         `);
       });

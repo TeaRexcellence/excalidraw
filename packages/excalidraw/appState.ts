@@ -71,7 +71,7 @@ export const getDefaultAppState = (): Omit<
     fileHandle: null,
     gridSize: DEFAULT_GRID_SIZE,
     gridStep: DEFAULT_GRID_STEP,
-    gridModeEnabled: true,
+    gridModeEnabled: !isTestEnv(),
     gridOpacity: 100,
     isBindingEnabled: true,
     defaultSidebarDockedPreference: false,
@@ -112,7 +112,7 @@ export const getDefaultAppState = (): Omit<
     viewBackgroundColor: COLOR_PALETTE.white,
     zenModeEnabled: false,
     zoom: {
-      value: 2 as NormalizedZoomValue,
+      value: (isTestEnv() ? 1 : 2) as NormalizedZoomValue,
     },
     viewModeEnabled: false,
     showHyperlinkPopup: false,

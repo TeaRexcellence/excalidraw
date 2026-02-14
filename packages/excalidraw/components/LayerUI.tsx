@@ -66,7 +66,7 @@ import { Island } from "./Island";
 import { JSONExportDialog } from "./JSONExportDialog";
 import { LaserPointerButton } from "./LaserPointerButton";
 import { VideoEmbedDialog } from "./VideoEmbedDialog";
-import { TableCreateDialog } from "./TableCreateDialog";
+import { TableEditorModal } from "./TableEditorModal";
 import { CodeBlockCreateDialog } from "./CodeBlockCreateDialog";
 import { DocumentInsertDialog } from "./DocumentInsertDialog";
 import { DocumentViewerDialog } from "./DocumentViewerDialog";
@@ -591,8 +591,9 @@ const LayerUI = ({
           }}
         />
       )}
-      {appState.openDialog?.name === "tableCreate" && (
-        <TableCreateDialog
+      {appState.openDialog?.name === "tableEditor" && (
+        <TableEditorModal
+          elementId={appState.openDialog.elementId}
           onClose={() => {
             setAppState({ openDialog: null });
           }}
