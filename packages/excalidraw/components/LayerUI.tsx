@@ -22,6 +22,7 @@ import {
   actionToggleStats,
   actionToggleGridMode,
   actionToggleObjectsSnapMode,
+  actionToggleSearchMenu,
 } from "../actions";
 import { trackEvent } from "../analytics";
 import { isHandToolActive } from "../appState";
@@ -49,7 +50,7 @@ import MainMenu from "./main-menu/MainMenu";
 import { ActiveConfirmDialog } from "./ActiveConfirmDialog";
 import { useEditorInterface, useStylesPanelMode } from "./App";
 import { OverwriteConfirmDialog } from "./OverwriteConfirm/OverwriteConfirm";
-import { sidebarRightIcon, gridIcon, magnetIcon } from "./icons";
+import { sidebarRightIcon, gridIcon, magnetIcon, searchIcon } from "./icons";
 import { DefaultSidebar } from "./DefaultSidebar";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
 import { Stats } from "./Stats";
@@ -127,7 +128,6 @@ const DefaultMainMenu: React.FC<{
       {UIOptions.canvasActions.saveAsImage && (
         <MainMenu.DefaultItems.SaveAsImage />
       )}
-      <MainMenu.DefaultItems.SearchMenu />
       <MainMenu.DefaultItems.Help />
       <MainMenu.DefaultItems.ClearCanvas />
       <MainMenu.Separator />
@@ -398,6 +398,22 @@ const LayerUI = ({
                               onClick={() => {
                                 actionManager.executeAction(
                                   actionToggleObjectsSnapMode,
+                                );
+                              }}
+                            />
+                            <ToolButton
+                              className="Shape"
+                              type="button"
+                              icon={searchIcon}
+                              selected={
+                                appState.openDialog?.name === "searchMenu"
+                              }
+                              title={`${t("search.title")} — Ctrl+F`}
+                              aria-label={t("search.title")}
+                              data-testid="toolbar-search"
+                              onClick={() => {
+                                actionManager.executeAction(
+                                  actionToggleSearchMenu,
                                 );
                               }}
                             />
