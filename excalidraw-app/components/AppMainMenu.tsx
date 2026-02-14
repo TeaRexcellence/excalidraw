@@ -26,11 +26,18 @@ export const AppMainMenu: React.FC<{
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
 
   const handleStartNewProject = useCallback(async () => {
-    // Clear the current project ID (deselect project)
-    await ProjectManagerData.setCurrentProjectId(null);
-    // Clear the canvas
-    actionManager.executeAction(actionClearCanvas);
-    setShowNewProjectDialog(false);
+    // Flush any pending save for the current project, then cancel further saves
+    ProjectManagerData.flushSave();
+    ProjectManagerData.beginProjectSwitch();
+    try {
+      // Clear the current project ID (deselect project)
+      await ProjectManagerData.setCurrentProjectId(null);
+      // Clear the canvas
+      actionManager.executeAction(actionClearCanvas);
+      setShowNewProjectDialog(false);
+    } finally {
+      ProjectManagerData.endProjectSwitch();
+    }
   }, [actionManager]);
 
   const handleSaveProject = useCallback(() => {

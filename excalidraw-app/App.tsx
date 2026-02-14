@@ -242,6 +242,8 @@ const initializeScene = async (opts: {
       await ProjectManagerData.setCurrentProjectId(hashProjectId);
       projectData = await ProjectManagerData.loadCurrentProject();
     }
+    // Clean up the hash to prevent stale replays on refresh/hash change
+    window.history.replaceState({}, "", window.location.pathname);
     // else: ignore invalid hash, fall through to normal load
   } else if (!id && !jsonBackendMatch && !externalUrlMatch) {
     // No external source, try to load current project from Project Manager

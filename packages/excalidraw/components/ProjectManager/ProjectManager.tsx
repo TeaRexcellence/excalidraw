@@ -844,26 +844,40 @@ export const ProjectManager: React.FC = () => {
     async (projectId: string) => {
       const isCurrentProject = index.currentProjectId === projectId;
 
-      await api.deleteProject(projectId);
-
-      const newIndex: ProjectsIndex = {
-        ...index,
-        projects: index.projects.filter((p) => p.id !== projectId),
-        currentProjectId: isCurrentProject ? null : index.currentProjectId,
-      };
-      setIndex(newIndex);
-      await api.saveIndex(newIndex);
-
-      // If we deleted the current project, reset the canvas
+      // Cancel any pending auto-save BEFORE deleting to prevent folder resurrection
       if (isCurrentProject) {
-        app.syncActionResult({
-          elements: [],
-          appState: {
-            name: "",
-            viewBackgroundColor: app.state.viewBackgroundColor,
-          },
-          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-        });
+        ProjectManagerData.beginProjectSwitch();
+      }
+
+      try {
+        await api.deleteProject(projectId);
+
+        const newIndex: ProjectsIndex = {
+          ...index,
+          projects: index.projects.filter((p) => p.id !== projectId),
+          currentProjectId: isCurrentProject ? null : index.currentProjectId,
+        };
+
+        // Sync cachedIndex BEFORE canvas clear to prevent stale saves
+        ProjectManagerData.updateCachedIndex(newIndex);
+        setIndex(newIndex);
+        await api.saveIndex(newIndex);
+
+        // If we deleted the current project, reset the canvas
+        if (isCurrentProject) {
+          app.syncActionResult({
+            elements: [],
+            appState: {
+              name: "",
+              viewBackgroundColor: app.state.viewBackgroundColor,
+            },
+            captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+          });
+        }
+      } finally {
+        if (isCurrentProject) {
+          ProjectManagerData.endProjectSwitch();
+        }
       }
     },
     [app, index],
