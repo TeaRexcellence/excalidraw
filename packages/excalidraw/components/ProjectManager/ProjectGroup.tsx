@@ -156,6 +156,7 @@ interface ProjectGroupProps {
   // ── Visual dimming (e.g. during favorites drag) ──
   dimmed?: boolean;
   disableDropTarget?: boolean;
+  highlighted?: boolean; // parent-computed cross-section highlight
 }
 
 export const ProjectGroup: React.FC<ProjectGroupProps> = ({
@@ -193,6 +194,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   isDropTarget: externalIsDropTarget,
   dimmed,
   disableDropTarget,
+  highlighted,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(group?.name || "");
@@ -357,7 +359,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   );
 
   const isDropTargetActive =
-    (needsDroppable && isHeaderOver) || !!externalIsDropTarget;
+    (needsDroppable && isHeaderOver) || !!externalIsDropTarget || !!highlighted;
 
   // Combine droppable refs on the wrapper so the entire section is a drop target
   const wrapperRef = (node: HTMLElement | null) => {

@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+import type { DragStartEvent, DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 
 import { CaptureUpdateAction, getCommonBounds } from "@excalidraw/element";
 
@@ -516,7 +516,8 @@ const SortableGroupItem: React.FC<{
   groupSharedProps: any;
   externalDrag?: boolean;
   dimmed?: boolean;
-}> = ({ group, groupProjects, isBeingDragged, groupSharedProps, externalDrag, dimmed }) => {
+  highlighted?: boolean;
+}> = ({ group, groupProjects, isBeingDragged, groupSharedProps, externalDrag, dimmed, highlighted }) => {
   const {
     attributes,
     listeners,
@@ -554,6 +555,7 @@ const SortableGroupItem: React.FC<{
         dropRef={externalDrag ? setDropRef : undefined}
         isDropTarget={isOver && !!externalDrag}
         dimmed={dimmed}
+        highlighted={highlighted}
         {...groupSharedProps}
       />
     </div>
@@ -633,6 +635,7 @@ export const ProjectManager: React.FC = () => {
   // Single DndContext handles both group header reordering AND cross-section
   // card moves (category changes, adding to favorites, reordering).
   const [allViewDragId, setAllViewDragId] = useState<string | null>(null);
+  const [allViewOverId, setAllViewOverId] = useState<string | null>(null);
   const allViewSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor),
@@ -642,14 +645,20 @@ export const ProjectManager: React.FC = () => {
     setAllViewDragId(event.active.id as string);
   }, []);
 
+  const handleAllDragOver = useCallback((event: DragOverEvent) => {
+    setAllViewOverId((event.over?.id as string) ?? null);
+  }, []);
+
   const handleAllDragCancel = useCallback(() => {
     setAllViewDragId(null);
+    setAllViewOverId(null);
   }, []);
 
   const handleAllDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
       setAllViewDragId(null);
+      setAllViewOverId(null);
 
       if (!over || active.id === over.id) {
         return;
@@ -2619,6 +2628,37 @@ export const ProjectManager: React.FC = () => {
           // Is a favorites card being dragged? (can't leave favorites)
           const isFavDrag = allViewDragId?.startsWith("fav:") ?? false;
 
+          // Compute which section should show the drop target highlight.
+          // We track the `over` target and resolve its section, then
+          // highlight that section during cross-section card drags.
+          let highlightSection: string | null | undefined; // undefined = none
+          if (allViewDragId && allViewOverId && !isFavDrag) {
+            const dragProjectId = allViewDragId.replace(/^(fav:|card:)/, "");
+            const dragProject = index.projects.find((p) => p.id === dragProjectId);
+            // Resolve the section the over target belongs to
+            let overSection: string | null | undefined;
+            if (allViewOverId.startsWith("card:")) {
+              const oPid = allViewOverId.replace("card:", "");
+              const oP = index.projects.find((p) => p.id === oPid);
+              if (oP) overSection = oP.groupId; // null = uncategorized
+            } else if (allViewOverId.startsWith("fav:")) {
+              overSection = "favorites";
+            } else if (allViewOverId.startsWith("header:")) {
+              const hId = allViewOverId.replace("header:", "");
+              overSection = hId === "uncategorized" ? null : hId;
+            } else if (allViewOverId.startsWith("group:")) {
+              overSection = allViewOverId.replace("group:", "");
+            }
+            // Only highlight on cross-section drags
+            if (
+              overSection !== undefined &&
+              dragProject &&
+              overSection !== dragProject.groupId
+            ) {
+              highlightSection = overSection;
+            }
+          }
+
           // Determine what's being dragged for the DragOverlay
           const draggedGroupId = allViewDragId?.startsWith("group:")
             ? allViewDragId.replace("group:", "")
@@ -2638,6 +2678,7 @@ export const ProjectManager: React.FC = () => {
               sensors={allViewSensors}
               collisionDetection={closestCenter}
               onDragStart={handleAllDragStart}
+              onDragOver={handleAllDragOver}
               onDragEnd={handleAllDragEnd}
               onDragCancel={handleAllDragCancel}
               autoScroll={{
@@ -2657,6 +2698,7 @@ export const ProjectManager: React.FC = () => {
                   externalDrag
                   sortableIdPrefix="fav:"
                   disableDropTarget={isFavDrag}
+                  highlighted={highlightSection === "favorites"}
                   {...groupSharedProps}
                 />
               )}
@@ -2669,6 +2711,7 @@ export const ProjectManager: React.FC = () => {
                 externalDrag
                 sortableIdPrefix="card:"
                 dimmed={isFavDrag}
+                highlighted={highlightSection === null}
                 {...groupSharedProps}
               />
 
@@ -2692,6 +2735,7 @@ export const ProjectManager: React.FC = () => {
                       groupSharedProps={groupSharedProps}
                       externalDrag
                       dimmed={isFavDrag}
+                      highlighted={highlightSection === group.id}
                     />
                   );
                 })}
