@@ -515,7 +515,8 @@ const SortableGroupItem: React.FC<{
   isBeingDragged: boolean;
   groupSharedProps: any;
   externalDrag?: boolean;
-}> = ({ group, groupProjects, isBeingDragged, groupSharedProps, externalDrag }) => {
+  dimmed?: boolean;
+}> = ({ group, groupProjects, isBeingDragged, groupSharedProps, externalDrag, dimmed }) => {
   const {
     attributes,
     listeners,
@@ -528,7 +529,7 @@ const SortableGroupItem: React.FC<{
   // Droppable target for cross-section card drops (named group headers)
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: `header:${group.id}`,
-    disabled: !externalDrag,
+    disabled: !externalDrag || !!dimmed,
   });
 
   const style: React.CSSProperties = {
@@ -552,6 +553,7 @@ const SortableGroupItem: React.FC<{
         sortableIdPrefix="card:"
         dropRef={externalDrag ? setDropRef : undefined}
         isDropTarget={isOver && !!externalDrag}
+        dimmed={dimmed}
         {...groupSharedProps}
       />
     </div>
@@ -2614,6 +2616,9 @@ export const ProjectManager: React.FC = () => {
             (g) => `group:${g.id}`,
           );
 
+          // Is a favorites card being dragged? (can't leave favorites)
+          const isFavDrag = allViewDragId?.startsWith("fav:") ?? false;
+
           // Determine what's being dragged for the DragOverlay
           const draggedGroupId = allViewDragId?.startsWith("group:")
             ? allViewDragId.replace("group:", "")
@@ -2651,6 +2656,7 @@ export const ProjectManager: React.FC = () => {
                   projects={favoriteProjects}
                   externalDrag
                   sortableIdPrefix="fav:"
+                  disableDropTarget={isFavDrag}
                   {...groupSharedProps}
                 />
               )}
@@ -2662,6 +2668,7 @@ export const ProjectManager: React.FC = () => {
                 projects={ungroupedProjects}
                 externalDrag
                 sortableIdPrefix="card:"
+                dimmed={isFavDrag}
                 {...groupSharedProps}
               />
 
@@ -2684,6 +2691,7 @@ export const ProjectManager: React.FC = () => {
                       isBeingDragged={draggedGroupId === group.id}
                       groupSharedProps={groupSharedProps}
                       externalDrag
+                      dimmed={isFavDrag}
                     />
                   );
                 })}

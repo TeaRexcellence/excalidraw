@@ -153,6 +153,9 @@ interface ProjectGroupProps {
   // ── Drop target ref from parent (for named groups) ──
   dropRef?: (node: HTMLElement | null) => void;
   isDropTarget?: boolean;
+  // ── Visual dimming (e.g. during favorites drag) ──
+  dimmed?: boolean;
+  disableDropTarget?: boolean;
 }
 
 export const ProjectGroup: React.FC<ProjectGroupProps> = ({
@@ -188,6 +191,8 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   sortableIdPrefix = "",
   dropRef: externalDropRef,
   isDropTarget: externalIsDropTarget,
+  dimmed,
+  disableDropTarget,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(group?.name || "");
@@ -248,7 +253,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   // Always call the hook (React rules), but disable when not in external mode
   // For special sections (favorites, uncategorized), the header is a drop target
   // For named groups, the SortableGroupItem wrapper provides droppability
-  const needsDroppable = !!externalDrag && isSpecialSection;
+  const needsDroppable = !!externalDrag && isSpecialSection && !dimmed && !disableDropTarget;
   const { setNodeRef: setDroppableRef, isOver: isHeaderOver } = useDroppable({
     id: `header:${effectiveId}`,
     disabled: !needsDroppable,
@@ -367,7 +372,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   return (
     <div
       ref={wrapperRef}
-      className={`ProjectGroup${isDropTargetActive ? " ProjectGroup--drop-target" : ""}`}
+      className={`ProjectGroup${isDropTargetActive ? " ProjectGroup--drop-target" : ""}${dimmed ? " ProjectGroup--dimmed" : ""}`}
     >
       <div
         className={`ProjectGroup__header${dragHandleProps ? " ProjectGroup__header--draggable" : ""}`}
@@ -505,7 +510,14 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
         )}
       </div>
 
-      {isExpanded && externalDrag && renderGrid(sortableIds, sortableIdPrefix)}
+      {isExpanded && externalDrag && projects.length > 0 &&
+        renderGrid(sortableIds, sortableIdPrefix)}
+
+      {isExpanded && externalDrag && projects.length === 0 && (
+        <div className="ProjectGroup__empty-drop-zone">
+          Drop projects here
+        </div>
+      )}
 
       {isExpanded && !externalDrag && (
         <DndContext
