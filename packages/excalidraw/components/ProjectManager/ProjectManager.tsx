@@ -9,6 +9,7 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -45,7 +46,7 @@ import {
 } from "../../../../excalidraw-app/data/ProjectManagerData";
 
 import { ProjectCard } from "./ProjectCard";
-import { ProjectGroup } from "./ProjectGroup";
+import { ProjectGroup, DragOverlayCard } from "./ProjectGroup";
 import { CategoryBar } from "./CategoryBar";
 
 import { DEFAULT_PROJECTS_INDEX } from "./types";
@@ -513,7 +514,8 @@ const SortableGroupItem: React.FC<{
   groupProjects: Project[];
   isBeingDragged: boolean;
   groupSharedProps: any;
-}> = ({ group, groupProjects, isBeingDragged, groupSharedProps }) => {
+  externalDrag?: boolean;
+}> = ({ group, groupProjects, isBeingDragged, groupSharedProps, externalDrag }) => {
   const {
     attributes,
     listeners,
@@ -521,7 +523,13 @@ const SortableGroupItem: React.FC<{
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: group.id });
+  } = useSortable({ id: `group:${group.id}` });
+
+  // Droppable target for cross-section card drops (named group headers)
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `header:${group.id}`,
+    disabled: !externalDrag,
+  });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -530,12 +538,20 @@ const SortableGroupItem: React.FC<{
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+    >
       <ProjectGroup
         group={group}
         projects={groupProjects}
         dragHandleProps={listeners}
         forceCollapsed={isBeingDragged}
+        externalDrag={externalDrag}
+        sortableIdPrefix="card:"
+        dropRef={externalDrag ? setDropRef : undefined}
+        isDropTarget={isOver && !!externalDrag}
         {...groupSharedProps}
       />
     </div>
@@ -611,56 +627,256 @@ export const ProjectManager: React.FC = () => {
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [isResetting, setIsResetting] = useState(false);
 
-  // Drag-and-drop state for group reordering
-  const [activeDragGroupId, setActiveDragGroupId] = useState<string | null>(
-    null,
+  // ─── "All" view unified drag-and-drop ───────────────────────
+  // Single DndContext handles both group header reordering AND cross-section
+  // card moves (category changes, adding to favorites, reordering).
+  const [allViewDragId, setAllViewDragId] = useState<string | null>(null);
+  const allViewSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
   );
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: 8 },
-  });
-  const keyboardSensor = useSensor(KeyboardSensor);
-  const dndSensors = useSensors(pointerSensor, keyboardSensor);
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveDragGroupId(event.active.id as string);
+  const handleAllDragStart = useCallback((event: DragStartEvent) => {
+    setAllViewDragId(event.active.id as string);
   }, []);
 
-  const handleDragEnd = useCallback(
+  const handleAllDragCancel = useCallback(() => {
+    setAllViewDragId(null);
+  }, []);
+
+  const handleAllDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
-      setActiveDragGroupId(null);
+      setAllViewDragId(null);
 
       if (!over || active.id === over.id) {
         return;
       }
 
-      const sortedGroups = [...index.groups].sort((a, b) => a.order - b.order);
-      const oldIdx = sortedGroups.findIndex((g) => g.id === active.id);
-      const newIdx = sortedGroups.findIndex((g) => g.id === over.id);
+      const activeId = active.id as string;
+      const overId = over.id as string;
 
-      if (oldIdx === -1 || newIdx === -1) {
+      // Helper to save index updates
+      const saveIndex = async (newIdx: ProjectsIndex) => {
+        setIndex(newIdx);
+        indexRef.current = newIdx;
+        await api.saveIndex(newIdx);
+      };
+
+      // ── Group header reordering ──
+      if (activeId.startsWith("group:")) {
+        let targetGroupId: string | null = null;
+        if (overId.startsWith("group:")) {
+          targetGroupId = overId.replace("group:", "");
+        } else if (overId.startsWith("header:")) {
+          const headerId = overId.replace("header:", "");
+          // Only reorder between named groups, not special sections
+          if (headerId !== "favorites" && headerId !== "uncategorized") {
+            targetGroupId = headerId;
+          }
+        }
+        if (!targetGroupId) {
+          return;
+        }
+
+        const activeGroupId = activeId.replace("group:", "");
+        const sortedGroups = [...index.groups].sort(
+          (a, b) => a.order - b.order,
+        );
+        const oldIdx = sortedGroups.findIndex((g) => g.id === activeGroupId);
+        const newIdx = sortedGroups.findIndex((g) => g.id === targetGroupId);
+
+        if (oldIdx === -1 || newIdx === -1) {
+          return;
+        }
+
+        const reordered = arrayMove(sortedGroups, oldIdx, newIdx);
+        const updatedGroups = reordered.map((g, i) => ({ ...g, order: i }));
+        const newIndex: ProjectsIndex = { ...index, groups: updatedGroups };
+        setIndex(newIndex);
+        indexRef.current = newIndex;
+        await api.saveIndex(newIndex);
         return;
       }
 
-      const reordered = arrayMove(sortedGroups, oldIdx, newIdx);
-      const updatedGroups = reordered.map((g, i) => ({ ...g, order: i }));
+      // ── Card operations ──
+      const isFavDrag = activeId.startsWith("fav:");
+      const projectId = activeId.replace(/^(fav:|card:)/, "");
+      const project = index.projects.find((p) => p.id === projectId);
+      if (!project) {
+        return;
+      }
 
-      const newIndex: ProjectsIndex = {
-        ...index,
-        groups: updatedGroups,
-      };
+      // ── Favorites drag — can only reorder within favorites ──
+      if (isFavDrag) {
+        if (!overId.startsWith("fav:")) {
+          return; // Can't leave favorites
+        }
+        const targetProjectId = overId.replace("fav:", "");
+        const favProjects = sortProjects(
+          index.projects.filter((p) => p.isFavorite),
+          "favoriteOrder",
+        );
+        const oldIdx = favProjects.findIndex((p) => p.id === projectId);
+        const newIdx = favProjects.findIndex((p) => p.id === targetProjectId);
+        if (oldIdx === -1 || newIdx === -1) {
+          return;
+        }
+        const reordered = arrayMove(favProjects, oldIdx, newIdx);
+        const orderMap = new Map(
+          reordered.map((p, i) => [p.id, i]),
+        );
+        const newProjects = index.projects.map((p) =>
+          orderMap.has(p.id)
+            ? { ...p, favoriteOrder: orderMap.get(p.id)! }
+            : p,
+        );
+        await saveIndex({ ...index, projects: newProjects });
+        return;
+      }
 
-      setIndex(newIndex);
-      await api.saveIndex(newIndex);
+      // ── Regular card drag ──
+
+      // Dropped on a card
+      if (overId.startsWith("card:") || overId.startsWith("fav:")) {
+        const targetProjectId = overId.replace(/^(fav:|card:)/, "");
+        const targetProject = index.projects.find(
+          (p) => p.id === targetProjectId,
+        );
+        if (!targetProject) {
+          return;
+        }
+
+        // Dropped on a fav: card → add to favorites
+        if (overId.startsWith("fav:")) {
+          if (project.isFavorite) {
+            return; // Already favorited
+          }
+          const favProjects = index.projects.filter((p) => p.isFavorite);
+          const maxFavOrder = Math.max(
+            0,
+            ...favProjects.map((p) => p.favoriteOrder ?? 0),
+          );
+          const newProjects = index.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, isFavorite: true, favoriteOrder: maxFavOrder + 1 }
+              : p,
+          );
+          await saveIndex({ ...index, projects: newProjects });
+          return;
+        }
+
+        // Same section → reorder
+        const sourceSection = project.groupId;
+        const targetSection = targetProject.groupId;
+
+        if (sourceSection === targetSection) {
+          const sectionProjects = sortProjects(
+            index.projects.filter((p) => p.groupId === sourceSection),
+          );
+          const oldIdx = sectionProjects.findIndex(
+            (p) => p.id === projectId,
+          );
+          const newIdx = sectionProjects.findIndex(
+            (p) => p.id === targetProjectId,
+          );
+          if (oldIdx === -1 || newIdx === -1) {
+            return;
+          }
+          const reordered = arrayMove(sectionProjects, oldIdx, newIdx);
+          const orderMap = new Map(
+            reordered.map((p, i) => [p.id, i]),
+          );
+          const newProjects = index.projects.map((p) =>
+            orderMap.has(p.id) ? { ...p, order: orderMap.get(p.id)! } : p,
+          );
+          await saveIndex({ ...index, projects: newProjects });
+        } else {
+          // Different section → move to target section
+          const targetSectionProjects = index.projects.filter(
+            (p) => p.groupId === targetSection,
+          );
+          const maxOrder = Math.max(
+            0,
+            ...targetSectionProjects.map((p) => p.order ?? 0),
+          );
+          const newProjects = index.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, groupId: targetSection, order: maxOrder + 1 }
+              : p,
+          );
+          await saveIndex({ ...index, projects: newProjects });
+        }
+        return;
+      }
+
+      // Dropped on a header or group wrapper
+      if (overId.startsWith("header:") || overId.startsWith("group:")) {
+        const targetId = overId.replace(/^(header:|group:)/, "");
+
+        if (targetId === "favorites") {
+          // Add to favorites (don't change groupId)
+          if (project.isFavorite) {
+            return; // Already favorited
+          }
+          const favProjects = index.projects.filter((p) => p.isFavorite);
+          const maxFavOrder = Math.max(
+            0,
+            ...favProjects.map((p) => p.favoriteOrder ?? 0),
+          );
+          const newProjects = index.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, isFavorite: true, favoriteOrder: maxFavOrder + 1 }
+              : p,
+          );
+          await saveIndex({ ...index, projects: newProjects });
+          return;
+        }
+
+        if (targetId === "uncategorized") {
+          // Move to uncategorized
+          if (project.groupId === null) {
+            return; // Already uncategorized
+          }
+          const uncatProjects = index.projects.filter(
+            (p) => p.groupId === null,
+          );
+          const maxOrder = Math.max(
+            0,
+            ...uncatProjects.map((p) => p.order ?? 0),
+          );
+          const newProjects = index.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, groupId: null, order: maxOrder + 1 }
+              : p,
+          );
+          await saveIndex({ ...index, projects: newProjects });
+          return;
+        }
+
+        // Move to named group
+        if (project.groupId === targetId) {
+          return; // Already in this group
+        }
+        const groupProjects = index.projects.filter(
+          (p) => p.groupId === targetId,
+        );
+        const maxOrder = Math.max(
+          0,
+          ...groupProjects.map((p) => p.order ?? 0),
+        );
+        const newProjects = index.projects.map((p) =>
+          p.id === projectId
+            ? { ...p, groupId: targetId, order: maxOrder + 1 }
+            : p,
+        );
+        await saveIndex({ ...index, projects: newProjects });
+      }
     },
     [index],
   );
 
-  const handleDragCancel = useCallback(() => {
-    setActiveDragGroupId(null);
-  }, []);
-
-  // ─── Project card reordering ─────────────────────────────────
+  // ─── Project card reordering (for tab views) ──────────────────
 
   const handleReorderProjects = useCallback(
     async (
@@ -2389,15 +2605,43 @@ export const ProjectManager: React.FC = () => {
             );
           }
 
-          // "All" view — cascading sections: Favorites → Named groups → Uncategorized
+          // "All" view — single DndContext for cross-section card
+          // moves + group header reordering
           const sortedGroups = [...index.groups].sort(
             (a, b) => a.order - b.order,
           );
-          const sortedGroupIds = sortedGroups.map((g) => g.id);
+          const sortedGroupIds = sortedGroups.map(
+            (g) => `group:${g.id}`,
+          );
+
+          // Determine what's being dragged for the DragOverlay
+          const draggedGroupId = allViewDragId?.startsWith("group:")
+            ? allViewDragId.replace("group:", "")
+            : null;
+          const draggedCardId = allViewDragId?.startsWith("card:") || allViewDragId?.startsWith("fav:")
+            ? allViewDragId.replace(/^(fav:|card:)/, "")
+            : null;
+          const draggedProject = draggedCardId
+            ? index.projects.find((p) => p.id === draggedCardId)
+            : null;
+          const draggedGroup = draggedGroupId
+            ? index.groups.find((g) => g.id === draggedGroupId)
+            : null;
 
           return (
-            <>
-              {/* Favorites section — not sortable */}
+            <DndContext
+              sensors={allViewSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleAllDragStart}
+              onDragEnd={handleAllDragEnd}
+              onDragCancel={handleAllDragCancel}
+              autoScroll={{
+                enabled: true,
+                threshold: { x: 0, y: 0.15 },
+                acceleration: 10,
+              }}
+            >
+              {/* Favorites section */}
               {favoriteProjects.length > 0 && (
                 <ProjectGroup
                   group={null}
@@ -2405,72 +2649,66 @@ export const ProjectManager: React.FC = () => {
                   label="Favorites"
                   icon="star"
                   projects={favoriteProjects}
+                  externalDrag
+                  sortableIdPrefix="fav:"
                   {...groupSharedProps}
                 />
               )}
 
-              {/* Uncategorized — not sortable, pinned after favorites */}
+              {/* Uncategorized — pinned after favorites */}
               <ProjectGroup
                 group={null}
                 sectionId="uncategorized"
                 projects={ungroupedProjects}
+                externalDrag
+                sortableIdPrefix="card:"
                 {...groupSharedProps}
               />
 
-              {/* Named groups — sortable via drag and drop */}
-              <DndContext
-                sensors={dndSensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDragCancel={handleDragCancel}
-                autoScroll={{
-                  enabled: true,
-                  threshold: { x: 0, y: 0.15 },
-                  acceleration: 10,
-                }}
+              {/* Named groups — sortable headers + sortable cards */}
+              <SortableContext
+                items={sortedGroupIds}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={sortedGroupIds}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {sortedGroups.map((group) => {
-                    const groupProjects = sortProjects(
-                      index.projects.filter((p) => p.groupId === group.id),
-                    );
-                    return (
-                      <SortableGroupItem
-                        key={group.id}
-                        group={group}
-                        groupProjects={groupProjects}
-                        isBeingDragged={activeDragGroupId === group.id}
-                        groupSharedProps={groupSharedProps}
-                      />
-                    );
-                  })}
-                </SortableContext>
+                {sortedGroups.map((group) => {
+                  const gProjects = sortProjects(
+                    index.projects.filter(
+                      (p) => p.groupId === group.id,
+                    ),
+                  );
+                  return (
+                    <SortableGroupItem
+                      key={group.id}
+                      group={group}
+                      groupProjects={gProjects}
+                      isBeingDragged={draggedGroupId === group.id}
+                      groupSharedProps={groupSharedProps}
+                      externalDrag
+                    />
+                  );
+                })}
+              </SortableContext>
 
-                <DragOverlay dropAnimation={null}>
-                  {activeDragGroupId
-                    ? (() => {
-                        const dragGroup = index.groups.find(
-                          (g) => g.id === activeDragGroupId,
-                        );
-                        return dragGroup ? (
-                          <DragOverlayGroupHeader
-                            group={dragGroup}
-                            projectCount={
-                              index.projects.filter(
-                                (p) => p.groupId === activeDragGroupId,
-                              ).length
-                            }
-                          />
-                        ) : null;
-                      })()
-                    : null}
-                </DragOverlay>
-              </DndContext>
-            </>
+              {/* Unified DragOverlay — shows card or group ghost */}
+              <DragOverlay dropAnimation={null}>
+                {draggedProject ? (
+                  <DragOverlayCard
+                    project={draggedProject}
+                    previewUrl={getPreviewUrl(draggedProject.id)}
+                    size={cardSize}
+                  />
+                ) : draggedGroup ? (
+                  <DragOverlayGroupHeader
+                    group={draggedGroup}
+                    projectCount={
+                      index.projects.filter(
+                        (p) => p.groupId === draggedGroup.id,
+                      ).length
+                    }
+                  />
+                ) : null}
+              </DragOverlay>
+            </DndContext>
           );
         })()}
 

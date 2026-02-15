@@ -7,6 +7,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -54,7 +55,7 @@ const setCollapsedSection = (id: string, collapsed: boolean) => {
 
 // ─── Sortable card wrapper ──────────────────────────────────────
 
-const SortableProjectCard: React.FC<{
+export const SortableProjectCard: React.FC<{
   id: string;
   children: React.ReactNode;
 }> = ({ id, children }) => {
@@ -83,7 +84,7 @@ const SortableProjectCard: React.FC<{
 
 // ─── Drag overlay card ──────────────────────────────────────────
 
-const DragOverlayCard: React.FC<{
+export const DragOverlayCard: React.FC<{
   project: Project;
   previewUrl: string | null;
   size: number;
@@ -146,6 +147,12 @@ interface ProjectGroupProps {
     orderedIds: string[],
     orderKey: "order" | "favoriteOrder",
   ) => void;
+  // ── External drag mode (for "All" page single DndContext) ──
+  externalDrag?: boolean; // if true, skip internal DndContext; parent provides it
+  sortableIdPrefix?: string; // prefix for sortable IDs (e.g. "fav:" or "card:")
+  // ── Drop target ref from parent (for named groups) ──
+  dropRef?: (node: HTMLElement | null) => void;
+  isDropTarget?: boolean;
 }
 
 export const ProjectGroup: React.FC<ProjectGroupProps> = ({
@@ -177,6 +184,10 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   dragHandleProps,
   forceCollapsed,
   onReorderProjects,
+  externalDrag,
+  sortableIdPrefix = "",
+  dropRef: externalDropRef,
+  isDropTarget: externalIsDropTarget,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(group?.name || "");
@@ -232,7 +243,18 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
     [group?.name, handleRenameSubmit],
   );
 
-  // ─── Card drag-and-drop ─────────────────────────────────────
+  // ─── Droppable header (for external drag mode) ────────────
+
+  // Always call the hook (React rules), but disable when not in external mode
+  // For special sections (favorites, uncategorized), the header is a drop target
+  // For named groups, the SortableGroupItem wrapper provides droppability
+  const needsDroppable = !!externalDrag && isSpecialSection;
+  const { setNodeRef: setDroppableRef, isOver: isHeaderOver } = useDroppable({
+    id: `header:${effectiveId}`,
+    disabled: !needsDroppable,
+  });
+
+  // ─── Card drag-and-drop (internal mode only) ──────────────
 
   const [activeDragProjectId, setActiveDragProjectId] = useState<
     string | null
@@ -285,14 +307,68 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   const displayLabel =
     label || (isUngrouped ? "Uncategorized" : group?.name || "");
 
-  const projectIds = projects.map((p) => p.id);
+  // Use prefixed IDs for sortable items when in external drag mode
+  const sortableIds = projects.map((p) => `${sortableIdPrefix}${p.id}`);
+  // Internal mode uses plain project IDs
+  const internalIds = projects.map((p) => p.id);
 
   const dragProject = activeDragProjectId
     ? projects.find((p) => p.id === activeDragProjectId)
     : null;
 
+  // ── Shared grid content ──────────────────────────────────
+
+  const renderGrid = (ids: string[], idPrefix: string) => (
+    <SortableContext items={ids} strategy={rectSortingStrategy}>
+      <div className="ProjectGroup__grid">
+        {projects.map((project) => (
+          <SortableProjectCard
+            key={project.id}
+            id={`${idPrefix}${project.id}`}
+          >
+            <ProjectCard
+              project={project}
+              isActive={project.id === currentProjectId}
+              justSaved={project.id === justSavedId}
+              previewUrl={getPreviewUrl(project.id)}
+              size={cardSize}
+              groups={allGroups}
+              onSelect={onSelectProject}
+              onOpenInNewTab={onOpenInNewTab}
+              onOpenFileLocation={onOpenFileLocation}
+              onRename={onRenameProject}
+              onDelete={onDeleteProject}
+              onMoveToGroup={onMoveToGroup}
+              onSetCustomPreview={onSetCustomPreview}
+              onRemoveCustomPreview={onRemoveCustomPreview}
+              onToggleFavorite={onToggleFavorite}
+              onCreateCategory={onCreateCategory}
+              availableGroups={availableGroups}
+            />
+          </SortableProjectCard>
+        ))}
+      </div>
+    </SortableContext>
+  );
+
+  const isDropTargetActive =
+    (needsDroppable && isHeaderOver) || !!externalIsDropTarget;
+
+  // Combine droppable refs on the wrapper so the entire section is a drop target
+  const wrapperRef = (node: HTMLElement | null) => {
+    if (needsDroppable) {
+      setDroppableRef(node);
+    }
+    if (externalDropRef) {
+      externalDropRef(node);
+    }
+  };
+
   return (
-    <div className="ProjectGroup">
+    <div
+      ref={wrapperRef}
+      className={`ProjectGroup${isDropTargetActive ? " ProjectGroup--drop-target" : ""}`}
+    >
       <div
         className={`ProjectGroup__header${dragHandleProps ? " ProjectGroup__header--draggable" : ""}`}
         onClick={handleToggle}
@@ -429,7 +505,9 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
         )}
       </div>
 
-      {isExpanded && (
+      {isExpanded && externalDrag && renderGrid(sortableIds, sortableIdPrefix)}
+
+      {isExpanded && !externalDrag && (
         <DndContext
           sensors={cardSensors}
           collisionDetection={closestCenter}
@@ -437,36 +515,7 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
           onDragEnd={handleCardDragEnd}
           onDragCancel={handleCardDragCancel}
         >
-          <SortableContext
-            items={projectIds}
-            strategy={rectSortingStrategy}
-          >
-            <div className="ProjectGroup__grid">
-              {projects.map((project) => (
-                <SortableProjectCard key={project.id} id={project.id}>
-                  <ProjectCard
-                    project={project}
-                    isActive={project.id === currentProjectId}
-                    justSaved={project.id === justSavedId}
-                    previewUrl={getPreviewUrl(project.id)}
-                    size={cardSize}
-                    groups={allGroups}
-                    onSelect={onSelectProject}
-                    onOpenInNewTab={onOpenInNewTab}
-                    onOpenFileLocation={onOpenFileLocation}
-                    onRename={onRenameProject}
-                    onDelete={onDeleteProject}
-                    onMoveToGroup={onMoveToGroup}
-                    onSetCustomPreview={onSetCustomPreview}
-                    onRemoveCustomPreview={onRemoveCustomPreview}
-                    onToggleFavorite={onToggleFavorite}
-                    onCreateCategory={onCreateCategory}
-                    availableGroups={availableGroups}
-                  />
-                </SortableProjectCard>
-              ))}
-            </div>
-          </SortableContext>
+          {renderGrid(internalIds, "")}
 
           <DragOverlay dropAnimation={null}>
             {dragProject ? (
