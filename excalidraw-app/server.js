@@ -135,6 +135,7 @@ function readBody(req) {
 function json(res, data, status = 200) {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(data));
+  return true;
 }
 
 function serveStaticFile(filePath, res) {
@@ -580,8 +581,6 @@ async function handleAPI(req, res, urlPath) {
 
   // ── Videos: upload ──
   if (req.method === "POST" && urlPath.startsWith("/api/videos/upload")) {
-    const url = new URL(urlPath, `http://localhost`);
-    // Parse from original URL to get query params
     const fullUrl = new URL(req.url, `http://${req.headers.host}`);
     const projectId = fullUrl.searchParams.get("projectId");
     const filename = fullUrl.searchParams.get("filename");
@@ -676,7 +675,9 @@ function handleStatic(req, res, urlPath) {
 // ── Server ──────────────────────────────────────────────────────────
 
 const server = http.createServer(async (req, res) => {
-  const urlPath = (req.url || "/").split("?")[0];
+  const rawPath = (req.url || "/").split("?")[0];
+  // Decode %20 etc. for filesystem lookups, but keep raw for API matching
+  const urlPath = decodeURIComponent(rawPath);
 
   // Handle API routes
   if (urlPath.startsWith("/api/")) {

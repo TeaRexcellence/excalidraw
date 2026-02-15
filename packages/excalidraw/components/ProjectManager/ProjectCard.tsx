@@ -203,9 +203,19 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         >
           {previewUrl ? (
             <img
+              // Key on URL so React creates a fresh element when src changes,
+              // clearing any stale inline styles from onError
+              key={previewUrl}
               src={previewUrl}
               alt={project.title}
               draggable={false}
+              onLoad={(e) => {
+                // Ensure image is visible (undo any previous onError hide)
+                e.currentTarget.style.display = "";
+                e.currentTarget.nextElementSibling?.classList.add(
+                  "ProjectCard__placeholder--hidden",
+                );
+              }}
               onError={(e) => {
                 // Hide broken image, show placeholder instead
                 e.currentTarget.style.display = "none";

@@ -105,12 +105,8 @@ function projectFilePlugin(): Plugin {
     return `/projects/${path.relative(projectsDir, projectDir).replace(/\\/g, "/")}`;
   };
 
-  return {
-    name: "project-file-plugin",
-    configureServer(server) {
-      ensureProjectsDir();
-
-      server.middlewares.use(async (req, res, next) => {
+  // Shared middleware for both dev and preview (production) servers
+  const projectMiddleware = async (req: any, res: any, next: any) => {
         // Strip query string for matching
         const urlPath = req.url?.split("?")[0] || "";
 
@@ -154,7 +150,7 @@ function projectFilePlugin(): Plugin {
         // Save projects index
         if (req.method === "POST" && urlPath === "/api/projects/save") {
           const chunks: Buffer[] = [];
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             const data = Buffer.concat(chunks).toString();
             // Validate JSON structure before writing to prevent index corruption
@@ -216,7 +212,7 @@ function projectFilePlugin(): Plugin {
           const scenePath = path.join(projectDir, "scene.excalidraw");
           const chunks: Buffer[] = [];
 
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             const data = Buffer.concat(chunks).toString();
             fs.writeFileSync(scenePath, data);
@@ -246,7 +242,7 @@ function projectFilePlugin(): Plugin {
           const previewPath = path.join(projectDir, "preview.png");
           const chunks: Buffer[] = [];
 
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             const buffer = Buffer.concat(chunks);
             fs.writeFileSync(previewPath, buffer);
@@ -421,7 +417,7 @@ function projectFilePlugin(): Plugin {
         // Open file location in file explorer (for document elements)
         if (req.method === "POST" && urlPath === "/api/files/open-folder") {
           const chunks: Buffer[] = [];
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             try {
               const body = JSON.parse(Buffer.concat(chunks).toString());
@@ -466,7 +462,7 @@ function projectFilePlugin(): Plugin {
           const projectId = moveMatch[1];
           const chunks: Buffer[] = [];
 
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             try {
               const { oldCategoryName, oldTitle, newCategoryName, newTitle } = JSON.parse(Buffer.concat(chunks).toString());
@@ -517,7 +513,7 @@ function projectFilePlugin(): Plugin {
         if (req.method === "POST" && urlPath === "/api/projects/rename-category") {
           const chunks: Buffer[] = [];
 
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             try {
               const { oldName, newName } = JSON.parse(Buffer.concat(chunks).toString());
@@ -598,7 +594,7 @@ function projectFilePlugin(): Plugin {
         if (req.method === "POST" && urlPath === "/api/projects/import") {
           const chunks: Buffer[] = [];
 
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", async () => {
             try {
               const buffer = Buffer.concat(chunks);
@@ -734,7 +730,17 @@ function projectFilePlugin(): Plugin {
         }
 
         next();
-      });
+  };
+
+  return {
+    name: "project-file-plugin",
+    configureServer(server) {
+      ensureProjectsDir();
+      server.middlewares.use(projectMiddleware);
+    },
+    configurePreviewServer(server) {
+      ensureProjectsDir();
+      server.middlewares.use(projectMiddleware);
     },
   };
 }
@@ -790,10 +796,8 @@ function videoFilePlugin(): Plugin {
     return `/projects/${path.relative(projectsDir, projectDir).replace(/\\/g, "/")}`;
   };
 
-  return {
-    name: "video-file-plugin",
-    configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
+  // Shared middleware for both dev and preview (production) servers
+  const videoMiddleware = async (req: any, res: any, next: any) => {
         // Handle video upload - stores in project folder
         if (req.method === "POST" && req.url?.startsWith("/api/videos/upload")) {
           const urlParams = new URL(req.url, `http://${req.headers.host}`);
@@ -832,7 +836,7 @@ function videoFilePlugin(): Plugin {
           const filePath = path.join(videosDir, safeFilename);
           const chunks: Buffer[] = [];
 
-          req.on("data", (chunk) => chunks.push(chunk));
+          req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             const buffer = Buffer.concat(chunks);
             fs.writeFileSync(filePath, buffer);
@@ -909,7 +913,15 @@ function videoFilePlugin(): Plugin {
         }
 
         next();
-      });
+  };
+
+  return {
+    name: "video-file-plugin",
+    configureServer(server) {
+      server.middlewares.use(videoMiddleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(videoMiddleware);
     },
   };
 }
