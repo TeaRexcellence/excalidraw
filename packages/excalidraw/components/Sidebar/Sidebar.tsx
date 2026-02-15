@@ -36,8 +36,8 @@ import "./Sidebar.scss";
 
 import type { SidebarProps, SidebarPropsContextValue } from "./common";
 
-const MIN_SIDEBAR_WIDTH = 200;
-const DEFAULT_SIDEBAR_WIDTH = 256;
+const MIN_SIDEBAR_WIDTH = 280;
+const DEFAULT_SIDEBAR_WIDTH = 280;
 
 /**
  * Flags whether the currently rendered Sidebar is docked or not, for use
@@ -149,7 +149,7 @@ export const SidebarInner = forwardRef(
     const [sidebarWidth, setSidebarWidthState] = useState(() => {
       try {
         const saved = localStorage.getItem("excalidraw-sidebar-width");
-        return saved ? parseInt(saved, 10) : DEFAULT_SIDEBAR_WIDTH;
+        return saved ? Math.max(MIN_SIDEBAR_WIDTH, parseInt(saved, 10)) : DEFAULT_SIDEBAR_WIDTH;
       } catch {
         return DEFAULT_SIDEBAR_WIDTH;
       }
