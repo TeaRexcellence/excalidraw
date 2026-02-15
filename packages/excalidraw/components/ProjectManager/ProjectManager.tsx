@@ -1063,7 +1063,14 @@ export const ProjectManager: React.FC = () => {
         await api.saveIndex(newIndex);
 
         // If we deleted the current project, reset to a blank unsaved canvas
+        // and clear localStorage so stale data doesn't resurface on reload
         if (isCurrentProject) {
+          try {
+            localStorage.removeItem("excalidraw");
+            localStorage.removeItem("excalidraw-state");
+          } catch {
+            // noop
+          }
           app.imageCache.clear();
           const defaults = getDefaultAppState();
           app.syncActionResult({
