@@ -253,10 +253,11 @@ export const ProjectManager: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
 
   // Listen for external save trigger (from main menu)
-  const saveTrigger = useAtomValue(triggerSaveProjectAtom);
+  // useAtom so we can reset to 0 after processing (prevents stale re-fires on remount)
+  const [saveTrigger, setSaveTrigger] = useAtom(triggerSaveProjectAtom);
 
   // Listen for external "new project" trigger (from main menu)
-  const newProjectTrigger = useAtomValue(triggerNewProjectAtom);
+  const [newProjectTrigger, setNewProjectTrigger] = useAtom(triggerNewProjectAtom);
 
   // Listen for external refresh trigger (from VideoEmbedDialog after creating project)
   const refreshTrigger = useAtomValue(triggerRefreshProjectsAtom);
@@ -300,9 +301,7 @@ export const ProjectManager: React.FC = () => {
   const pendingSaveTriggerRef = useRef(0);
   // Track the last saveTrigger value we actually processed, so dependency
   // changes (like saveCurrentProject getting a new ref) don't re-fire the badge.
-  // Initialize to current atom value so stale triggers don't re-fire on
-  // remount (Radix tabs unmount inactive content).
-  const lastProcessedSaveTriggerRef = useRef(saveTrigger);
+  const lastProcessedSaveTriggerRef = useRef(0);
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
   // Sanitize name for folder path (must match server-side sanitization in vite.config.mts)
@@ -937,6 +936,8 @@ export const ProjectManager: React.FC = () => {
     }
 
     lastProcessedSaveTriggerRef.current = saveTrigger;
+    // Reset atom so remounts don't re-fire this stale trigger
+    setSaveTrigger(0);
 
     if (index.currentProjectId === null) {
       // Not saved yet - show save modal
@@ -974,6 +975,7 @@ export const ProjectManager: React.FC = () => {
     if (!isLoading && pendingSaveTriggerRef.current > 0) {
       lastProcessedSaveTriggerRef.current = pendingSaveTriggerRef.current;
       pendingSaveTriggerRef.current = 0;
+      setSaveTrigger(0);
 
       if (index.currentProjectId === null) {
         const name = app.state.name || generateRandomName("");
@@ -1002,21 +1004,17 @@ export const ProjectManager: React.FC = () => {
   }, [isLoading, index.currentProjectId, app.state.name, saveCurrentProject]);
 
   // Handle external "new project" trigger (from main menu → same flow as sidebar button)
-  // Initialize to current atom value so stale triggers don't re-fire on remount.
-  const lastProcessedNewProjectTriggerRef = useRef(newProjectTrigger);
   useEffect(() => {
     if (newProjectTrigger === 0) {
-      return;
-    }
-    if (newProjectTrigger === lastProcessedNewProjectTriggerRef.current) {
       return;
     }
     if (isLoading) {
       return;
     }
-    lastProcessedNewProjectTriggerRef.current = newProjectTrigger;
+    // Reset atom so remounts don't re-fire this stale trigger
+    setNewProjectTrigger(0);
     handleNewProjectClick();
-  }, [newProjectTrigger, isLoading, handleNewProjectClick]);
+  }, [newProjectTrigger, isLoading, handleNewProjectClick, setNewProjectTrigger]);
 
   // Delete project
   const handleDeleteProject = useCallback(
