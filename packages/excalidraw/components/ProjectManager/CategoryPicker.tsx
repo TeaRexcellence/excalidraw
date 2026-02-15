@@ -98,6 +98,13 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
       <div className="CategoryPicker" onMouseDown={(e) => e.stopPropagation()}>
         <div className="CategoryPicker__header">
           <span className="CategoryPicker__title">Move to category</span>
+          <button
+            className="CategoryPicker__closeBtn"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            &times;
+          </button>
         </div>
 
         <div className="CategoryPicker__search">
@@ -152,10 +159,18 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={handleCreateKeyDown}
-                onBlur={handleCreateSubmit}
                 placeholder="Category name..."
                 className="CategoryPicker__createInput"
               />
+              <button
+                className="CategoryPicker__createSubmitBtn"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleCreateSubmit();
+                }}
+              >
+                Add
+              </button>
             </div>
           ) : (
             <button

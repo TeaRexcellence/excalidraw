@@ -1834,6 +1834,8 @@ export const ProjectManager: React.FC = () => {
             onRemoveCustomPreview: handleRemoveCustomPreview,
             onToggleFavorite: handleToggleFavorite,
             onCreateCategory: handleCreateCategory,
+            onNavigateToCategory: (categoryId: string) =>
+              setActiveFilter(categoryId),
             availableGroups,
             getPreviewUrl,
           };
