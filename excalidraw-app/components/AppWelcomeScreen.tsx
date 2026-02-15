@@ -9,12 +9,13 @@ import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { WelcomeScreen } from "@excalidraw/excalidraw/index";
 import React from "react";
 
-import { ProjectManagerData } from "../data/ProjectManagerData";
+import { hasCurrentProjectAtom } from "../data/ProjectManagerData";
+import { useAtomValue } from "../app-jotai";
 
 export const AppWelcomeScreen: React.FC<{}> = React.memo(() => {
   const { t } = useI18n();
   const actionManager = useExcalidrawActionManager();
-  const hasCurrentProject = ProjectManagerData.hasCurrentProject();
+  const hasCurrentProject = useAtomValue(hasCurrentProjectAtom);
 
   return (
     <WelcomeScreen>
@@ -56,7 +57,7 @@ export const AppWelcomeScreen: React.FC<{}> = React.memo(() => {
               }
               shortcut={getShortcutFromShortcutName("saveToActiveFile")}
               icon={ProjectsIcon}
-              title="Save the current canvas as a project"
+              title="Save this canvas to the Project Manager"
             >
               Save Project
             </WelcomeScreen.Center.MenuItem>

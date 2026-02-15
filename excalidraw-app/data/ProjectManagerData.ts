@@ -19,7 +19,7 @@ import type {
   ProjectsIndex,
 } from "@excalidraw/excalidraw/components/ProjectManager/types";
 
-import { atom } from "../app-jotai";
+import { atom, appJotaiStore } from "../app-jotai";
 
 // Re-export types for convenience
 export type { Project, ProjectGroup, ProjectsIndex };
@@ -36,6 +36,9 @@ export const triggerRefreshProjectsAtom = atom(0);
 // Atom for preview cache — persists across component mounts/unmounts
 // Maps projectId → preview URL (data URL for instant display, or disk URL with cache-buster)
 export const previewCacheAtom = atom<Record<string, string>>({});
+
+// Reactive atom so components (e.g. welcome screen) can hide/show based on project state
+export const hasCurrentProjectAtom = atom(false);
 
 const DEFAULT_INDEX: ProjectsIndex = DEFAULT_PROJECTS_INDEX;
 
@@ -232,6 +235,7 @@ export class ProjectManagerData {
   static async getIndex(): Promise<ProjectsIndex> {
     if (!cachedIndex) {
       cachedIndex = await api.getIndex();
+      appJotaiStore.set(hasCurrentProjectAtom, cachedIndex.currentProjectId != null);
     }
     return cachedIndex;
   }
@@ -241,6 +245,7 @@ export class ProjectManagerData {
    */
   static async refreshIndex(): Promise<ProjectsIndex> {
     cachedIndex = await api.getIndex();
+    appJotaiStore.set(hasCurrentProjectAtom, cachedIndex.currentProjectId != null);
     return cachedIndex;
   }
 
@@ -342,6 +347,7 @@ export class ProjectManagerData {
       ...index,
       currentProjectId: projectId,
     };
+    appJotaiStore.set(hasCurrentProjectAtom, projectId != null);
     await api.saveIndex(cachedIndex);
   }
 
@@ -350,6 +356,7 @@ export class ProjectManagerData {
    */
   static updateCachedIndex(index: ProjectsIndex): void {
     cachedIndex = index;
+    appJotaiStore.set(hasCurrentProjectAtom, index.currentProjectId != null);
   }
 
   /**

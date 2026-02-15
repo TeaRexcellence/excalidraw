@@ -769,19 +769,27 @@
 
   &__placeholder {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2px;
     width: 100%;
     height: 100%;
     color: var(--color-gray-40);
     font-size: 0.625rem;
     font-weight: 500;
     letter-spacing: 0.05em;
-    text-transform: uppercase;
 
     &--hidden {
       display: none;
     }
+  }
+
+  &__placeholder-sub {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    opacity: 0.6;
+    letter-spacing: 0.08em;
   }
 
   // ── Info Section ───────────────────────────
