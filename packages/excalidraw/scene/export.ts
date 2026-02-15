@@ -15,7 +15,10 @@ import {
   applyDarkModeFilter,
 } from "@excalidraw/common";
 
-import { getCommonBounds, getElementAbsoluteCoords } from "@excalidraw/element";
+import {
+  getCommonBounds,
+  getElementAbsoluteCoords,
+} from "@excalidraw/element";
 
 import {
   getInitializedImageElements,
@@ -65,7 +68,7 @@ import {
 
 import type { RenderableElementsMap } from "./types";
 
-import type { AppState, BinaryFiles } from "../types";
+import type { AppState, BinaryFiles, NormalizedZoomValue } from "../types";
 
 const truncateText = (element: ExcalidrawTextElement, maxWidth: number) => {
   if (element.width <= maxWidth) {
@@ -226,14 +229,16 @@ export const exportToCanvas = async (
     exportPadding = 0;
   }
 
+  const boundsElements = exportingFrame
+    ? [exportingFrame]
+    : getRootElements(elementsForRender);
+
   const [minX, minY, width, height] = getCanvasSize(
-    exportingFrame ? [exportingFrame] : getRootElements(elementsForRender),
+    boundsElements,
     exportPadding,
   );
 
   const { canvas, scale = 1 } = createCanvas(width, height);
-
-  const defaultAppState = getDefaultAppState();
 
   const { imageCache } = await updateImageCache({
     imageCache: new Map(),
@@ -263,7 +268,7 @@ export const exportToCanvas = async (
       viewBackgroundColor: exportBackground ? viewBackgroundColor : null,
       scrollX: -minX + exportPadding,
       scrollY: -minY + exportPadding,
-      zoom: defaultAppState.zoom,
+      zoom: { value: 1 as NormalizedZoomValue },
       shouldCacheIgnoreZoom: false,
       theme: appState.exportWithDarkMode ? THEME.DARK : THEME.LIGHT,
     },

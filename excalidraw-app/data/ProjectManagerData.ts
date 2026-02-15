@@ -30,6 +30,10 @@ export const triggerSaveProjectAtom = atom(0);
 // Atom to trigger project list refresh from outside ProjectManager component
 export const triggerRefreshProjectsAtom = atom(0);
 
+// Atom for preview cache — persists across component mounts/unmounts
+// Maps projectId → preview URL (data URL for instant display, or disk URL with cache-buster)
+export const previewCacheAtom = atom<Record<string, string>>({});
+
 const DEFAULT_INDEX: ProjectsIndex = DEFAULT_PROJECTS_INDEX;
 
 // API helpers

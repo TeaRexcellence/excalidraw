@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { useAtomValue } from "../../../../excalidraw-app/app-jotai";
+import { useAtom, useAtomValue } from "../../../../excalidraw-app/app-jotai";
 
 import { getDefaultAppState } from "../../appState";
 import { t } from "../../i18n";
@@ -15,6 +15,7 @@ import { DotsIcon } from "../icons";
 import {
   triggerSaveProjectAtom,
   triggerRefreshProjectsAtom,
+  previewCacheAtom,
   ProjectManagerData,
 } from "../../../../excalidraw-app/data/ProjectManagerData";
 
@@ -243,7 +244,7 @@ export const ProjectManager: React.FC = () => {
   const [index, setIndex] = useState<ProjectsIndex>(DEFAULT_PROJECTS_INDEX);
   const [cardSize, setCardSize] = useState(DEFAULT_CARD_SIZE);
   const [isLoading, setIsLoading] = useState(true);
-  const [previewCache, setPreviewCache] = useState<Record<string, string>>({});
+  const [previewCache, setPreviewCache] = useAtom(previewCacheAtom);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Ref to always have current index value (avoids stale closure issues)
@@ -361,14 +362,19 @@ export const ProjectManager: React.FC = () => {
       const categoryFolder = sanitizeFolderName(category);
       const projectFolder = sanitizeFolderName(project.title);
       // Folder on disk uses the ID-suffixed format: {title}_{id}
-      return `/projects/${categoryFolder}/${projectFolder}_${projectId}/preview.png`;
+      // Use updatedAt as cache-buster so browser fetches fresh image after preview changes
+      return `/projects/${categoryFolder}/${projectFolder}_${projectId}/preview.png?t=${project.updatedAt}`;
     },
     [previewCache, index.projects, index.groups, sanitizeFolderName],
   );
 
   // Generate preview using the same export function as "Export Image"
   // This ensures previews look identical to exports (including video thumbnails)
-  const generatePreview = useCallback(async (): Promise<Blob | null> => {
+  // Returns both a data URL (for instant display) and a blob (for disk persistence)
+  const generatePreview = useCallback(async (): Promise<{
+    blob: Blob;
+    dataUrl: string;
+  } | null> => {
     try {
       const elements = app.scene.getNonDeletedElements();
       if (elements.length === 0) {
@@ -388,12 +394,12 @@ export const ProjectManager: React.FC = () => {
         app.files,
         {
           exportBackground: true,
-          exportPadding: 10,
+          exportPadding: 20,
           viewBackgroundColor: app.state.viewBackgroundColor,
         },
         // Custom canvas creator to limit preview size
         (width, height) => {
-          const maxSize = 400;
+          const maxSize = 600;
           const scale = Math.min(maxSize / width, maxSize / height, 1);
           const canvas = document.createElement("canvas");
           canvas.width = Math.round(width * scale);
@@ -402,15 +408,25 @@ export const ProjectManager: React.FC = () => {
         },
       );
 
-      return new Promise((resolve) => {
+      // Get data URL immediately for optimistic display
+      const dataUrl = canvas.toDataURL("image/png");
+
+      // Convert to blob for disk persistence
+      const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob(
-          (blob) => {
-            resolve(blob);
+          (b) => {
+            resolve(b);
           },
           "image/png",
           0.85,
         );
       });
+
+      if (!blob) {
+        return null;
+      }
+
+      return { blob, dataUrl };
     } catch (err) {
       console.error("[Preview] Failed to generate preview:", err);
       return null;
@@ -457,13 +473,22 @@ export const ProjectManager: React.FC = () => {
           return; // Don't overwrite custom preview
         }
 
-        const previewBlob = await generatePreview();
-        if (previewBlob) {
-          const previewUrl = await api.savePreview(projectId, previewBlob);
+        const previewResult = await generatePreview();
+        if (previewResult) {
+          // Optimistic: show data URL immediately
           setPreviewCache((prev) => ({
             ...prev,
-            [projectId]: `${previewUrl}?t=${Date.now()}`,
+            [projectId]: previewResult.dataUrl,
           }));
+          // Background: save to disk and update with persistent URL
+          api.savePreview(projectId, previewResult.blob).then((previewUrl) => {
+            if (previewUrl) {
+              setPreviewCache((prev) => ({
+                ...prev,
+                [projectId]: `${previewUrl}?t=${Date.now()}`,
+              }));
+            }
+          });
         }
       }
     },
@@ -482,13 +507,22 @@ export const ProjectManager: React.FC = () => {
         return;
       }
 
-      const previewBlob = await generatePreview();
-      if (previewBlob) {
-        const previewUrl = await api.savePreview(projectId, previewBlob);
+      const previewResult = await generatePreview();
+      if (previewResult) {
+        // Optimistic: show data URL immediately
         setPreviewCache((prev) => ({
           ...prev,
-          [projectId]: `${previewUrl}?t=${Date.now()}`,
+          [projectId]: previewResult.dataUrl,
         }));
+        // Background: save to disk and update with persistent URL
+        api.savePreview(projectId, previewResult.blob).then((previewUrl) => {
+          if (previewUrl) {
+            setPreviewCache((prev) => ({
+              ...prev,
+              [projectId]: `${previewUrl}?t=${Date.now()}`,
+            }));
+          }
+        });
       }
     };
 
@@ -498,6 +532,43 @@ export const ProjectManager: React.FC = () => {
       ProjectManagerData.setPreviewGenerator(null);
     };
   }, [generatePreview]);
+
+  // Eagerly generate preview for the current project on mount/load
+  // This ensures the preview is always fresh and visible immediately
+  useEffect(() => {
+    if (isLoading || !index.currentProjectId) {
+      return;
+    }
+    const currentProject = index.projects.find(
+      (p) => p.id === index.currentProjectId,
+    );
+    if (currentProject?.hasCustomPreview) {
+      return;
+    }
+    // Small delay to let the canvas finish rendering after project load
+    const timer = window.setTimeout(async () => {
+      const previewResult = await generatePreview();
+      if (previewResult && index.currentProjectId) {
+        setPreviewCache((prev) => ({
+          ...prev,
+          [index.currentProjectId!]: previewResult.dataUrl,
+        }));
+        api
+          .savePreview(index.currentProjectId, previewResult.blob)
+          .then((previewUrl) => {
+            if (previewUrl && index.currentProjectId) {
+              setPreviewCache((prev) => ({
+                ...prev,
+                [index.currentProjectId!]: `${previewUrl}?t=${Date.now()}`,
+              }));
+            }
+          });
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+    // Only run on initial load, not on every index change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
 
   // Open modal to create new project
   const handleNewProjectClick = useCallback(() => {
@@ -1178,13 +1249,22 @@ export const ProjectManager: React.FC = () => {
       await api.saveIndex(newIndex);
 
       // Regenerate preview from canvas
-      const previewBlob = await generatePreview();
-      if (previewBlob) {
-        const previewUrl = await api.savePreview(projectId, previewBlob);
+      const previewResult = await generatePreview();
+      if (previewResult) {
+        // Optimistic: show data URL immediately
         setPreviewCache((prev) => ({
           ...prev,
-          [projectId]: `${previewUrl}?t=${Date.now()}`,
+          [projectId]: previewResult.dataUrl,
         }));
+        // Background: save to disk and update with persistent URL
+        api.savePreview(projectId, previewResult.blob).then((previewUrl) => {
+          if (previewUrl) {
+            setPreviewCache((prev) => ({
+              ...prev,
+              [projectId]: `${previewUrl}?t=${Date.now()}`,
+            }));
+          }
+        });
       }
     },
     [index, generatePreview],
