@@ -326,10 +326,12 @@
     "document": "Insert Document",
     "projectLink": "Project Link"
   },
-  "codeBlockDialog": {
-    "title": "Create Code Block",
+  "codeBlockEditor": {
+    "title": "Code Editor",
     "language": "Language",
-    "create": "Create"
+    "lineNumbers": "Line numbers",
+    "importFile": "Import file",
+    "done": "Done"
   },
   "documentDialog": {
     "insertTitle": "Insert Document",

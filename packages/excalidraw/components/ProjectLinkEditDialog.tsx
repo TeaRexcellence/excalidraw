@@ -113,7 +113,16 @@ export const ProjectLinkEditDialog: React.FC<ProjectLinkEditDialogProps> = ({
     });
 
     onClose();
-  }, [app, element, title, description, selectedProjectId, selectedProject, imageBase64, onClose]);
+  }, [
+    app,
+    element,
+    title,
+    description,
+    selectedProjectId,
+    selectedProject,
+    imageBase64,
+    onClose,
+  ]);
 
   if (!element) {
     onClose();

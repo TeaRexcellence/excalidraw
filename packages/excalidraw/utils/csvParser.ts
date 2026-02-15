@@ -14,8 +14,7 @@ export const parseCSV = (text: string): string[][] => {
     delimiter = "\t";
   } else if (
     firstLine.includes(";") &&
-    (firstLine.match(/;/g) || []).length >=
-      (firstLine.match(/,/g) || []).length
+    (firstLine.match(/;/g) || []).length >= (firstLine.match(/,/g) || []).length
   ) {
     delimiter = ";";
   }
@@ -42,25 +41,23 @@ export const parseCSV = (text: string): string[][] => {
       } else {
         currentField += char;
       }
-    } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === delimiter) {
-        currentRow.push(currentField.trim());
-        currentField = "";
-      } else if (char === "\n" || (char === "\r" && nextChar === "\n")) {
-        currentRow.push(currentField.trim());
-        if (currentRow.some((cell) => cell !== "")) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-        currentField = "";
-        if (char === "\r") {
-          i++; // skip \n in \r\n
-        }
-      } else {
-        currentField += char;
+    } else if (char === '"') {
+      inQuotes = true;
+    } else if (char === delimiter) {
+      currentRow.push(currentField.trim());
+      currentField = "";
+    } else if (char === "\n" || (char === "\r" && nextChar === "\n")) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some((cell) => cell !== "")) {
+        rows.push(currentRow);
       }
+      currentRow = [];
+      currentField = "";
+      if (char === "\r") {
+        i++; // skip \n in \r\n
+      }
+    } else {
+      currentField += char;
     }
   }
 

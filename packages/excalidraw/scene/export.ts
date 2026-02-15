@@ -480,8 +480,9 @@ export const exportToSvg = async (
   const renderEmbeddables = opts?.renderEmbeddables ?? false;
 
   // Prefetch video thumbnails for SVG export
-  const videoThumbnails =
-    await prefetchVideoThumbnailsAsDataUrls(elementsForRender);
+  const videoThumbnails = await prefetchVideoThumbnailsAsDataUrls(
+    elementsForRender,
+  );
 
   renderSceneToSvg(
     elementsForRender,

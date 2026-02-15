@@ -283,10 +283,7 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
 
   useEffect(() => {
     const eventHandler = (event: KeyboardEvent) => {
-      if (
-        event.key === KEYS.ESCAPE &&
-        !app.state.openPopup
-      ) {
+      if (event.key === KEYS.ESCAPE && !app.state.openPopup) {
         event.preventDefault();
         event.stopPropagation();
         stableState.onClose();
@@ -350,9 +347,7 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
 
   // Detect docked sidebar to offset the overlay
   const sidebarEl = document.querySelector(".sidebar.sidebar--docked");
-  const sidebarOffset = sidebarEl
-    ? sidebarEl.getBoundingClientRect().width
-    : 0;
+  const sidebarOffset = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
 
   return createPortal(
     <div
@@ -363,10 +358,7 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
           : undefined
       }
     >
-      <div
-        className="search-menu-overlay__backdrop"
-        onClick={onClose}
-      />
+      <div className="search-menu-overlay__backdrop" onClick={onClose} />
       <div className="search-menu-overlay__content">
         <div className="layer-ui__search">
           <div className="layer-ui__search-header">

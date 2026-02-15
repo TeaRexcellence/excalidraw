@@ -661,7 +661,12 @@ export const getYouTubeVideoId = (url: string): string | null => {
  */
 export const getYouTubeThumbnailUrl = (
   videoId: string,
-  quality: "default" | "hqdefault" | "mqdefault" | "sddefault" | "maxresdefault" = "hqdefault",
+  quality:
+    | "default"
+    | "hqdefault"
+    | "mqdefault"
+    | "sddefault"
+    | "maxresdefault" = "hqdefault",
 ): string => {
   return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
 };
@@ -731,7 +736,8 @@ export const captureVideoFrame = (
 
     const onLoaded = () => {
       // Seek to the specified time (or 1 second if video is long enough)
-      const targetTime = seekTime > 0 ? seekTime : Math.min(1, video.duration / 2);
+      const targetTime =
+        seekTime > 0 ? seekTime : Math.min(1, video.duration / 2);
       video.currentTime = targetTime;
     };
 
@@ -781,7 +787,9 @@ export const getVideoThumbnail = async (
 /**
  * Load an image from a URL and return it as an HTMLImageElement
  */
-export const loadImageFromUrl = (url: string): Promise<HTMLImageElement | null> => {
+export const loadImageFromUrl = (
+  url: string,
+): Promise<HTMLImageElement | null> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";

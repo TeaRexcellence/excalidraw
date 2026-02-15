@@ -290,7 +290,6 @@ import type {
   SceneElementsMap,
   ExcalidrawBindableElement,
   ExcalidrawTableElement,
-  ExcalidrawCodeBlockElement,
 } from "@excalidraw/element/types";
 
 import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
@@ -424,8 +423,7 @@ import { ImageViewButton } from "../components/ImageViewButton";
 import { LaserTrails } from "../laser-trails";
 import { withBatchedUpdates, withBatchedUpdatesThrottled } from "../reactUtils";
 import { textWysiwyg } from "../wysiwyg/textWysiwyg";
-// Table editor is now handled via TableEditorModal dialog
-import { openCodeBlockEditor } from "../wysiwyg/codeBlockEditor";
+// Table & code block editors are now handled via their respective Modal dialogs
 import { isOverScrollBars } from "../scene/scrollbars";
 
 import { isMaybeMermaidDefinition } from "../mermaid";
@@ -2035,7 +2033,6 @@ class App extends React.Component<AppProps, AppState> {
                         </LayerUI>
 
                         <div className="excalidraw-textEditorContainer" />
-                        <div className="excalidraw-codeBlockEditorContainer" />
                         <div className="excalidraw-contextMenuContainer" />
                         <div className="excalidraw-eye-dropper-container" />
                         <SVGLayer
@@ -2142,8 +2139,7 @@ class App extends React.Component<AppProps, AppState> {
                                 this.setState({
                                   openDialog: {
                                     name: "imageViewer",
-                                    imageElementId:
-                                      firstSelectedElement.id,
+                                    imageElementId: firstSelectedElement.id,
                                   },
                                 })
                               }
@@ -4111,7 +4107,6 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   private cancelInProgressAnimation: (() => void) | null = null;
-  private codeBlockEditorCloseHandler: (() => void) | null = null;
 
   scrollToContent = (
     /**
@@ -5814,20 +5809,6 @@ class App extends React.Component<AppProps, AppState> {
     });
   };
 
-  private startCodeBlockEditing = (element: ExcalidrawCodeBlockElement) => {
-    if (this.codeBlockEditorCloseHandler) {
-      this.codeBlockEditorCloseHandler();
-    }
-    this.codeBlockEditorCloseHandler = openCodeBlockEditor({
-      element,
-      excalidrawContainer: this.excalidrawContainerRef.current,
-      scene: this.scene,
-      onClose: () => {
-        this.codeBlockEditorCloseHandler = null;
-      },
-    });
-  };
-
   private startTextEditing = ({
     sceneX,
     sceneY,
@@ -6137,14 +6118,14 @@ class App extends React.Component<AppProps, AppState> {
       }
     }
 
-    // Handle double-click on codeblock elements
+    // Handle double-click on codeblock elements — open React modal editor
     {
       const hitElement = this.getElementAtPosition(sceneX, sceneY);
       if (hitElement && isCodeBlockElement(hitElement)) {
         this.setState({
           selectedElementIds: { [hitElement.id]: true },
+          openDialog: { name: "codeBlockEditor", elementId: hitElement.id },
         });
-        this.startCodeBlockEditing(hitElement as ExcalidrawCodeBlockElement);
         return;
       }
     }
@@ -6958,8 +6939,7 @@ class App extends React.Component<AppProps, AppState> {
           if (
             hitElement &&
             isProjectLinkElement(hitElement) &&
-            scenePointerX - hitElement.x >=
-              hitElement.width * (1 - 48 / 240)
+            scenePointerX - hitElement.x >= hitElement.width * (1 - 48 / 240)
           ) {
             setCursor(this.interactiveCanvas, CURSOR_TYPE.POINTER);
           } else if (
@@ -11646,18 +11626,24 @@ class App extends React.Component<AppProps, AppState> {
       for (const file of videoFiles) {
         try {
           // Upload video to server
-          const projectId = window.location.hash?.slice(1).split("/")[0] || "default";
+          const projectId =
+            window.location.hash?.slice(1).split("/")[0] || "default";
           const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
 
           const response = await fetch(
-            `/api/videos/upload?projectId=${encodeURIComponent(projectId)}&filename=${encodeURIComponent(filename)}`,
+            `/api/videos/upload?projectId=${encodeURIComponent(
+              projectId,
+            )}&filename=${encodeURIComponent(filename)}`,
             { method: "POST", body: file },
           );
 
           if (response.ok) {
             const data = await response.json();
             // Get video dimensions
-            const dimensions = await new Promise<{ width: number; height: number }>((resolve) => {
+            const dimensions = await new Promise<{
+              width: number;
+              height: number;
+            }>((resolve) => {
               const video = document.createElement("video");
               video.preload = "metadata";
               const blobUrl = URL.createObjectURL(file);
@@ -12221,8 +12207,7 @@ class App extends React.Component<AppProps, AppState> {
         shouldRotateWithDiscreteAngle(event),
         shouldResizeFromCenter(event),
         selectedElements.some(
-          (element) =>
-            isImageElement(element) || isProjectLinkElement(element),
+          (element) => isImageElement(element) || isProjectLinkElement(element),
         )
           ? !shouldMaintainAspectRatio(event)
           : shouldMaintainAspectRatio(event),
@@ -12359,6 +12344,14 @@ class App extends React.Component<AppProps, AppState> {
     (
       event: WheelEvent | React.WheelEvent<HTMLDivElement | HTMLCanvasElement>,
     ) => {
+      // Let modal editors (code block, etc.) handle their own scroll
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest(".CodeBlockEditorModal")
+      ) {
+        return;
+      }
+
       if (
         !(
           event.target instanceof HTMLCanvasElement ||

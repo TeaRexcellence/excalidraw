@@ -163,11 +163,17 @@
     --button-hover-bg: var(--sidebar-button-hover-bg, transparent);
     --button-active-bg: var(--sidebar-button-active-bg, var(--color-primary));
     --button-hover-color: var(--sidebar-button-active-bg, var(--color-primary));
-    --button-hover-border: var(--sidebar-button-active-bg, var(--color-primary));
+    --button-hover-border: var(
+      --sidebar-button-active-bg,
+      var(--color-primary)
+    );
 
     &[data-state="active"] {
       --button-bg: var(--sidebar-button-active-bg, var(--color-primary));
-      --button-hover-bg: var(--sidebar-button-active-bg, var(--color-primary-darker));
+      --button-hover-bg: var(
+        --sidebar-button-active-bg,
+        var(--color-primary-darker)
+      );
       --button-hover-color: var(--color-icon-white);
       --button-border: var(--sidebar-button-active-bg, var(--color-primary));
       color: var(--color-icon-white);

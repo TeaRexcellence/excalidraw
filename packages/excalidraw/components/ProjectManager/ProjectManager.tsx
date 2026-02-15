@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
-import { useAtomValue } from "jotai";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
+
+import { useAtomValue } from "../../../../excalidraw-app/app-jotai";
 
 import { getDefaultAppState } from "../../appState";
 import { t } from "../../i18n";
@@ -11,14 +12,24 @@ import { exportToCanvas } from "../../scene/export";
 import { Dialog } from "../Dialog";
 import { FilledButton } from "../FilledButton";
 import { DotsIcon } from "../icons";
-import { triggerSaveProjectAtom, triggerRefreshProjectsAtom, ProjectManagerData } from "../../../../excalidraw-app/data/ProjectManagerData";
+import {
+  triggerSaveProjectAtom,
+  triggerRefreshProjectsAtom,
+  ProjectManagerData,
+} from "../../../../excalidraw-app/data/ProjectManagerData";
 
 import { ProjectCard } from "./ProjectCard";
 import { ProjectGroup } from "./ProjectGroup";
 import { CategoryBar } from "./CategoryBar";
-import type { FilterType } from "./CategoryBar";
-import type { Project, ProjectGroup as ProjectGroupType, ProjectsIndex } from "./types";
+
 import { DEFAULT_PROJECTS_INDEX } from "./types";
+
+import type { FilterType } from "./CategoryBar";
+import type {
+  Project,
+  ProjectGroup as ProjectGroupType,
+  ProjectsIndex,
+} from "./types";
 
 import "./ProjectManager.scss";
 
@@ -111,7 +122,9 @@ const api = {
 
   async deleteProject(projectId: string): Promise<boolean> {
     try {
-      const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         console.error("[ProjectManager] Failed to delete project:", res.status);
         return false;
@@ -161,7 +174,11 @@ const api = {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        console.error("[ProjectManager] Failed to rename category:", res.status, data.error);
+        console.error(
+          "[ProjectManager] Failed to rename category:",
+          res.status,
+          data.error,
+        );
         return false;
       }
       return true;
@@ -174,8 +191,30 @@ const api = {
 
 // Generate a random project/group name
 const generateRandomName = (prefix: string): string => {
-  const adjectives = ["Swift", "Bright", "Cool", "Fresh", "Bold", "Calm", "Wild", "Neat", "Soft", "Sharp"];
-  const nouns = ["Canvas", "Sketch", "Draft", "Design", "Board", "Space", "Flow", "Wave", "Spark", "Frame"];
+  const adjectives = [
+    "Swift",
+    "Bright",
+    "Cool",
+    "Fresh",
+    "Bold",
+    "Calm",
+    "Wild",
+    "Neat",
+    "Soft",
+    "Sharp",
+  ];
+  const nouns = [
+    "Canvas",
+    "Sketch",
+    "Draft",
+    "Design",
+    "Board",
+    "Space",
+    "Flow",
+    "Wave",
+    "Spark",
+    "Frame",
+  ];
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   return `${prefix} ${adj} ${noun}`;
@@ -189,7 +228,15 @@ const generateRandomName = (prefix: string): string => {
 // "rename-project" = renaming existing project
 // "import" = importing a project from zip
 // "reset" = reset project manager (delete all projects)
-type ModalType = "project" | "save" | "group" | "confirm-save" | "rename-project" | "import" | "reset" | null;
+type ModalType =
+  | "project"
+  | "save"
+  | "group"
+  | "confirm-save"
+  | "rename-project"
+  | "import"
+  | "reset"
+  | null;
 
 export const ProjectManager: React.FC = () => {
   const app = useApp();
@@ -238,7 +285,9 @@ export const ProjectManager: React.FC = () => {
   const refreshTrigger = useAtomValue(triggerRefreshProjectsAtom);
 
   // Check if current canvas has unsaved content (not in project manager)
-  const hasUnsavedCanvas = index.currentProjectId === null && app.scene.getNonDeletedElements().length > 0;
+  const hasUnsavedCanvas =
+    index.currentProjectId === null &&
+    app.scene.getNonDeletedElements().length > 0;
 
   // Load projects on mount
   useEffect(() => {
@@ -306,7 +355,8 @@ export const ProjectManager: React.FC = () => {
         return null;
       }
       const category = project.groupId
-        ? index.groups.find((g) => g.id === project.groupId)?.name || "Uncategorized"
+        ? index.groups.find((g) => g.id === project.groupId)?.name ||
+          "Uncategorized"
         : "Uncategorized";
       const categoryFolder = sanitizeFolderName(category);
       const projectFolder = sanitizeFolderName(project.title);
@@ -353,9 +403,13 @@ export const ProjectManager: React.FC = () => {
       );
 
       return new Promise((resolve) => {
-        canvas.toBlob((blob) => {
-          resolve(blob);
-        }, "image/png", 0.85);
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob);
+          },
+          "image/png",
+          0.85,
+        );
       });
     } catch (err) {
       console.error("[Preview] Failed to generate preview:", err);
@@ -369,7 +423,6 @@ export const ProjectManager: React.FC = () => {
       const elements = app.scene.getElementsIncludingDeleted();
       const appState = app.state;
       const files = app.files;
-
 
       const sceneData = {
         type: "excalidraw",
@@ -409,7 +462,7 @@ export const ProjectManager: React.FC = () => {
           const previewUrl = await api.savePreview(projectId, previewBlob);
           setPreviewCache((prev) => ({
             ...prev,
-            [projectId]: previewUrl + "?t=" + Date.now(),
+            [projectId]: `${previewUrl}?t=${Date.now()}`,
           }));
         }
       }
@@ -434,7 +487,7 @@ export const ProjectManager: React.FC = () => {
         const previewUrl = await api.savePreview(projectId, previewBlob);
         setPreviewCache((prev) => ({
           ...prev,
-          [projectId]: previewUrl + "?t=" + Date.now(),
+          [projectId]: `${previewUrl}?t=${Date.now()}`,
         }));
       }
     };
@@ -492,7 +545,9 @@ export const ProjectManager: React.FC = () => {
   // Helper to get category name by group ID
   const getCategoryName = useCallback(
     (groupId: string | null): string | null => {
-      if (!groupId) return null;
+      if (!groupId) {
+        return null;
+      }
       return index.groups.find((g) => g.id === groupId)?.name || null;
     },
     [index.groups],
@@ -502,19 +557,29 @@ export const ProjectManager: React.FC = () => {
   const doRenameProject = useCallback(
     async (projectId: string, newTitle: string) => {
       const project = index.projects.find((p) => p.id === projectId);
-      if (!project) return;
+      if (!project) {
+        return;
+      }
 
       const oldTitle = project.title;
       const categoryName = getCategoryName(project.groupId);
 
       // Move folder first (rename)
-      await api.moveProject(projectId, categoryName, oldTitle, categoryName, newTitle);
+      await api.moveProject(
+        projectId,
+        categoryName,
+        oldTitle,
+        categoryName,
+        newTitle,
+      );
 
       // Then update index
       const newIndex: ProjectsIndex = {
         ...index,
         projects: index.projects.map((p) =>
-          p.id === projectId ? { ...p, title: newTitle, updatedAt: Date.now() } : p,
+          p.id === projectId
+            ? { ...p, title: newTitle, updatedAt: Date.now() }
+            : p,
         ),
       };
       setIndex(newIndex);
@@ -525,7 +590,13 @@ export const ProjectManager: React.FC = () => {
 
   // Confirm create from modal
   const handleModalConfirm = useCallback(async () => {
-    const name = modalName.trim() || (modalType === "save" ? "Untitled Project" : modalType === "project" ? "Untitled Project" : "Untitled Group");
+    const name =
+      modalName.trim() ||
+      (modalType === "save"
+        ? "Untitled Project"
+        : modalType === "project"
+        ? "Untitled Project"
+        : "Untitled Group");
 
     if (modalType === "save") {
       // Save current canvas as a new project (keeps existing content)
@@ -635,7 +706,16 @@ export const ProjectManager: React.FC = () => {
     }
 
     handleModalClose();
-  }, [app, index, modalName, modalType, saveCurrentProject, handleModalClose, renameProjectId, doRenameProject]);
+  }, [
+    app,
+    index,
+    modalName,
+    modalType,
+    saveCurrentProject,
+    handleModalClose,
+    renameProjectId,
+    doRenameProject,
+  ]);
 
   // Handle modal key press
   const handleModalKeyDown = useCallback(
@@ -655,7 +735,12 @@ export const ProjectManager: React.FC = () => {
       // Use ref to get current index value (avoids stale closure)
       const currentIndex = indexRef.current;
 
-      console.log("[ProjectManager] Selecting project:", projectId, "current:", currentIndex.currentProjectId);
+      console.log(
+        "[ProjectManager] Selecting project:",
+        projectId,
+        "current:",
+        currentIndex.currentProjectId,
+      );
 
       // Prevent concurrent operations
       if (operationInProgress.current) {
@@ -674,7 +759,10 @@ export const ProjectManager: React.FC = () => {
       try {
         // Auto-save current project first (save is already cancelled by beginProjectSwitch)
         if (currentIndex.currentProjectId) {
-          console.log("[ProjectManager] Saving current project:", currentIndex.currentProjectId);
+          console.log(
+            "[ProjectManager] Saving current project:",
+            currentIndex.currentProjectId,
+          );
           await saveCurrentProject(currentIndex.currentProjectId);
         }
 
@@ -702,7 +790,10 @@ export const ProjectManager: React.FC = () => {
 
         // NOW update the canvas (which triggers onChange → save)
         if (sceneData) {
-          console.log("[ProjectManager] Updating scene with elements:", sceneData.elements?.length || 0);
+          console.log(
+            "[ProjectManager] Updating scene with elements:",
+            sceneData.elements?.length || 0,
+          );
           app.syncActionResult({
             elements: sceneData.elements || [],
             appState: {
@@ -723,7 +814,9 @@ export const ProjectManager: React.FC = () => {
             }
           }
         } else {
-          console.log("[ProjectManager] No scene data found, creating empty scene");
+          console.log(
+            "[ProjectManager] No scene data found, creating empty scene",
+          );
           app.syncActionResult({
             elements: [],
             appState: {
@@ -794,8 +887,12 @@ export const ProjectManager: React.FC = () => {
 
   // Handle external save trigger (must be after saveCurrentProject is defined)
   useEffect(() => {
-    if (saveTrigger === 0) return; // Skip initial render
-    if (saveTrigger === lastProcessedSaveTriggerRef.current) return; // Already handled
+    if (saveTrigger === 0) {
+      return;
+    } // Skip initial render
+    if (saveTrigger === lastProcessedSaveTriggerRef.current) {
+      return;
+    } // Already handled
 
     if (isLoading) {
       // Store for later when loading completes
@@ -819,14 +916,22 @@ export const ProjectManager: React.FC = () => {
 
         // Scroll to current project
         setTimeout(() => {
-          const activeCard = contentRef.current?.querySelector(".ProjectCard--active");
+          const activeCard = contentRef.current?.querySelector(
+            ".ProjectCard--active",
+          );
           if (activeCard) {
             activeCard.scrollIntoView({ behavior: "smooth", block: "center" });
           }
         }, 100);
       });
     }
-  }, [saveTrigger, index.currentProjectId, app.state.name, isLoading, saveCurrentProject]);
+  }, [
+    saveTrigger,
+    index.currentProjectId,
+    app.state.name,
+    isLoading,
+    saveCurrentProject,
+  ]);
 
   // Handle pending save trigger after loading completes
   useEffect(() => {
@@ -845,9 +950,14 @@ export const ProjectManager: React.FC = () => {
           setTimeout(() => setJustSavedId(null), 1500);
 
           setTimeout(() => {
-            const activeCard = contentRef.current?.querySelector(".ProjectCard--active");
+            const activeCard = contentRef.current?.querySelector(
+              ".ProjectCard--active",
+            );
             if (activeCard) {
-              activeCard.scrollIntoView({ behavior: "smooth", block: "center" });
+              activeCard.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
             }
           }, 100);
         });
@@ -903,19 +1013,29 @@ export const ProjectManager: React.FC = () => {
   const handleMoveToGroup = useCallback(
     async (projectId: string, newGroupId: string | null) => {
       const project = index.projects.find((p) => p.id === projectId);
-      if (!project) return;
+      if (!project) {
+        return;
+      }
 
       const oldCategoryName = getCategoryName(project.groupId);
       const newCategoryName = getCategoryName(newGroupId);
 
       // Move folder to new category
-      await api.moveProject(projectId, oldCategoryName, project.title, newCategoryName, project.title);
+      await api.moveProject(
+        projectId,
+        oldCategoryName,
+        project.title,
+        newCategoryName,
+        project.title,
+      );
 
       // Then update index
       const newIndex: ProjectsIndex = {
         ...index,
         projects: index.projects.map((p) =>
-          p.id === projectId ? { ...p, groupId: newGroupId, updatedAt: Date.now() } : p,
+          p.id === projectId
+            ? { ...p, groupId: newGroupId, updatedAt: Date.now() }
+            : p,
         ),
       };
       setIndex(newIndex);
@@ -943,7 +1063,9 @@ export const ProjectManager: React.FC = () => {
   const handleRenameGroup = useCallback(
     async (groupId: string, newName: string) => {
       const group = index.groups.find((g) => g.id === groupId);
-      if (!group) return;
+      if (!group) {
+        return;
+      }
 
       const oldName = group.name;
 
@@ -967,14 +1089,24 @@ export const ProjectManager: React.FC = () => {
   const handleDeleteGroup = useCallback(
     async (groupId: string) => {
       const group = index.groups.find((g) => g.id === groupId);
-      if (!group) return;
+      if (!group) {
+        return;
+      }
 
       const categoryName = group.name;
 
       // Move all projects in this group to Uncategorized
-      const projectsInGroup = index.projects.filter((p) => p.groupId === groupId);
+      const projectsInGroup = index.projects.filter(
+        (p) => p.groupId === groupId,
+      );
       for (const project of projectsInGroup) {
-        await api.moveProject(project.id, categoryName, project.title, null, project.title);
+        await api.moveProject(
+          project.id,
+          categoryName,
+          project.title,
+          null,
+          project.title,
+        );
       }
 
       // Then update index
@@ -1002,7 +1134,9 @@ export const ProjectManager: React.FC = () => {
         const newIndex: ProjectsIndex = {
           ...index,
           projects: index.projects.map((p) =>
-            p.id === projectId ? { ...p, hasCustomPreview: true, updatedAt: Date.now() } : p,
+            p.id === projectId
+              ? { ...p, hasCustomPreview: true, updatedAt: Date.now() }
+              : p,
           ),
         };
         // Sync all caches synchronously so the auto-save preview generator
@@ -1015,7 +1149,7 @@ export const ProjectManager: React.FC = () => {
         // Update preview cache to show the new image
         setPreviewCache((prev) => ({
           ...prev,
-          [projectId]: previewUrl + "?t=" + Date.now(),
+          [projectId]: `${previewUrl}?t=${Date.now()}`,
         }));
       } catch (err) {
         console.error("Failed to set custom preview:", err);
@@ -1031,7 +1165,9 @@ export const ProjectManager: React.FC = () => {
       const newIndex: ProjectsIndex = {
         ...index,
         projects: index.projects.map((p) =>
-          p.id === projectId ? { ...p, hasCustomPreview: false, updatedAt: Date.now() } : p,
+          p.id === projectId
+            ? { ...p, hasCustomPreview: false, updatedAt: Date.now() }
+            : p,
         ),
       };
       // Sync all caches synchronously so the auto-save preview generator
@@ -1047,7 +1183,7 @@ export const ProjectManager: React.FC = () => {
         const previewUrl = await api.savePreview(projectId, previewBlob);
         setPreviewCache((prev) => ({
           ...prev,
-          [projectId]: previewUrl + "?t=" + Date.now(),
+          [projectId]: `${previewUrl}?t=${Date.now()}`,
         }));
       }
     },
@@ -1058,7 +1194,9 @@ export const ProjectManager: React.FC = () => {
   const handleToggleFavorite = useCallback(
     async (projectId: string) => {
       const project = index.projects.find((p) => p.id === projectId);
-      if (!project) return;
+      if (!project) {
+        return;
+      }
 
       const newIndex: ProjectsIndex = {
         ...index,
@@ -1104,14 +1242,18 @@ export const ProjectManager: React.FC = () => {
   // Close settings dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+      if (
+        settingsRef.current &&
+        !settingsRef.current.contains(e.target as Node)
+      ) {
         setSettingsOpen(false);
       }
     };
 
     if (settingsOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [settingsOpen]);
 
@@ -1125,9 +1267,12 @@ export const ProjectManager: React.FC = () => {
     setIsExporting(true);
 
     try {
-      const response = await fetch(`/api/projects/${index.currentProjectId}/export`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `/api/projects/${index.currentProjectId}/export`,
+        {
+          method: "POST",
+        },
+      );
 
       if (!response.ok) {
         throw new Error("Export failed");
@@ -1163,48 +1308,51 @@ export const ProjectManager: React.FC = () => {
   }, []);
 
   // Handle import file selection
-  const handleImportFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    // Reset input for re-selection
-    e.target.value = "";
-
-    if (!file.name.endsWith(".zip")) {
-      setImportError("Please select a .zip file");
-      return;
-    }
-
-    setIsImporting(true);
-    setImportError(null);
-
-    try {
-      const response = await fetch("/api/projects/import", {
-        method: "POST",
-        body: file,
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Import failed");
+  const handleImportFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) {
+        return;
       }
 
-      // Refresh the project list
-      const newIndex = await api.getIndex();
-      setIndex(newIndex);
+      // Reset input for re-selection
+      e.target.value = "";
 
-      // Close the modal
-      setModalType(null);
-    } catch (err) {
-      console.error("[ProjectManager] Import failed:", err);
-      setImportError(err instanceof Error ? err.message : "Import failed");
-    } finally {
-      setIsImporting(false);
-    }
-  }, []);
+      if (!file.name.endsWith(".zip")) {
+        setImportError("Please select a .zip file");
+        return;
+      }
+
+      setIsImporting(true);
+      setImportError(null);
+
+      try {
+        const response = await fetch("/api/projects/import", {
+          method: "POST",
+          body: file,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Import failed");
+        }
+
+        // Refresh the project list
+        const newIndex = await api.getIndex();
+        setIndex(newIndex);
+
+        // Close the modal
+        setModalType(null);
+      } catch (err) {
+        console.error("[ProjectManager] Import failed:", err);
+        setImportError(err instanceof Error ? err.message : "Import failed");
+      } finally {
+        setIsImporting(false);
+      }
+    },
+    [],
+  );
 
   // Open reset modal
   const handleResetClick = useCallback(async () => {
@@ -1306,9 +1454,7 @@ export const ProjectManager: React.FC = () => {
                 >
                   {isExporting ? "Exporting..." : "Export Project"}
                 </button>
-                <button onClick={handleImportClick}>
-                  Import Project
-                </button>
+                <button onClick={handleImportClick}>Import Project</button>
                 <div className="ProjectManager__settingsDropdown__divider" />
                 <button
                   className="ProjectManager__settingsDropdown__danger"
@@ -1325,14 +1471,15 @@ export const ProjectManager: React.FC = () => {
       {hasUnsavedCanvas && (
         <div className="ProjectManager__unsavedBanner">
           <span>Unsaved canvas</span>
-          <button onClick={handleSaveCurrentClick}>
-            Save
-          </button>
+          <button onClick={handleSaveCurrentClick}>Save</button>
         </div>
       )}
 
       <div className="ProjectManager__actions">
-        <button className="ProjectManager__actionBtn" onClick={handleNewProjectClick}>
+        <button
+          className="ProjectManager__actionBtn"
+          onClick={handleNewProjectClick}
+        >
           + {t("projectManager.newProject")}
         </button>
       </div>
@@ -1357,8 +1504,11 @@ export const ProjectManager: React.FC = () => {
           size="small"
         >
           <div className="ProjectManager__dialog">
-            <p style={{ marginBottom: "1rem", color: "var(--color-on-surface)" }}>
-              You have unsaved changes. Would you like to save them before creating a new project?
+            <p
+              style={{ marginBottom: "1rem", color: "var(--color-on-surface)" }}
+            >
+              You have unsaved changes. Would you like to save them before
+              creating a new project?
             </p>
             <div className="ProjectManager__dialog__actions">
               <FilledButton
@@ -1379,7 +1529,10 @@ export const ProjectManager: React.FC = () => {
       )}
 
       {/* Create/Save/Rename Modal */}
-      {(modalType === "project" || modalType === "save" || modalType === "group" || modalType === "rename-project") && (
+      {(modalType === "project" ||
+        modalType === "save" ||
+        modalType === "group" ||
+        modalType === "rename-project") && (
         <Dialog
           onCloseRequest={handleModalClose}
           title={
@@ -1395,7 +1548,10 @@ export const ProjectManager: React.FC = () => {
         >
           <div className="ProjectManager__dialog">
             <div className="ProjectManager__dialog__inputGroup">
-              <label htmlFor="project-name-input" className="ProjectManager__dialog__label">
+              <label
+                htmlFor="project-name-input"
+                className="ProjectManager__dialog__label"
+              >
                 Name
               </label>
               <input
@@ -1406,7 +1562,9 @@ export const ProjectManager: React.FC = () => {
                 onChange={(e) => setModalName(e.target.value)}
                 onKeyDown={handleModalKeyDown}
                 placeholder={
-                  modalType === "group" ? "Enter category name" : "Enter project name"
+                  modalType === "group"
+                    ? "Enter category name"
+                    : "Enter project name"
                 }
                 autoFocus
               />
@@ -1421,7 +1579,13 @@ export const ProjectManager: React.FC = () => {
               <FilledButton
                 variant="filled"
                 color="primary"
-                label={modalType === "save" ? "Save" : modalType === "rename-project" ? "Rename" : "Create"}
+                label={
+                  modalType === "save"
+                    ? "Save"
+                    : modalType === "rename-project"
+                    ? "Rename"
+                    : "Create"
+                }
                 onClick={handleModalConfirm}
               />
             </div>
@@ -1437,8 +1601,11 @@ export const ProjectManager: React.FC = () => {
           size="small"
         >
           <div className="ProjectManager__dialog">
-            <p style={{ marginBottom: "1rem", color: "var(--color-on-surface)" }}>
-              Select a project zip file to import. The project will be added to your Uncategorized folder.
+            <p
+              style={{ marginBottom: "1rem", color: "var(--color-on-surface)" }}
+            >
+              Select a project zip file to import. The project will be added to
+              your Uncategorized folder.
             </p>
             <input
               ref={importInputRef}
@@ -1448,9 +1615,7 @@ export const ProjectManager: React.FC = () => {
               style={{ display: "none" }}
             />
             {importError && (
-              <div className="ProjectManager__dialog__error">
-                {importError}
-              </div>
+              <div className="ProjectManager__dialog__error">{importError}</div>
             )}
             <div className="ProjectManager__dialog__actions">
               <FilledButton
@@ -1463,7 +1628,11 @@ export const ProjectManager: React.FC = () => {
                 variant="filled"
                 color="primary"
                 label={isImporting ? "Importing..." : "Choose File"}
-                onClick={isImporting ? undefined : () => importInputRef.current?.click()}
+                onClick={
+                  isImporting
+                    ? undefined
+                    : () => importInputRef.current?.click()
+                }
               />
             </div>
           </div>
@@ -1481,8 +1650,14 @@ export const ProjectManager: React.FC = () => {
             <div className="ProjectManager__dialog__warning">
               ⚠️ This action cannot be undone!
             </div>
-            <p style={{ color: "var(--color-on-surface)", marginBottom: "0.5rem" }}>
-              This will permanently delete <strong>all projects</strong> and their assets (including videos).
+            <p
+              style={{
+                color: "var(--color-on-surface)",
+                marginBottom: "0.5rem",
+              }}
+            >
+              This will permanently delete <strong>all projects</strong> and
+              their assets (including videos).
             </p>
             {projectsPath && (
               <div className="ProjectManager__dialog__path">
@@ -1491,7 +1666,10 @@ export const ProjectManager: React.FC = () => {
               </div>
             )}
             <div className="ProjectManager__dialog__inputGroup">
-              <label htmlFor="reset-confirm-input" className="ProjectManager__dialog__label">
+              <label
+                htmlFor="reset-confirm-input"
+                className="ProjectManager__dialog__label"
+              >
                 Type <strong>CONFIRM</strong> to proceed
               </label>
               <input
@@ -1523,7 +1701,11 @@ export const ProjectManager: React.FC = () => {
                 variant="filled"
                 color="danger"
                 label={isResetting ? "Resetting..." : "Delete All Projects"}
-                onClick={isResetting || resetConfirmText !== "CONFIRM" ? undefined : handleResetConfirm}
+                onClick={
+                  isResetting || resetConfirmText !== "CONFIRM"
+                    ? undefined
+                    : handleResetConfirm
+                }
               />
             </div>
           </div>
@@ -1628,7 +1810,9 @@ export const ProjectManager: React.FC = () => {
 
           if (activeFilter !== "all") {
             // Filter by specific category
-            const filtered = index.projects.filter((p) => p.groupId === activeFilter);
+            const filtered = index.projects.filter(
+              (p) => p.groupId === activeFilter,
+            );
             return (
               <div className="ProjectGroup__grid">
                 {filtered.map((project) => (

@@ -1,17 +1,33 @@
-import { eyeIcon, ProjectsIcon, PlusIcon } from "@excalidraw/excalidraw/components/icons";
-import { useExcalidrawSetAppState, useExcalidrawActionManager } from "@excalidraw/excalidraw/components/App";
+import {
+  eyeIcon,
+  ProjectsIcon,
+  PlusIcon,
+} from "@excalidraw/excalidraw/components/icons";
+import {
+  useExcalidrawSetAppState,
+  useExcalidrawActionManager,
+} from "@excalidraw/excalidraw/components/App";
 import { MainMenu } from "@excalidraw/excalidraw/index";
 import { actionClearCanvas } from "@excalidraw/excalidraw/actions";
 import React, { useCallback, useState } from "react";
-import { useSetAtom } from "jotai";
+
 import ConfirmDialog from "@excalidraw/excalidraw/components/ConfirmDialog";
 
-import { isDevEnv, DEFAULT_SIDEBAR, PROJECTS_SIDEBAR_TAB } from "@excalidraw/common";
+import {
+  isDevEnv,
+  DEFAULT_SIDEBAR,
+  PROJECTS_SIDEBAR_TAB,
+} from "@excalidraw/common";
 
 import type { Theme } from "@excalidraw/element/types";
 
+import { useSetAtom } from "../app-jotai";
+
 import { LanguageList } from "../app-language/LanguageList";
-import { ProjectManagerData, triggerSaveProjectAtom } from "../data/ProjectManagerData";
+import {
+  ProjectManagerData,
+  triggerSaveProjectAtom,
+} from "../data/ProjectManagerData";
 
 import { saveDebugState } from "./DebugCanvas";
 
@@ -76,7 +92,10 @@ export const AppMainMenu: React.FC<{
         <MainMenu.Item icon={ProjectsIcon} onClick={handleOpenProjectFolder}>
           Open Project Folder
         </MainMenu.Item>
-        <MainMenu.Item icon={PlusIcon} onClick={() => setShowNewProjectDialog(true)}>
+        <MainMenu.Item
+          icon={PlusIcon}
+          onClick={() => setShowNewProjectDialog(true)}
+        >
           Start New Project
         </MainMenu.Item>
         <MainMenu.Separator />
@@ -123,7 +142,8 @@ export const AppMainMenu: React.FC<{
           title="Start New Project"
         >
           <p className="clear-canvas__content">
-            This will close the current project and start fresh. Any unsaved changes will be lost. Are you sure?
+            This will close the current project and start fresh. Any unsaved
+            changes will be lost. Are you sure?
           </p>
         </ConfirmDialog>
       )}

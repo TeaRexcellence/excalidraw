@@ -574,8 +574,7 @@ export const newTableElement = (
     opts.rowHeights || Array(rows).fill(DEFAULT_TABLE_CELL_HEIGHT);
 
   const cells =
-    opts.cells ||
-    Array.from({ length: rows }, () => Array(columns).fill(""));
+    opts.cells || Array.from({ length: rows }, () => Array(columns).fill(""));
 
   const width = columnWidths.reduce((sum: number, w: number) => sum + w, 0);
   const height = rowHeights.reduce((sum: number, h: number) => sum + h, 0);
@@ -612,9 +611,10 @@ export const newCodeBlockElement = (
     }),
     type: "codeblock",
     code: opts.code ?? "",
-    language: opts.language ?? "javascript",
+    language: opts.language ?? "plaintext",
     showLineNumbers: opts.showLineNumbers ?? true,
     scrollOffsetY: 0,
+    fontSize: 13,
   };
 };
 
@@ -650,8 +650,8 @@ export const newProjectLinkElement = (
   } & ElementConstructorOpts,
 ): NonDeleted<ExcalidrawProjectLinkElement> => {
   // Auto-size height based on content
-  const hasDescription = !!(opts.description);
-  const hasImage = !!(opts.imageBase64);
+  const hasDescription = !!opts.description;
+  const hasImage = !!opts.imageBase64;
   let autoHeight = 56; // base: padding + title + project name
   if (hasDescription) {
     autoHeight += 42;

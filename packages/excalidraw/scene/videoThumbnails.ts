@@ -125,7 +125,10 @@ export async function prefetchVideoThumbnails(
           }
         }
       } catch (err) {
-        console.warn(`[VideoThumbnails] Failed to get thumbnail for element ${element.id}:`, err);
+        console.warn(
+          `[VideoThumbnails] Failed to get thumbnail for element ${element.id}:`,
+          err,
+        );
         // Placeholder will be shown
       }
     }),
@@ -175,7 +178,10 @@ export async function prefetchVideoThumbnailsAsDataUrls(
           thumbnails.set(element.id, thumbnailDataUrl);
         }
       } catch (err) {
-        console.warn(`[VideoThumbnails] Failed to get thumbnail for element ${element.id}:`, err);
+        console.warn(
+          `[VideoThumbnails] Failed to get thumbnail for element ${element.id}:`,
+          err,
+        );
         // Placeholder will be shown
       }
     }),

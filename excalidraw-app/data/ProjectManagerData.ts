@@ -6,14 +6,20 @@
  */
 
 import { debounce } from "@excalidraw/common";
-import { atom } from "jotai";
+
+import { DEFAULT_PROJECTS_INDEX } from "@excalidraw/excalidraw/components/ProjectManager/types";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
 import type { AppState, BinaryFiles } from "@excalidraw/excalidraw/types";
 
 // Import types from the canonical source
-import type { Project, ProjectGroup, ProjectsIndex } from "@excalidraw/excalidraw/components/ProjectManager/types";
-import { DEFAULT_PROJECTS_INDEX } from "@excalidraw/excalidraw/components/ProjectManager/types";
+import type {
+  Project,
+  ProjectGroup,
+  ProjectsIndex,
+} from "@excalidraw/excalidraw/components/ProjectManager/types";
+
+import { atom } from "../app-jotai";
 
 // Re-export types for convenience
 export type { Project, ProjectGroup, ProjectsIndex };
@@ -36,7 +42,11 @@ const api = {
       }
       const data = await res.json();
       // Validate structure
-      if (!data || !Array.isArray(data.projects) || !Array.isArray(data.groups)) {
+      if (
+        !data ||
+        !Array.isArray(data.projects) ||
+        !Array.isArray(data.groups)
+      ) {
         return DEFAULT_INDEX;
       }
       return data;
@@ -157,7 +167,10 @@ export class ProjectManagerData {
           try {
             await previewGenerator(projectId);
           } catch (previewErr) {
-            console.warn("[ProjectManagerData] Preview generation failed:", previewErr);
+            console.warn(
+              "[ProjectManagerData] Preview generation failed:",
+              previewErr,
+            );
             // Don't fail the whole save for preview issues
           }
         }
@@ -185,7 +198,9 @@ export class ProjectManagerData {
   /**
    * Register a preview generator callback (called by ProjectManager component)
    */
-  static setPreviewGenerator(generator: ((projectId: string) => Promise<void>) | null): void {
+  static setPreviewGenerator(
+    generator: ((projectId: string) => Promise<void>) | null,
+  ): void {
     previewGenerator = generator;
   }
 
@@ -280,7 +295,12 @@ export class ProjectManagerData {
       this.skipEmptySavesAfterSwitch = false;
     }
     if (cachedIndex?.currentProjectId) {
-      this.saveDebounced(cachedIndex.currentProjectId, elements, appState, files);
+      this.saveDebounced(
+        cachedIndex.currentProjectId,
+        elements,
+        appState,
+        files,
+      );
     }
   }
 

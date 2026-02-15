@@ -52,6 +52,7 @@ import {
   isArrowElement,
   isBindingElement,
   isBoundToContainer,
+  isCodeBlockElement,
   isElbowArrow,
   isFrameLikeElement,
   isFreeDrawElement,
@@ -911,18 +912,49 @@ export const resizeSingleElement = (
       const scaleY = Math.abs(nextHeight) / origElement.height;
       const MIN_COL_WIDTH = 40;
       const MIN_ROW_HEIGHT = 24;
-      const newColWidths = origElement.columnWidths.map(
-        (w: number) => Math.max(MIN_COL_WIDTH, w * scaleX),
+      const newColWidths = origElement.columnWidths.map((w: number) =>
+        Math.max(MIN_COL_WIDTH, w * scaleX),
       );
-      const newRowHeights = origElement.rowHeights.map(
-        (h: number) => Math.max(MIN_ROW_HEIGHT, h * scaleY),
+      const newRowHeights = origElement.rowHeights.map((h: number) =>
+        Math.max(MIN_ROW_HEIGHT, h * scaleY),
       );
       (updates as any).columnWidths = newColWidths;
       (updates as any).rowHeights = newRowHeights;
       // Keep element width/height in sync with actual cell dimensions
-      (updates as any).width = newColWidths.reduce((s: number, w: number) => s + w, 0);
-      (updates as any).height = newRowHeights.reduce((s: number, h: number) => s + h, 0);
+      (updates as any).width = newColWidths.reduce(
+        (s: number, w: number) => s + w,
+        0,
+      );
+      (updates as any).height = newRowHeights.reduce(
+        (s: number, h: number) => s + h,
+        0,
+      );
       // Reset scroll offset on resize (content dimensions changed)
+      (updates as any).scrollOffsetY = 0;
+    }
+
+    // Proportionally scale code block: fontSize from width ratio, derive height from content
+    if (isCodeBlockElement(latestElement) && isCodeBlockElement(origElement)) {
+      const scaleX = Math.abs(nextWidth) / origElement.width;
+      const CODE_MIN_FONT = 8;
+      const CODE_MAX_FONT = 40;
+      const origFontSize = origElement.fontSize || 13;
+      const newFontSize = Math.min(
+        CODE_MAX_FONT,
+        Math.max(CODE_MIN_FONT, origFontSize * scaleX),
+      );
+      // Derive height from content at new font size (matches renderCodeBlock.ts constants)
+      const BASE_FONT_SIZE = 13;
+      const s = newFontSize / BASE_FONT_SIZE;
+      const lineHeight = 20 * s; // BASE_LINE_HEIGHT
+      const padding = 10 * s; // BASE_PADDING
+      const headerHeight = 22 * s; // BASE_HEADER_HEIGHT
+      const lineCount = (latestElement.code || "").split("\n").length;
+      const contentHeight = headerHeight + padding + lineCount * lineHeight + padding;
+
+      (updates as any).fontSize = newFontSize;
+      (updates as any).width = Math.abs(nextWidth);
+      (updates as any).height = contentHeight;
       (updates as any).scrollOffsetY = 0;
     }
 

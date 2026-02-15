@@ -53,7 +53,16 @@ import { t } from "../../i18n";
 
 import { useAppProps, useEditorInterface, useExcalidrawAppState } from "../App";
 import { ToolButton } from "../ToolButton";
-import { FreedrawIcon, TrashIcon, elementLinkIcon, LoopIcon, PlayIcon, PauseIcon, VolumeIcon, VolumeOffIcon } from "../icons";
+import {
+  FreedrawIcon,
+  TrashIcon,
+  elementLinkIcon,
+  LoopIcon,
+  PlayIcon,
+  PauseIcon,
+  VolumeIcon,
+  VolumeOffIcon,
+} from "../icons";
 import { getSelectedElements } from "../../scene";
 
 import { getLinkHandleFromCoords } from "./helpers";
@@ -172,7 +181,9 @@ export const Hyperlink = ({
     formatTimeDisplay(videoOptions.startTime),
   );
   const [endTimeInput, setEndTimeInput] = useState(() =>
-    videoOptions.endTime !== null ? formatTimeDisplay(videoOptions.endTime) : "",
+    videoOptions.endTime !== null
+      ? formatTimeDisplay(videoOptions.endTime)
+      : "",
   );
 
   // Get video element from DOM
@@ -261,7 +272,9 @@ export const Hyperlink = ({
     const opts = parseVideoOptions(linkVal);
     setVideoOptions(opts);
     setStartTimeInput(formatTimeDisplay(opts.startTime));
-    setEndTimeInput(opts.endTime !== null ? formatTimeDisplay(opts.endTime) : "");
+    setEndTimeInput(
+      opts.endTime !== null ? formatTimeDisplay(opts.endTime) : "",
+    );
   }, [linkVal]);
 
   // Apply video options to element
@@ -512,7 +525,11 @@ export const Hyperlink = ({
           />
         ) : element.link ? (
           <a
-            href={isLocalFilePath(element.link) ? "#" : normalizeLink(element.link || "")}
+            href={
+              isLocalFilePath(element.link)
+                ? "#"
+                : normalizeLink(element.link || "")
+            }
             className="excalidraw-hyperlinkContainer-link"
             target={isLocalLink(element.link) ? "_self" : "_blank"}
             onClick={(event) => {
@@ -526,7 +543,9 @@ export const Hyperlink = ({
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ path: localPath }),
-                }).catch((err) => console.error("Failed to open local path:", err));
+                }).catch((err) =>
+                  console.error("Failed to open local path:", err),
+                );
                 return;
               }
               if (element.link && onLinkOpen) {
@@ -604,7 +623,9 @@ export const Hyperlink = ({
             type="button"
             className="excalidraw-hyperlinkContainer__video-playpause"
             onClick={togglePlayPause}
-            title={isPlaying ? t("videoControls.pause") : t("videoControls.play")}
+            title={
+              isPlaying ? t("videoControls.pause") : t("videoControls.play")
+            }
           >
             {isPlaying ? PauseIcon : PlayIcon}
           </button>
@@ -617,7 +638,11 @@ export const Hyperlink = ({
           {/* Loop toggle */}
           <button
             type="button"
-            className={`excalidraw-hyperlinkContainer__video-toggle ${videoOptions.loop ? "excalidraw-hyperlinkContainer__video-toggle--active" : ""}`}
+            className={`excalidraw-hyperlinkContainer__video-toggle ${
+              videoOptions.loop
+                ? "excalidraw-hyperlinkContainer__video-toggle--active"
+                : ""
+            }`}
             onClick={() => applyVideoOptions({ loop: !videoOptions.loop })}
             title={t("videoControls.loop")}
           >
@@ -657,7 +682,9 @@ export const Hyperlink = ({
                 }
               }}
               placeholder={
-                videoDuration !== null ? formatTimeDisplay(videoDuration) : "end"
+                videoDuration !== null
+                  ? formatTimeDisplay(videoDuration)
+                  : "end"
               }
               title={t("videoControls.end")}
             />
@@ -671,7 +698,9 @@ export const Hyperlink = ({
             <input
               type="checkbox"
               checked={videoOptions.autoplay}
-              onChange={() => applyVideoOptions({ autoplay: !videoOptions.autoplay })}
+              onChange={() =>
+                applyVideoOptions({ autoplay: !videoOptions.autoplay })
+              }
             />
             <span>{t("videoControls.autoplayLabel")}</span>
           </label>
@@ -679,9 +708,17 @@ export const Hyperlink = ({
           {/* Mute toggle */}
           <button
             type="button"
-            className={`excalidraw-hyperlinkContainer__video-toggle ${videoOptions.muted ? "excalidraw-hyperlinkContainer__video-toggle--active" : ""}`}
+            className={`excalidraw-hyperlinkContainer__video-toggle ${
+              videoOptions.muted
+                ? "excalidraw-hyperlinkContainer__video-toggle--active"
+                : ""
+            }`}
             onClick={() => applyVideoOptions({ muted: !videoOptions.muted })}
-            title={videoOptions.muted ? t("videoControls.unmute") : t("videoControls.mute")}
+            title={
+              videoOptions.muted
+                ? t("videoControls.unmute")
+                : t("videoControls.mute")
+            }
           >
             {videoOptions.muted ? VolumeOffIcon : VolumeIcon}
           </button>

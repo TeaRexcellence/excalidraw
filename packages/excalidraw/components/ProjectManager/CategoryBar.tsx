@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+
 import type { ProjectGroup } from "./types";
 
 export type FilterType = "all" | "favorites" | string;
@@ -59,7 +60,9 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
     if (contextMenu) {
       const handleClick = () => setContextMenu(null);
       const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === "Escape") setContextMenu(null);
+        if (e.key === "Escape") {
+          setContextMenu(null);
+        }
       };
       document.addEventListener("click", handleClick);
       document.addEventListener("keydown", handleEscape);
@@ -148,7 +151,9 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
 
         {/* All pill */}
         <button
-          className={`CategoryBar__pill ${activeFilter === "all" ? "CategoryBar__pill--active" : ""}`}
+          className={`CategoryBar__pill ${
+            activeFilter === "all" ? "CategoryBar__pill--active" : ""
+          }`}
           onClick={() => onFilterChange("all")}
         >
           All
@@ -157,10 +162,24 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
         {/* Favorites pill */}
         {favoriteCount > 0 && (
           <button
-            className={`CategoryBar__pill ${activeFilter === "favorites" ? "CategoryBar__pill--active" : ""}`}
+            className={`CategoryBar__pill ${
+              activeFilter === "favorites" ? "CategoryBar__pill--active" : ""
+            }`}
             onClick={() => onFilterChange("favorites")}
           >
-            <svg className="CategoryBar__pill__star" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <svg
+              className="CategoryBar__pill__star"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
             Favorites
           </button>
         )}
@@ -168,7 +187,11 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
         {/* Uncategorized pill */}
         {uncategorizedCount > 0 && (
           <button
-            className={`CategoryBar__pill ${activeFilter === "uncategorized" ? "CategoryBar__pill--active" : ""}`}
+            className={`CategoryBar__pill ${
+              activeFilter === "uncategorized"
+                ? "CategoryBar__pill--active"
+                : ""
+            }`}
             onClick={() => onFilterChange("uncategorized")}
           >
             Uncategorized
@@ -192,7 +215,9 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
           ) : (
             <button
               key={group.id}
-              className={`CategoryBar__pill ${activeFilter === group.id ? "CategoryBar__pill--active" : ""} ${isEmpty ? "CategoryBar__pill--empty" : ""}`}
+              className={`CategoryBar__pill ${
+                activeFilter === group.id ? "CategoryBar__pill--active" : ""
+              } ${isEmpty ? "CategoryBar__pill--empty" : ""}`}
               onClick={() => onFilterChange(group.id)}
               onContextMenu={(e) => handlePillContextMenu(e, group.id)}
               title={isEmpty ? "Empty" : undefined}

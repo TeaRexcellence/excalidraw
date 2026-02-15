@@ -95,7 +95,6 @@ const renderApp: TestRenderFn = async (ui, options) => {
     if (window.h.state.isLoading) {
       throw new Error("still loading");
     }
-
   });
 
   return renderResult;

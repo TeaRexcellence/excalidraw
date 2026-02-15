@@ -1,9 +1,6 @@
 import React from "react";
 
-import {
-  CLASSES,
-  KEYS,
-} from "@excalidraw/common";
+import { CLASSES, KEYS } from "@excalidraw/common";
 
 import type {
   ExcalidrawFrameLikeElement,

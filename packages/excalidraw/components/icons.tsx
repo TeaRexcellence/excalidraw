@@ -490,7 +490,13 @@ export const ProjectLinkIcon = createIcon(
 
 // custom video player icon
 export const VideoIcon = createIcon(
-  <g stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" fill="none">
+  <g
+    stroke="currentColor"
+    strokeWidth="5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    fill="none"
+  >
     <rect x="5" y="10" width="90" height="75" rx="8" ry="8" />
     <line x1="5" y1="70" x2="95" y2="70" />
     <polygon points="42,30 42,56 62,43" />
@@ -513,7 +519,11 @@ export const LoopIcon = createIcon(
 export const PlayIcon = createIcon(
   <g strokeWidth="1.5">
     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-    <path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" fill="currentColor" stroke="none" />
+    <path
+      d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z"
+      fill="currentColor"
+      stroke="none"
+    />
   </g>,
   tablerIconProps,
 );
@@ -522,8 +532,16 @@ export const PlayIcon = createIcon(
 export const PauseIcon = createIcon(
   <g strokeWidth="1.5">
     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-    <path d="M6 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" fill="currentColor" stroke="none" />
-    <path d="M14 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z" fill="currentColor" stroke="none" />
+    <path
+      d="M6 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"
+      fill="currentColor"
+      stroke="none"
+    />
+    <path
+      d="M14 5m0 1a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1z"
+      fill="currentColor"
+      stroke="none"
+    />
   </g>,
   tablerIconProps,
 );

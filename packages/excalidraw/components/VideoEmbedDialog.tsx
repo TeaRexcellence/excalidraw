@@ -1,15 +1,18 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useSetAtom } from "jotai";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
-import { t } from "../i18n";
 import { isDirectVideoUrl } from "@excalidraw/element/embeddable";
+
+import { useSetAtom } from "../../../excalidraw-app/app-jotai";
+
+import { t } from "../i18n";
+
+import { triggerRefreshProjectsAtom } from "../../../excalidraw-app/data/ProjectManagerData";
 
 import { Dialog } from "./Dialog";
 import { FilledButton } from "./FilledButton";
 import { useApp } from "./App";
-import { triggerRefreshProjectsAtom } from "../../../excalidraw-app/data/ProjectManagerData";
 
 import "./VideoEmbedDialog.scss";
 
@@ -37,7 +40,9 @@ const uploadVideoFile = async (
   const projectId = await getCurrentProjectId();
 
   if (!projectId) {
-    throw new Error("No project selected. Please save your canvas as a project first.");
+    throw new Error(
+      "No project selected. Please save your canvas as a project first.",
+    );
   }
   // Sanitize filename
   const filename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -47,7 +52,9 @@ const uploadVideoFile = async (
 
   // Upload file
   const response = await fetch(
-    `/api/videos/upload?projectId=${encodeURIComponent(projectId)}&filename=${encodeURIComponent(filename)}`,
+    `/api/videos/upload?projectId=${encodeURIComponent(
+      projectId,
+    )}&filename=${encodeURIComponent(filename)}`,
     {
       method: "POST",
       body: file,
@@ -145,8 +152,30 @@ const getVideoDimensionsFromUrl = (
 
 // Generate a random project name
 const generateRandomName = (): string => {
-  const adjectives = ["Swift", "Bright", "Cool", "Fresh", "Bold", "Calm", "Wild", "Neat", "Soft", "Sharp"];
-  const nouns = ["Canvas", "Sketch", "Draft", "Design", "Board", "Space", "Flow", "Wave", "Spark", "Frame"];
+  const adjectives = [
+    "Swift",
+    "Bright",
+    "Cool",
+    "Fresh",
+    "Bold",
+    "Calm",
+    "Wild",
+    "Neat",
+    "Soft",
+    "Sharp",
+  ];
+  const nouns = [
+    "Canvas",
+    "Sketch",
+    "Draft",
+    "Design",
+    "Board",
+    "Space",
+    "Flow",
+    "Wave",
+    "Spark",
+    "Frame",
+  ];
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   return `${adj} ${noun}`;
@@ -227,20 +256,22 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
   useEffect(() => {
     let aborted = false;
 
-    getCurrentProjectId().then((projectId) => {
-      if (aborted) {
-        return;
-      }
-      if (projectId) {
-        setDialogState("video-dialog");
-      } else {
-        setDialogState("save-prompt");
-      }
-    }).catch(() => {
-      if (!aborted) {
-        setDialogState("save-prompt");
-      }
-    });
+    getCurrentProjectId()
+      .then((projectId) => {
+        if (aborted) {
+          return;
+        }
+        if (projectId) {
+          setDialogState("video-dialog");
+        } else {
+          setDialogState("save-prompt");
+        }
+      })
+      .catch(() => {
+        if (!aborted) {
+          setDialogState("save-prompt");
+        }
+      });
 
     return () => {
       aborted = true;
@@ -268,9 +299,14 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
         finalUrl = `${videoUrl}#excalidraw-video-dimensions=${dimensions.width}x${dimensions.height}`;
       }
 
+      const viewportCenterX =
+        -app.state.scrollX + app.state.width / 2 / app.state.zoom.value;
+      const viewportCenterY =
+        -app.state.scrollY + app.state.height / 2 / app.state.zoom.value;
+
       app.insertEmbeddableElement({
-        sceneX: app.state.width / 2,
-        sceneY: app.state.height / 2,
+        sceneX: viewportCenterX,
+        sceneY: viewportCenterY,
         link: finalUrl,
       });
     },
@@ -390,7 +426,11 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
   // Loading state
   if (dialogState === "checking") {
     return (
-      <Dialog onCloseRequest={onClose} title={t("videoDialog.title")} size="small">
+      <Dialog
+        onCloseRequest={onClose}
+        title={t("videoDialog.title")}
+        size="small"
+      >
         <div className="VideoEmbedDialog">
           <p style={{ textAlign: "center", padding: "2rem" }}>Loading...</p>
         </div>
@@ -403,8 +443,12 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
     return (
       <Dialog onCloseRequest={onClose} title="Save Project First" size="small">
         <div className="VideoEmbedDialog">
-          <p style={{ marginBottom: "1.5rem", color: "var(--color-on-surface)" }}>
-            <span style={{ color: "#f0c000", fontWeight: "bold" }}>OOPS!</span> You need to save your project first before we can attach videos to it.
+          <p
+            style={{ marginBottom: "1.5rem", color: "var(--color-on-surface)" }}
+          >
+            <span style={{ color: "#f0c000", fontWeight: "bold" }}>OOPS!</span>{" "}
+            You need to save your project first before we can attach videos to
+            it.
           </p>
           <div className="VideoEmbedDialog__actions">
             <FilledButton
@@ -431,7 +475,10 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
       <Dialog onCloseRequest={onClose} title="Save Project" size="small">
         <div className="VideoEmbedDialog">
           <div className="VideoEmbedDialog__inputGroup">
-            <label htmlFor="project-name-input" className="VideoEmbedDialog__label">
+            <label
+              htmlFor="project-name-input"
+              className="VideoEmbedDialog__label"
+            >
               Project Name
             </label>
             <input

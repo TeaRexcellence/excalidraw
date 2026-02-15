@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import type { ProjectGroup } from "./types";
 
 interface CategoryPickerProps {
@@ -49,7 +56,9 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
 
   const filteredGroups = useMemo(() => {
     const term = search.toLowerCase().trim();
-    if (!term) return groups;
+    if (!term) {
+      return groups;
+    }
     return groups.filter((g) => g.name.toLowerCase().includes(term));
   }, [groups, search]);
 
@@ -86,10 +95,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
 
   return (
     <div className="CategoryPicker__overlay" onMouseDown={onClose}>
-      <div
-        className="CategoryPicker"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+      <div className="CategoryPicker" onMouseDown={(e) => e.stopPropagation()}>
         <div className="CategoryPicker__header">
           <span className="CategoryPicker__title">Move to category</span>
         </div>
@@ -124,10 +130,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
           {filteredGroups
             .sort((a, b) => a.order - b.order)
             .map((group) => (
-              <label
-                key={group.id}
-                className="CategoryPicker__item"
-              >
+              <label key={group.id} className="CategoryPicker__item">
                 <input
                   type="radio"
                   name="category"

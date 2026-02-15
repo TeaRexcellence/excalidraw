@@ -21,6 +21,7 @@ import {
   hasStrokeColor,
   toolIsArrow,
   newTableElement,
+  newCodeBlockElement,
   CaptureUpdateAction,
 } from "@excalidraw/element";
 
@@ -1079,7 +1080,13 @@ export const ShapesSwitcher = ({
     },
   ] as const;
 
-  const SHAPE_GROUP_TYPES = ["rectangle", "diamond", "ellipse", "arrow", "line"] as const;
+  const SHAPE_GROUP_TYPES = [
+    "rectangle",
+    "diamond",
+    "ellipse",
+    "arrow",
+    "line",
+  ] as const;
 
   const SHAPE_GROUP = [
     { type: "ellipse", icon: EllipseIcon, label: t("toolBar.ellipse") },
@@ -1093,9 +1100,7 @@ export const ShapesSwitcher = ({
 
   // Sync preferred shape when active tool changes (e.g. via keyboard shortcut)
   useEffect(() => {
-    if (
-      (SHAPE_GROUP_TYPES as readonly string[]).includes(activeTool.type)
-    ) {
+    if ((SHAPE_GROUP_TYPES as readonly string[]).includes(activeTool.type)) {
       setPreferredShape(activeTool.type);
     }
   }, [activeTool.type]);
@@ -1137,7 +1142,10 @@ export const ShapesSwitcher = ({
         const colWidths = Array(cols).fill(DEFAULT_CELL_WIDTH);
         const rowHeights = Array(rows).fill(DEFAULT_CELL_HEIGHT);
         const totalWidth = colWidths.reduce((s: number, w: number) => s + w, 0);
-        const totalHeight = rowHeights.reduce((s: number, h: number) => s + h, 0);
+        const totalHeight = rowHeights.reduce(
+          (s: number, h: number) => s + h,
+          0,
+        );
 
         const viewportCenterX =
           -app.state.scrollX + app.state.width / 2 / app.state.zoom.value;
@@ -1178,7 +1186,39 @@ export const ShapesSwitcher = ({
       type: "codeblock",
       icon: CodeBlockIcon,
       label: t("toolBar.codeBlock"),
-      action: () => app.setOpenDialog({ name: "codeBlockCreate" as const }),
+      action: () => {
+        const viewportCenterX =
+          -app.state.scrollX + app.state.width / 2 / app.state.zoom.value;
+        const viewportCenterY =
+          -app.state.scrollY + app.state.height / 2 / app.state.zoom.value;
+
+        const element = newCodeBlockElement({
+          x: viewportCenterX - 200,
+          y: viewportCenterY - 125,
+          code: "",
+          language: "plaintext",
+          showLineNumbers: true,
+          strokeColor: "transparent",
+          backgroundColor: "transparent",
+          fillStyle: "solid",
+          strokeWidth: 0,
+          strokeStyle: "solid",
+          roughness: 0,
+          opacity: 100,
+          locked: false,
+        });
+
+        app.scene.insertElement(element);
+
+        app.syncActionResult({
+          appState: {
+            ...app.state,
+            selectedElementIds: { [element.id]: true },
+            openDialog: { name: "codeBlockEditor", elementId: element.id },
+          },
+          captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+        });
+      },
     },
     {
       type: "document",
@@ -1429,10 +1469,7 @@ export const ShapesSwitcher = ({
             onLockToggle
           ) {
             return (
-              <div
-                key={value}
-                className="tool-hover-dropdown"
-              >
+              <div key={value} className="tool-hover-dropdown">
                 {toolButton}
                 <div className="tool-hover-dropdown__panel">
                   <label
@@ -1462,7 +1499,8 @@ export const ShapesSwitcher = ({
           }
 
           return toolButton;
-        })}
+        },
+      )}
       {/* Frame tool */}
       <ToolButton
         className="Shape"
@@ -1470,7 +1508,9 @@ export const ShapesSwitcher = ({
         icon={frameToolIcon}
         checked={activeTool.type === "frame"}
         name="editor-current-shape"
-        title={`${capitalizeString(t("toolBar.frame"))} — ${KEYS.F.toLocaleUpperCase()}`}
+        title={`${capitalizeString(
+          t("toolBar.frame"),
+        )} — ${KEYS.F.toLocaleUpperCase()}`}
         keyBindingLabel={KEYS.F.toLocaleUpperCase()}
         aria-label={capitalizeString(t("toolBar.frame"))}
         data-testid="toolbar-frame"
@@ -1488,7 +1528,9 @@ export const ShapesSwitcher = ({
         icon={EraserIcon}
         checked={activeTool.type === "eraser"}
         name="editor-current-shape"
-        title={`${capitalizeString(t("toolBar.eraser"))} — ${KEYS.E.toLocaleUpperCase()}`}
+        title={`${capitalizeString(
+          t("toolBar.eraser"),
+        )} — ${KEYS.E.toLocaleUpperCase()}`}
         keyBindingLabel={KEYS.E.toLocaleUpperCase()}
         aria-label={capitalizeString(t("toolBar.eraser"))}
         data-testid="toolbar-eraser"
@@ -1506,7 +1548,9 @@ export const ShapesSwitcher = ({
         icon={laserPointerToolIcon}
         checked={activeTool.type === "laser"}
         name="editor-current-shape"
-        title={`${capitalizeString(t("toolBar.laser"))} — ${KEYS.K.toLocaleUpperCase()}`}
+        title={`${capitalizeString(
+          t("toolBar.laser"),
+        )} — ${KEYS.K.toLocaleUpperCase()}`}
         keyBindingLabel={KEYS.K.toLocaleUpperCase()}
         aria-label={capitalizeString(t("toolBar.laser"))}
         data-testid="toolbar-laser"

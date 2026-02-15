@@ -224,7 +224,9 @@ const initializeScene = async (opts: {
   const externalUrlMatch = window.location.hash.match(/^#url=(.*)$/);
 
   // Check for project=ID in hash (for opening specific project)
-  const projectHashMatch = window.location.hash.match(/^#project=([a-zA-Z0-9_-]+)$/);
+  const projectHashMatch = window.location.hash.match(
+    /^#project=([a-zA-Z0-9_-]+)$/,
+  );
 
   // Try to load from Project Manager first
   let projectData: {
@@ -237,7 +239,9 @@ const initializeScene = async (opts: {
     // Load specific project from hash — validate it exists first
     const hashProjectId = projectHashMatch[1];
     const hashIndex = await ProjectManagerData.getIndex();
-    const projectExists = hashIndex.projects.some((p) => p.id === hashProjectId);
+    const projectExists = hashIndex.projects.some(
+      (p) => p.id === hashProjectId,
+    );
     if (projectExists) {
       await ProjectManagerData.setCurrentProjectId(hashProjectId);
       projectData = await ProjectManagerData.loadCurrentProject();

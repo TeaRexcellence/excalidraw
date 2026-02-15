@@ -11,9 +11,7 @@ export const actionOpenDocumentLocation = register({
     if (selectedIds.length !== 1) {
       return false;
     }
-    const el = app.scene
-      .getElementsMapIncludingDeleted()
-      .get(selectedIds[0]);
+    const el = app.scene.getElementsMapIncludingDeleted().get(selectedIds[0]);
     return !!el && isDocumentElement(el);
   },
   perform: (_elements, appState, _value, app) => {
@@ -21,9 +19,7 @@ export const actionOpenDocumentLocation = register({
     if (selectedIds.length !== 1) {
       return false;
     }
-    const el = app.scene
-      .getElementsMapIncludingDeleted()
-      .get(selectedIds[0]);
+    const el = app.scene.getElementsMapIncludingDeleted().get(selectedIds[0]);
 
     if (el && isDocumentElement(el) && el.filePath) {
       fetch("/api/files/open-folder", {
@@ -48,9 +44,7 @@ export const actionViewDocumentContents = register({
     if (selectedIds.length !== 1) {
       return false;
     }
-    const el = app.scene
-      .getElementsMapIncludingDeleted()
-      .get(selectedIds[0]);
+    const el = app.scene.getElementsMapIncludingDeleted().get(selectedIds[0]);
     return !!el && isDocumentElement(el);
   },
   perform: (_elements, appState, _value, _app) => {

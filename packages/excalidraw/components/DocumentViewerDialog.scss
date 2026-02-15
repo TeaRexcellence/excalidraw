@@ -46,16 +46,36 @@
     overflow: auto;
     min-height: 100%;
 
-    .token.keyword { color: #569cd6; }
-    .token.string { color: #ce9178; }
-    .token.comment { color: #6a9955; }
-    .token.number { color: #b5cea8; }
-    .token.function { color: #dcdcaa; }
-    .token.punctuation { color: #d4d4d4; }
-    .token.operator { color: #d4d4d4; }
-    .token.class-name { color: #4ec9b0; }
-    .token.builtin { color: #4ec9b0; }
-    .token.boolean { color: #569cd6; }
+    .token.keyword {
+      color: #569cd6;
+    }
+    .token.string {
+      color: #ce9178;
+    }
+    .token.comment {
+      color: #6a9955;
+    }
+    .token.number {
+      color: #b5cea8;
+    }
+    .token.function {
+      color: #dcdcaa;
+    }
+    .token.punctuation {
+      color: #d4d4d4;
+    }
+    .token.operator {
+      color: #d4d4d4;
+    }
+    .token.class-name {
+      color: #4ec9b0;
+    }
+    .token.builtin {
+      color: #4ec9b0;
+    }
+    .token.boolean {
+      color: #569cd6;
+    }
   }
 
   &__textarea {

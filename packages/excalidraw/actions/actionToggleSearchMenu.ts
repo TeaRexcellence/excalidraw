@@ -1,7 +1,4 @@
-import {
-  KEYS,
-  CLASSES,
-} from "@excalidraw/common";
+import { KEYS, CLASSES } from "@excalidraw/common";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
 
@@ -24,10 +21,9 @@ export const actionToggleSearchMenu = register({
   },
   perform(elements, appState, _, app) {
     if (appState.openDialog?.name === "searchMenu") {
-      const searchInput =
-        document.querySelector<HTMLInputElement>(
-          `.${CLASSES.SEARCH_MENU_INPUT_WRAPPER} input`,
-        );
+      const searchInput = document.querySelector<HTMLInputElement>(
+        `.${CLASSES.SEARCH_MENU_INPUT_WRAPPER} input`,
+      );
 
       searchInput?.focus();
       searchInput?.select();

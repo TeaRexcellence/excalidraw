@@ -1,10 +1,14 @@
 import React, { useRef, useEffect, useCallback, useState } from "react";
-import { HotTable, HotTableClass } from "@handsontable/react";
+
+import type { HotTableClass } from "@handsontable/react";
+
+import { HotTable } from "@handsontable/react";
 import { registerAllModules } from "handsontable/registry";
 import "handsontable/dist/handsontable.full.min.css";
 
-import type { ExcalidrawTableElement } from "@excalidraw/element/types";
 import { CaptureUpdateAction } from "@excalidraw/element";
+
+import type { ExcalidrawTableElement } from "@excalidraw/element/types";
 
 import { t } from "../i18n";
 import { parseCSV, autoSizeColumns } from "../utils/csvParser";
@@ -211,14 +215,11 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
   }, [handleDone]);
 
   // Detect dark mode
-  const isDark =
-    document.querySelector(".excalidraw.theme--dark") !== null;
+  const isDark = document.querySelector(".excalidraw.theme--dark") !== null;
 
   // Detect docked sidebar to offset the modal
   const sidebarEl = document.querySelector(".sidebar.sidebar--docked");
-  const sidebarWidth = sidebarEl
-    ? sidebarEl.getBoundingClientRect().width
-    : 0;
+  const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
 
   if (!element) {
     onClose();

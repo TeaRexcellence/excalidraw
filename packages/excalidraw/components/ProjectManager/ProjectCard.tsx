@@ -1,6 +1,8 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import type { Project, ProjectGroup } from "./types";
+
 import { CategoryPicker } from "./CategoryPicker";
+
+import type { Project, ProjectGroup } from "./types";
 
 interface ProjectCardProps {
   project: Project;
@@ -56,15 +58,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     onSelect(project.id);
   }, [onSelect, project.id]);
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setContextMenuPos({ x: e.clientX, y: e.clientY });
-      setShowContextMenu(true);
-    },
-    [],
-  );
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setShowContextMenu(true);
+  }, []);
 
   const closeContextMenu = useCallback(() => {
     setShowContextMenu(false);
@@ -165,7 +164,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
       />
       <div
         ref={cardRef}
-        className={`ProjectCard ${isActive ? "ProjectCard--active" : ""} ${justSaved ? "ProjectCard--just-saved" : ""}`}
+        className={`ProjectCard ${isActive ? "ProjectCard--active" : ""} ${
+          justSaved ? "ProjectCard--just-saved" : ""
+        }`}
         style={{ width: size, height: size + 30 }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
@@ -175,11 +176,26 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
       >
         {justSaved && <div className="ProjectCard__savedBadge">Saved!</div>}
         <button
-          className={`ProjectCard__favoriteBtn ${project.isFavorite ? "ProjectCard__favoriteBtn--active" : ""}`}
+          className={`ProjectCard__favoriteBtn ${
+            project.isFavorite ? "ProjectCard__favoriteBtn--active" : ""
+          }`}
           onClick={handleFavoriteClick}
-          title={project.isFavorite ? "Remove from favorites" : "Add to favorites"}
+          title={
+            project.isFavorite ? "Remove from favorites" : "Add to favorites"
+          }
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill={project.isFavorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill={project.isFavorite ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+          </svg>
         </button>
         <div
           className="ProjectCard__preview"
@@ -193,11 +209,17 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               onError={(e) => {
                 // Hide broken image, show placeholder instead
                 e.currentTarget.style.display = "none";
-                e.currentTarget.nextElementSibling?.classList.remove("ProjectCard__placeholder--hidden");
+                e.currentTarget.nextElementSibling?.classList.remove(
+                  "ProjectCard__placeholder--hidden",
+                );
               }}
             />
           ) : null}
-          <div className={`ProjectCard__placeholder ${previewUrl ? "ProjectCard__placeholder--hidden" : ""}`}>
+          <div
+            className={`ProjectCard__placeholder ${
+              previewUrl ? "ProjectCard__placeholder--hidden" : ""
+            }`}
+          >
             <span>No preview</span>
           </div>
           <div className="ProjectCard__gradient" />

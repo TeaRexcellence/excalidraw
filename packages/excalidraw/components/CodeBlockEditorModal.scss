@@ -1,0 +1,345 @@
+// ── Loading fallback ──────────────────────────────────────────────────
+.CodeBlockEditorModal-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &__spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: codeBlockEditorSpin 0.7s linear infinite;
+  }
+}
+
+@keyframes codeBlockEditorSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ── Backdrop ─────────────────────────────────────────────────────────
+.CodeBlockEditorModal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ── Modal ────────────────────────────────────────────────────────────
+.CodeBlockEditorModal {
+  display: flex;
+  flex-direction: column;
+  width: 80vw;
+  height: 80vh;
+  min-width: 480px;
+  min-height: 350px;
+  max-width: 1200px;
+  max-height: 900px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  background: #1e1e2e;
+
+  // ── Toolbar ──────────────────────────────────────────────────────
+  &__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 16px;
+    background: #14141f;
+    border-bottom: 1px solid #2a2a3c;
+    flex-shrink: 0;
+  }
+
+  &__toolbarLeft {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  &__toolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #cdd6f4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    white-space: nowrap;
+  }
+
+  &__langSelect {
+    background: #2a2a3c;
+    color: #cdd6f4;
+    border: 1px solid #3a3a4c;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    &:hover {
+      border-color: #555;
+    }
+
+    &:focus {
+      border-color: #89b4fa;
+    }
+  }
+
+  &__lineNumToggle {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #6c7086;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+
+    input[type="checkbox"] {
+      margin: 0;
+      cursor: pointer;
+    }
+  }
+
+  &__btn {
+    background: none;
+    border: 1px solid #3a3a4c;
+    border-radius: 6px;
+    color: #cdd6f4;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    &:hover {
+      background: #2a2a3c;
+      border-color: #555;
+    }
+
+    &--primary {
+      background: var(--color-primary, #89b4fa);
+      color: #1e1e2e;
+      border-color: var(--color-primary, #89b4fa);
+      font-weight: 600;
+
+      &:hover {
+        opacity: 0.9;
+        background: var(--color-primary, #89b4fa);
+        border-color: var(--color-primary, #89b4fa);
+      }
+    }
+  }
+
+  // ── Editor area ────────────────────────────────────────────────
+  &__editorWrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    background: #1e1e2e;
+  }
+
+  &__lineNumbers {
+    width: 48px;
+    min-width: 48px;
+    overflow: hidden;
+    background: #181825;
+    border-right: 1px solid #2a2a3c;
+    padding-top: 12px;
+    user-select: none;
+    flex-shrink: 0;
+
+    > div {
+      // Inner container that gets translateY for scroll sync
+    }
+
+    div > div {
+      height: 22px;
+      line-height: 22px;
+      padding-right: 10px;
+      text-align: right;
+      font-family: Consolas, "SF Mono", Monaco, "Fira Code", monospace;
+      font-size: 13px;
+      color: #555570;
+    }
+  }
+
+  &__codeArea {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+
+    &--noGutter {
+      // No special styles needed, just removes gutter offset
+    }
+  }
+
+  &__textarea,
+  &__highlighted {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 12px 14px;
+    margin: 0;
+    font-family: Consolas, "SF Mono", Monaco, "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 22px;
+    white-space: pre;
+    overflow: auto;
+    tab-size: 2;
+    box-sizing: border-box;
+  }
+
+  &__textarea {
+    border: none;
+    outline: none;
+    resize: none;
+    background: transparent;
+    color: transparent;
+    caret-color: #cdd6f4;
+    z-index: 2;
+
+    &::selection {
+      background: rgba(137, 180, 250, 0.25);
+    }
+  }
+
+  &__highlighted {
+    z-index: 1;
+    pointer-events: none;
+    color: #cdd6f4;
+
+    // Prism token colors — Catppuccin Mocha inspired
+    .token.keyword {
+      color: #cba6f7;
+    }
+    .token.string,
+    .token.char {
+      color: #a6e3a1;
+    }
+    .token.comment {
+      color: #6c7086;
+      font-style: italic;
+    }
+    .token.number {
+      color: #fab387;
+    }
+    .token.function {
+      color: #89b4fa;
+    }
+    .token.punctuation {
+      color: #9399b2;
+    }
+    .token.operator {
+      color: #89dceb;
+    }
+    .token.class-name {
+      color: #f9e2af;
+    }
+    .token.builtin {
+      color: #f9e2af;
+    }
+    .token.boolean {
+      color: #cba6f7;
+    }
+    .token.property {
+      color: #89b4fa;
+    }
+    .token.tag {
+      color: #f38ba8;
+    }
+    .token.attr-name {
+      color: #fab387;
+    }
+    .token.attr-value {
+      color: #a6e3a1;
+    }
+    .token.regex {
+      color: #f5c2e7;
+    }
+    .token.important {
+      color: #f38ba8;
+    }
+    .token.deleted {
+      color: #f38ba8;
+    }
+    .token.inserted {
+      color: #a6e3a1;
+    }
+    .token.selector {
+      color: #a6e3a1;
+    }
+    .token.atrule {
+      color: #cba6f7;
+    }
+    .token.constant {
+      color: #fab387;
+    }
+    .token.variable {
+      color: #cdd6f4;
+    }
+    .token.template-string {
+      color: #a6e3a1;
+    }
+  }
+
+  // Scrollbar styling
+  &__textarea,
+  &__highlighted {
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+}
+
+// ── Dark mode ────────────────────────────────────────────────────────
+// The code editor always uses a dark theme (like VS Code), so only
+// the backdrop needs a slight tweak for dark-mode Excalidraw.
+.excalidraw.theme--dark {
+  .CodeBlockEditorModal-backdrop {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}

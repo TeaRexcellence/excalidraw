@@ -108,10 +108,7 @@ export const DocumentViewerDialog: React.FC<DocumentViewerDialogProps> = ({
               spellCheck={false}
             />
           ) : (
-            <pre
-              ref={preRef}
-              className="DocumentViewerDialog__code"
-            />
+            <pre ref={preRef} className="DocumentViewerDialog__code" />
           )}
         </div>
       </div>

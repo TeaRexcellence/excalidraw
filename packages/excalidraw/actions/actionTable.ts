@@ -37,7 +37,11 @@ export const actionAddRowBelow = register({
   perform: (elements, appState, _, app) => {
     const table = getSelectedTable(appState, app);
     if (!table) {
-      return { appState, elements, captureUpdate: CaptureUpdateAction.EVENTUALLY };
+      return {
+        appState,
+        elements,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
     }
     const newCells = [
       ...table.cells.map((r) => [...r]),
@@ -51,7 +55,11 @@ export const actionAddRowBelow = register({
       rowHeights: newRowHeights,
       height: newHeight,
     });
-    return { appState, elements, captureUpdate: CaptureUpdateAction.IMMEDIATELY };
+    return {
+      appState,
+      elements,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
 });
 
@@ -63,7 +71,11 @@ export const actionAddRowAbove = register({
   perform: (elements, appState, _, app) => {
     const table = getSelectedTable(appState, app);
     if (!table) {
-      return { appState, elements, captureUpdate: CaptureUpdateAction.EVENTUALLY };
+      return {
+        appState,
+        elements,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
     }
     const newCells = [
       Array(table.columns).fill(""),
@@ -77,7 +89,11 @@ export const actionAddRowAbove = register({
       rowHeights: newRowHeights,
       height: newHeight,
     });
-    return { appState, elements, captureUpdate: CaptureUpdateAction.IMMEDIATELY };
+    return {
+      appState,
+      elements,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
 });
 
@@ -92,7 +108,11 @@ export const actionDeleteRow = register({
   perform: (elements, appState, _, app) => {
     const table = getSelectedTable(appState, app);
     if (!table || table.rows <= 1) {
-      return { appState, elements, captureUpdate: CaptureUpdateAction.EVENTUALLY };
+      return {
+        appState,
+        elements,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
     }
     // Remove last row
     const newCells = table.cells.slice(0, -1).map((r) => [...r]);
@@ -104,7 +124,11 @@ export const actionDeleteRow = register({
       rowHeights: newRowHeights,
       height: newHeight,
     });
-    return { appState, elements, captureUpdate: CaptureUpdateAction.IMMEDIATELY };
+    return {
+      appState,
+      elements,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
 });
 
@@ -116,7 +140,11 @@ export const actionAddColumnRight = register({
   perform: (elements, appState, _, app) => {
     const table = getSelectedTable(appState, app);
     if (!table) {
-      return { appState, elements, captureUpdate: CaptureUpdateAction.EVENTUALLY };
+      return {
+        appState,
+        elements,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
     }
     const newCells = table.cells.map((r) => [...r, ""]);
     const newColumnWidths = [...table.columnWidths, DEFAULT_TABLE_CELL_WIDTH];
@@ -127,7 +155,11 @@ export const actionAddColumnRight = register({
       columnWidths: newColumnWidths,
       width: newWidth,
     });
-    return { appState, elements, captureUpdate: CaptureUpdateAction.IMMEDIATELY };
+    return {
+      appState,
+      elements,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
 });
 
@@ -139,7 +171,11 @@ export const actionAddColumnLeft = register({
   perform: (elements, appState, _, app) => {
     const table = getSelectedTable(appState, app);
     if (!table) {
-      return { appState, elements, captureUpdate: CaptureUpdateAction.EVENTUALLY };
+      return {
+        appState,
+        elements,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
     }
     const newCells = table.cells.map((r) => ["", ...r]);
     const newColumnWidths = [DEFAULT_TABLE_CELL_WIDTH, ...table.columnWidths];
@@ -150,7 +186,11 @@ export const actionAddColumnLeft = register({
       columnWidths: newColumnWidths,
       width: newWidth,
     });
-    return { appState, elements, captureUpdate: CaptureUpdateAction.IMMEDIATELY };
+    return {
+      appState,
+      elements,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
 });
 
@@ -165,7 +205,11 @@ export const actionDeleteColumn = register({
   perform: (elements, appState, _, app) => {
     const table = getSelectedTable(appState, app);
     if (!table || table.columns <= 1) {
-      return { appState, elements, captureUpdate: CaptureUpdateAction.EVENTUALLY };
+      return {
+        appState,
+        elements,
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
     }
     // Remove last column
     const newCells = table.cells.map((r) => [...r].slice(0, -1));
@@ -177,6 +221,10 @@ export const actionDeleteColumn = register({
       columnWidths: newColumnWidths,
       width: newWidth,
     });
-    return { appState, elements, captureUpdate: CaptureUpdateAction.IMMEDIATELY };
+    return {
+      appState,
+      elements,
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
   },
 });

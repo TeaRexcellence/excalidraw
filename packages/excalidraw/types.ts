@@ -379,8 +379,18 @@ export interface AppState {
   openSidebar: { name: SidebarName; tab?: SidebarTabName } | null;
   openDialog:
     | null
-    | { name: "imageExport" | "help" | "jsonExport" | "videoEmbed" | "codeBlockCreate" | "documentInsert" | "projectLinkCreate" | "searchMenu" }
+    | {
+        name:
+          | "imageExport"
+          | "help"
+          | "jsonExport"
+          | "videoEmbed"
+          | "documentInsert"
+          | "projectLinkCreate"
+          | "searchMenu";
+      }
     | { name: "tableEditor"; elementId: string }
+    | { name: "codeBlockEditor"; elementId: string }
     | { name: "projectLinkEdit"; elementId: string }
     | { name: "ttd"; tab: "text-to-diagram" | "mermaid" }
     | { name: "commandPalette" }

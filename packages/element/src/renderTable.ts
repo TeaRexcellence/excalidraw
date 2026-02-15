@@ -1,7 +1,8 @@
-import type { ExcalidrawTableElement } from "./types";
+import { THEME, applyDarkModeFilter } from "@excalidraw/common";
+
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
 
-import { THEME, applyDarkModeFilter } from "@excalidraw/common";
+import type { ExcalidrawTableElement } from "./types";
 
 const TABLE_HEADER_BG_LIGHT = "rgba(213, 216, 235, 0.35)";
 const TABLE_HEADER_BG_DARK = "rgba(99, 102, 140, 0.35)";
@@ -21,7 +22,10 @@ const SCROLLBAR_COLOR_LIGHT = "rgba(0,0,0,0.25)";
 const SCROLLBAR_COLOR_DARK = "rgba(255,255,255,0.3)";
 
 const getFontSize = (rowHeight: number): number => {
-  return Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, rowHeight * FONT_RATIO));
+  return Math.max(
+    MIN_FONT_SIZE,
+    Math.min(MAX_FONT_SIZE, rowHeight * FONT_RATIO),
+  );
 };
 
 export const drawTableOnCanvas = (
@@ -31,7 +35,15 @@ export const drawTableOnCanvas = (
 ) => {
   context.save();
 
-  const { rows, columns, cells, columnWidths, rowHeights, headerRow, scrollOffsetY } = element;
+  const {
+    rows,
+    columns,
+    cells,
+    columnWidths,
+    rowHeights,
+    headerRow,
+    scrollOffsetY,
+  } = element;
   const totalWidth = columnWidths.reduce((s, w) => s + w, 0);
   const totalHeight = rowHeights.reduce((s, h) => s + h, 0);
   const isDark = renderConfig.theme === THEME.DARK;
@@ -52,10 +64,7 @@ export const drawTableOnCanvas = (
   context.translate(0, -scrollOffset);
 
   // 1. Draw background fill if backgroundColor is set
-  if (
-    element.backgroundColor &&
-    element.backgroundColor !== "transparent"
-  ) {
+  if (element.backgroundColor && element.backgroundColor !== "transparent") {
     context.fillStyle = isDark
       ? applyDarkModeFilter(element.backgroundColor)
       : element.backgroundColor;
@@ -109,7 +118,9 @@ export const drawTableOnCanvas = (
     const cellPadding = Math.max(4, fontSize * PADDING_RATIO);
     const isHeader = headerRow && r === 0;
 
-    const font = `${isHeader ? "bold " : ""}${fontSize}px Virgil, Segoe UI Emoji`;
+    const font = `${
+      isHeader ? "bold " : ""
+    }${fontSize}px Virgil, Segoe UI Emoji`;
     context.font = font;
 
     // Skip rows entirely above the visible area for performance
@@ -144,7 +155,7 @@ export const drawTableOnCanvas = (
         if (measured.width > maxTextWidth) {
           while (
             displayText.length > 0 &&
-            context.measureText(displayText + "\u2026").width > maxTextWidth
+            context.measureText(`${displayText}\u2026`).width > maxTextWidth
           ) {
             displayText = displayText.slice(0, -1);
           }
@@ -186,11 +197,29 @@ export const drawTableOnCanvas = (
     context.beginPath();
     context.moveTo(sbX + radius, thumbY);
     context.lineTo(sbX + SCROLLBAR_WIDTH - radius, thumbY);
-    context.arcTo(sbX + SCROLLBAR_WIDTH, thumbY, sbX + SCROLLBAR_WIDTH, thumbY + radius, radius);
+    context.arcTo(
+      sbX + SCROLLBAR_WIDTH,
+      thumbY,
+      sbX + SCROLLBAR_WIDTH,
+      thumbY + radius,
+      radius,
+    );
     context.lineTo(sbX + SCROLLBAR_WIDTH, thumbY + thumbHeight - radius);
-    context.arcTo(sbX + SCROLLBAR_WIDTH, thumbY + thumbHeight, sbX + SCROLLBAR_WIDTH - radius, thumbY + thumbHeight, radius);
+    context.arcTo(
+      sbX + SCROLLBAR_WIDTH,
+      thumbY + thumbHeight,
+      sbX + SCROLLBAR_WIDTH - radius,
+      thumbY + thumbHeight,
+      radius,
+    );
     context.lineTo(sbX + radius, thumbY + thumbHeight);
-    context.arcTo(sbX, thumbY + thumbHeight, sbX, thumbY + thumbHeight - radius, radius);
+    context.arcTo(
+      sbX,
+      thumbY + thumbHeight,
+      sbX,
+      thumbY + thumbHeight - radius,
+      radius,
+    );
     context.lineTo(sbX, thumbY + radius);
     context.arcTo(sbX, thumbY, sbX + radius, thumbY, radius);
     context.closePath();

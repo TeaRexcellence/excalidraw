@@ -206,10 +206,32 @@ export type ExcalidrawTableElement = _ExcalidrawElementBase &
 
 export type CodeBlockLanguage =
   | "javascript"
+  | "typescript"
   | "python"
+  | "java"
   | "csharp"
   | "cpp"
+  | "go"
+  | "rust"
+  | "ruby"
+  | "php"
+  | "swift"
+  | "kotlin"
+  | "scala"
+  | "html"
+  | "css"
+  | "json"
+  | "yaml"
+  | "sql"
+  | "bash"
+  | "powershell"
   | "markdown"
+  | "xml"
+  | "docker"
+  | "lua"
+  | "perl"
+  | "r"
+  | "dart"
   | "plaintext";
 
 export type ExcalidrawCodeBlockElement = _ExcalidrawElementBase &
@@ -219,6 +241,8 @@ export type ExcalidrawCodeBlockElement = _ExcalidrawElementBase &
     language: CodeBlockLanguage;
     showLineNumbers: boolean;
     scrollOffsetY: number;
+    /** Font size in px — scales proportionally on resize (default 13) */
+    fontSize: number;
   }>;
 
 export type ExcalidrawDocumentElement = _ExcalidrawElementBase &

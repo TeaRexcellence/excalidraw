@@ -755,17 +755,35 @@ const renderElementToSvg = (
 
         // Header background
         if (tableEl.headerRow && tableEl.rows > 0) {
-          const headerRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
+          const headerRect = svgRoot.ownerDocument.createElementNS(
+            SVG_NS,
+            "rect",
+          );
           headerRect.setAttribute("x", "0");
           headerRect.setAttribute("y", "0");
-          headerRect.setAttribute("width", `${tableEl.columnWidths.reduce((s: number, w: number) => s + w, 0)}`);
+          headerRect.setAttribute(
+            "width",
+            `${tableEl.columnWidths.reduce(
+              (s: number, w: number) => s + w,
+              0,
+            )}`,
+          );
           headerRect.setAttribute("height", `${tableEl.rowHeights[0]}`);
-          headerRect.setAttribute("fill", isDark ? "rgba(99,102,140,0.35)" : "rgba(213,216,235,0.35)");
+          headerRect.setAttribute(
+            "fill",
+            isDark ? "rgba(99,102,140,0.35)" : "rgba(213,216,235,0.35)",
+          );
           g.appendChild(headerRect);
         }
 
-        const totalW = tableEl.columnWidths.reduce((s: number, w: number) => s + w, 0);
-        const totalH = tableEl.rowHeights.reduce((s: number, h: number) => s + h, 0);
+        const totalW = tableEl.columnWidths.reduce(
+          (s: number, w: number) => s + w,
+          0,
+        );
+        const totalH = tableEl.rowHeights.reduce(
+          (s: number, h: number) => s + h,
+          0,
+        );
 
         // Inner grid lines
         let gy = 0;
@@ -804,7 +822,10 @@ const renderElementToSvg = (
             const cellText = tableEl.cells[r]?.[c] || "";
             if (cellText) {
               const isHeader = tableEl.headerRow && r === 0;
-              const text = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+              const text = svgRoot.ownerDocument.createElementNS(
+                SVG_NS,
+                "text",
+              );
               text.textContent = cellText;
               text.setAttribute("x", `${gx + cellPadding}`);
               text.setAttribute("y", `${gy + cellH / 2}`);
@@ -1056,7 +1077,10 @@ const renderElementToSvg = (
         arrowRect.setAttribute("fill", "#4f46e5");
         arrowRect.setAttribute("rx", "0");
         // Clip to right corners only by overlapping left side
-        const arrowClip = svgRoot.ownerDocument.createElementNS(SVG_NS, "clipPath");
+        const arrowClip = svgRoot.ownerDocument.createElementNS(
+          SVG_NS,
+          "clipPath",
+        );
         const clipId = `clip-arrow-${element.id}`;
         arrowClip.setAttribute("id", clipId);
         const clipRect = svgRoot.ownerDocument.createElementNS(SVG_NS, "rect");
@@ -1072,11 +1096,18 @@ const renderElementToSvg = (
         g.appendChild(arrowRect);
 
         // Chevron
-        const chevron = svgRoot.ownerDocument.createElementNS(SVG_NS, "polyline");
+        const chevron = svgRoot.ownerDocument.createElementNS(
+          SVG_NS,
+          "polyline",
+        );
         const chevronCx = arrowX + 30;
         const chevronCy = element.height / 2;
-        chevron.setAttribute("points",
-          `${chevronCx - 6},${chevronCy - 10} ${chevronCx + 6},${chevronCy} ${chevronCx - 6},${chevronCy + 10}`);
+        chevron.setAttribute(
+          "points",
+          `${chevronCx - 6},${chevronCy - 10} ${chevronCx + 6},${chevronCy} ${
+            chevronCx - 6
+          },${chevronCy + 10}`,
+        );
         chevron.setAttribute("fill", "none");
         chevron.setAttribute("stroke", "#ffffff");
         chevron.setAttribute("stroke-width", "3");
@@ -1097,7 +1128,10 @@ const renderElementToSvg = (
 
         // Description
         if (plEl.description) {
-          const descText = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+          const descText = svgRoot.ownerDocument.createElementNS(
+            SVG_NS,
+            "text",
+          );
           descText.textContent = plEl.description;
           descText.setAttribute("x", "14");
           descText.setAttribute("y", "52");
@@ -1109,7 +1143,10 @@ const renderElementToSvg = (
 
         // Project name
         if (plEl.projectName) {
-          const projText = svgRoot.ownerDocument.createElementNS(SVG_NS, "text");
+          const projText = svgRoot.ownerDocument.createElementNS(
+            SVG_NS,
+            "text",
+          );
           projText.textContent = `→ ${plEl.projectName}`;
           projText.setAttribute("x", "14");
           projText.setAttribute("y", `${element.height - 14}`);

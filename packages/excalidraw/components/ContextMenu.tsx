@@ -24,7 +24,10 @@ export type ContextMenuItemCustom = {
   predicate?: (appState: AppState) => boolean;
 };
 
-export type ContextMenuItem = typeof CONTEXT_MENU_SEPARATOR | Action | ContextMenuItemCustom;
+export type ContextMenuItem =
+  | typeof CONTEXT_MENU_SEPARATOR
+  | Action
+  | ContextMenuItemCustom;
 
 export type ContextMenuItems = (ContextMenuItem | false | null | undefined)[];
 
@@ -44,7 +47,12 @@ export const ContextMenu = React.memo(
     const elements = useExcalidrawElements();
 
     const filteredItems = items.reduce((acc: ContextMenuItem[], item) => {
-      if (item && item !== CONTEXT_MENU_SEPARATOR && "contextItemType" in item && item.contextItemType === "custom") {
+      if (
+        item &&
+        item !== CONTEXT_MENU_SEPARATOR &&
+        "contextItemType" in item &&
+        item.contextItemType === "custom"
+      ) {
         // Custom component item
         if (!item.predicate || item.predicate(appState)) {
           acc.push(item);
@@ -99,10 +107,17 @@ export const ContextMenu = React.memo(
             }
 
             // Handle custom component items
-            if ("contextItemType" in item && item.contextItemType === "custom") {
+            if (
+              "contextItemType" in item &&
+              item.contextItemType === "custom"
+            ) {
               const CustomComponent = item.Component;
               return (
-                <li key={idx} className="context-menu-item-custom" data-testid={item.name}>
+                <li
+                  key={idx}
+                  className="context-menu-item-custom"
+                  data-testid={item.name}
+                >
                   <CustomComponent appState={appState} />
                 </li>
               );

@@ -17,9 +17,6 @@ import {
   updateObject,
 } from "@excalidraw/common";
 
-const MIN_SIDEBAR_WIDTH = 200;
-const DEFAULT_SIDEBAR_WIDTH = 256;
-
 import { useUIAppState } from "../../context/ui-appState";
 import { atom, useSetAtom } from "../../editor-jotai";
 import { useOutsideClick } from "../../hooks/useOutsideClick";
@@ -37,6 +34,9 @@ import { SidebarTab } from "./SidebarTab";
 import "./Sidebar.scss";
 
 import type { SidebarProps, SidebarPropsContextValue } from "./common";
+
+const MIN_SIDEBAR_WIDTH = 200;
+const DEFAULT_SIDEBAR_WIDTH = 256;
 
 /**
  * Flags whether the currently rendered Sidebar is docked or not, for use
@@ -160,10 +160,13 @@ export const SidebarInner = forwardRef(
       setSidebarWidthAtom(sidebarWidth);
     }, [sidebarWidth, setSidebarWidthAtom]);
 
-    const setSidebarWidth = useCallback((width: number) => {
-      setSidebarWidthState(width);
-      setSidebarWidthAtom(width);
-    }, [setSidebarWidthAtom]);
+    const setSidebarWidth = useCallback(
+      (width: number) => {
+        setSidebarWidthState(width);
+        setSidebarWidthAtom(width);
+      },
+      [setSidebarWidthAtom],
+    );
 
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
@@ -191,7 +194,10 @@ export const SidebarInner = forwardRef(
       const handleMouseUp = () => {
         setIsResizing(false);
         try {
-          localStorage.setItem("excalidraw-sidebar-width", sidebarWidth.toString());
+          localStorage.setItem(
+            "excalidraw-sidebar-width",
+            sidebarWidth.toString(),
+          );
         } catch {
           // noop
         }
@@ -217,10 +223,7 @@ export const SidebarInner = forwardRef(
         ref={islandRef}
         style={{ width: sidebarWidth }}
       >
-        <div
-          className="sidebar__resize-handle"
-          onMouseDown={handleMouseDown}
-        />
+        <div className="sidebar__resize-handle" onMouseDown={handleMouseDown} />
         <SidebarPropsContext.Provider value={headerPropsRef.current}>
           {children}
         </SidebarPropsContext.Provider>

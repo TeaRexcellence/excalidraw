@@ -26,7 +26,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Handle time updates - for custom end time behavior
   const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !hasCustomEndTime || endTime === null || isSeekingRef.current) {
+    if (
+      !video ||
+      !hasCustomEndTime ||
+      endTime === null ||
+      isSeekingRef.current
+    ) {
       return;
     }
 

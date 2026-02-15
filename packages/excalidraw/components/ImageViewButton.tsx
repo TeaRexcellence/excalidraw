@@ -1,6 +1,4 @@
-import {
-  sceneCoordsToViewportCoords,
-} from "@excalidraw/common";
+import { sceneCoordsToViewportCoords } from "@excalidraw/common";
 import { getElementAbsoluteCoords } from "@excalidraw/element";
 
 import type {

@@ -11,9 +11,7 @@
  */
 
 import { clearAppStateForLocalStorage } from "@excalidraw/excalidraw/appState";
-import {
-  debounce,
-} from "@excalidraw/common";
+import { debounce } from "@excalidraw/common";
 import {
   createStore,
   entries,

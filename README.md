@@ -9,7 +9,7 @@ Shape libraries still work. Online collaboration, cloud storage, sharing, and te
 ## Features at a Glance
 
 | Feature | Description |
-|---------|-------------|
+| --- | --- |
 | [Project Manager](#project-manager) | File-based project save/load with categories, favorites, export/import |
 | [Video Embed](#video-embed) | YouTube, direct URL, and local video file embedding with playback controls |
 | [Table Element](#table-element) | Spreadsheet-style tables with editable cells, resizable columns, CSV import |
@@ -31,6 +31,7 @@ A complete project management system backed by local files. Replaces the default
 ### How It Works
 
 Projects live in `public/projects/` on disk:
+
 ```
 public/projects/
 ├── projects.json                 # Master index
@@ -59,6 +60,7 @@ public/projects/
 Access via the **⋮** (dots) button in the Project Manager header.
 
 **Export** zips the entire project folder and downloads it:
+
 ```
 MyProject.zip
 ├── scene.excalidraw      # Canvas data (required)
@@ -69,6 +71,7 @@ MyProject.zip
 ```
 
 **Import** accepts a `.zip` file:
+
 1. Validates the zip contains a `scene.excalidraw` file (rejects if missing).
 2. Adds the project to the **Uncategorized** group.
 3. If a project with the same name already exists, appends `(1)`, `(2)`, etc.
@@ -90,7 +93,7 @@ Full video embedding with YouTube, direct URLs, and local file uploads. Videos a
 ### Supported Sources
 
 | Source | Example |
-|--------|---------|
+| --- | --- |
 | YouTube | Any youtube.com/youtu.be URL (regular, shorts, playlists, timestamps) |
 | Direct URL | `https://example.com/video.mp4` (.mp4, .webm, .ogg, .mov, .avi, .mkv, .m4v) |
 | Local upload | Browse and upload a file — copied into the project's `videos/` folder |
@@ -99,16 +102,17 @@ Full video embedding with YouTube, direct URLs, and local file uploads. Videos a
 
 Hover over a video element to get the expanded controls panel:
 
-| Control | Description |
-|---------|-------------|
-| Play / Pause | Toggle playback |
-| Current time | Live position display (M:SS) |
-| Loop | Loop entire video or custom range |
+| Control          | Description                                         |
+| ---------------- | --------------------------------------------------- |
+| Play / Pause     | Toggle playback                                     |
+| Current time     | Live position display (M:SS)                        |
+| Loop             | Loop entire video or custom range                   |
 | Start / End time | Set playback range (accepts `1:30` or `90` seconds) |
-| Autoplay | Start playing automatically on load |
-| Mute | Toggle audio |
+| Autoplay         | Start playing automatically on load                 |
+| Mute             | Toggle audio                                        |
 
 Options are persisted in the URL hash:
+
 ```
 #excalidraw-video=loop,autoplay,muted,start:30,end:120,dim:1920x1080
 ```
@@ -116,6 +120,7 @@ Options are persisted in the URL hash:
 ### Export
 
 Videos display their thumbnails in PNG/SVG exports:
+
 - **YouTube** — Fetches `img.youtube.com` thumbnail
 - **Local/Direct** — Captures a frame at 1 second (or video midpoint)
 
@@ -144,14 +149,14 @@ Spreadsheet-style tables rendered directly on the canvas.
 
 ### Properties
 
-| Property | Default | Description |
-|----------|---------|-------------|
-| `columns` | User-selected | Number of columns |
-| `rows` | User-selected | Number of rows |
-| `cells` | Empty 2D array | Cell text content `[row][col]` |
-| `columnWidths` | 120px each | Pixel width per column |
-| `rowHeights` | 36px each | Pixel height per row |
-| `headerRow` | false | Render first row as header |
+| Property       | Default        | Description                    |
+| -------------- | -------------- | ------------------------------ |
+| `columns`      | User-selected  | Number of columns              |
+| `rows`         | User-selected  | Number of rows                 |
+| `cells`        | Empty 2D array | Cell text content `[row][col]` |
+| `columnWidths` | 120px each     | Pixel width per column         |
+| `rowHeights`   | 36px each      | Pixel height per row           |
+| `headerRow`    | false          | Render first row as header     |
 
 ### Access
 
@@ -198,11 +203,11 @@ Embed local files from your filesystem onto the canvas.
 
 ### Properties
 
-| Property | Description |
-|----------|-------------|
-| `fileName` | Name of the file |
-| `fileType` | MIME type or extension |
-| `filePath` | Absolute path on disk |
+| Property      | Description                   |
+| ------------- | ----------------------------- |
+| `fileName`    | Name of the file              |
+| `fileType`    | MIME type or extension        |
+| `filePath`    | Absolute path on disk         |
 | `fileContent` | Full text content of the file |
 
 ### Access
@@ -224,12 +229,12 @@ Interactive cards that link between projects — useful for building a network o
 
 ### Properties
 
-| Property | Description |
-|----------|-------------|
-| `title` | Card title |
-| `description` | Short description text |
-| `projectId` | ID of the linked project |
-| `projectName` | Name of the linked project |
+| Property      | Description                     |
+| ------------- | ------------------------------- |
+| `title`       | Card title                      |
+| `description` | Short description text          |
+| `projectId`   | ID of the linked project        |
+| `projectName` | Name of the linked project      |
 | `imageBase64` | Optional preview image (base64) |
 
 ### Access
@@ -274,13 +279,13 @@ Extended hyperlink support beyond web URLs.
 
 ### Supported Formats
 
-| Format | Example |
-|--------|---------|
-| Web URLs | `https://example.com` |
-| Windows paths | `C:\path\to\file` or `C:/path/to/file` |
-| UNC paths | `\\server\share\folder` |
-| File protocol | `file:///path/to/file` |
-| Localhost | `localhost:3000/page` or `127.0.0.1:8080` |
+| Format         | Example                                   |
+| -------------- | ----------------------------------------- |
+| Web URLs       | `https://example.com`                     |
+| Windows paths  | `C:\path\to\file` or `C:/path/to/file`    |
+| UNC paths      | `\\server\share\folder`                   |
+| File protocol  | `file:///path/to/file`                    |
+| Localhost      | `localhost:3000/page` or `127.0.0.1:8080` |
 | Relative paths | `/path/to/file` (resolved against origin) |
 
 Local paths bypass the standard URL sanitizer and are handled natively.
@@ -315,7 +320,7 @@ Stripped-out cloud and collaboration features for a clean, local-only experience
 ### Added to Main Menu
 
 | Item | Description |
-|------|-------------|
+| --- | --- |
 | Save Project | Open sidebar to Projects, trigger save |
 | Open Project Folder | Open current project's folder in file explorer |
 | Start New Project | Close current project + clear canvas (with confirmation) |
@@ -350,21 +355,21 @@ yarn fix                # Auto-fix formatting and linting
 
 The Vite dev server exposes local APIs for project and file management:
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/projects/list` | GET | Get projects index |
-| `/api/projects/save` | POST | Save projects index |
-| `/api/projects/{id}/scene` | GET/POST | Get/save project scene data |
-| `/api/projects/{id}/preview` | POST | Save preview image |
-| `/api/projects/{id}` | DELETE | Delete project |
-| `/api/projects/{id}/open-folder` | POST | Open folder in file explorer |
-| `/api/projects/{id}/move` | POST | Move/rename project folder |
-| `/api/projects/{id}/export` | POST | Export as zip |
-| `/api/projects/import` | POST | Import from zip |
-| `/api/projects/reset` | POST | Delete all projects |
-| `/api/videos/upload` | POST | Upload video file |
-| `/api/videos/{path}` | DELETE | Delete video file |
-| `/api/files/pick` | POST | System file picker dialog |
+| Endpoint                         | Method   | Description                  |
+| -------------------------------- | -------- | ---------------------------- |
+| `/api/projects/list`             | GET      | Get projects index           |
+| `/api/projects/save`             | POST     | Save projects index          |
+| `/api/projects/{id}/scene`       | GET/POST | Get/save project scene data  |
+| `/api/projects/{id}/preview`     | POST     | Save preview image           |
+| `/api/projects/{id}`             | DELETE   | Delete project               |
+| `/api/projects/{id}/open-folder` | POST     | Open folder in file explorer |
+| `/api/projects/{id}/move`        | POST     | Move/rename project folder   |
+| `/api/projects/{id}/export`      | POST     | Export as zip                |
+| `/api/projects/import`           | POST     | Import from zip              |
+| `/api/projects/reset`            | POST     | Delete all projects          |
+| `/api/videos/upload`             | POST     | Upload video file            |
+| `/api/videos/{path}`             | DELETE   | Delete video file            |
+| `/api/files/pick`                | POST     | System file picker dialog    |
 
 ### Architecture
 
@@ -389,7 +394,7 @@ excalidraw/
 ### Custom Element Types
 
 | Type | Type Guard | Factory | Renderer |
-|------|-----------|---------|----------|
+| --- | --- | --- | --- |
 | `table` | `isTableElement()` | `newTableElement()` | `renderTable.ts` |
 | `codeBlock` | `isCodeBlockElement()` | `newCodeBlockElement()` | `renderCodeBlock.ts` |
 | `document` | `isDocumentElement()` | `newDocumentElement()` | `renderDocument.ts` |

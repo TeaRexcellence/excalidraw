@@ -10,7 +10,11 @@ import {
   isShallowEqual,
 } from "@excalidraw/common";
 
-import { mutateElement, isDocumentElement, isImageElement } from "@excalidraw/element";
+import {
+  mutateElement,
+  isDocumentElement,
+  isImageElement,
+} from "@excalidraw/element";
 
 import { showSelectedShapeActions } from "@excalidraw/element";
 
@@ -68,7 +72,7 @@ import { JSONExportDialog } from "./JSONExportDialog";
 import { LaserPointerButton } from "./LaserPointerButton";
 import { VideoEmbedDialog } from "./VideoEmbedDialog";
 import { TableEditorModal } from "./TableEditorModal";
-import { CodeBlockCreateDialog } from "./CodeBlockCreateDialog";
+import { CodeBlockEditorModal } from "./CodeBlockEditorModal";
 import { DocumentInsertDialog } from "./DocumentInsertDialog";
 import { DocumentViewerDialog } from "./DocumentViewerDialog";
 import { ImageViewerDialog } from "./ImageViewerDialog";
@@ -615,8 +619,9 @@ const LayerUI = ({
           }}
         />
       )}
-      {appState.openDialog?.name === "codeBlockCreate" && (
-        <CodeBlockCreateDialog
+      {appState.openDialog?.name === "codeBlockEditor" && (
+        <CodeBlockEditorModal
+          elementId={appState.openDialog.elementId}
           onClose={() => {
             setAppState({ openDialog: null });
           }}
@@ -644,46 +649,48 @@ const LayerUI = ({
           }}
         />
       )}
-      {appState.openDialog?.name === "documentViewer" && (() => {
-        const docElement = app.scene
-          .getElementsIncludingDeleted()
-          .find(
-            (el) =>
-              el.id === (appState.openDialog as any).documentId &&
-              isDocumentElement(el),
+      {appState.openDialog?.name === "documentViewer" &&
+        (() => {
+          const docElement = app.scene
+            .getElementsIncludingDeleted()
+            .find(
+              (el) =>
+                el.id === (appState.openDialog as any).documentId &&
+                isDocumentElement(el),
+            );
+          if (!docElement || !isDocumentElement(docElement)) {
+            return null;
+          }
+          return (
+            <DocumentViewerDialog
+              element={docElement}
+              onClose={() => {
+                setAppState({ openDialog: null });
+              }}
+            />
           );
-        if (!docElement || !isDocumentElement(docElement)) {
-          return null;
-        }
-        return (
-          <DocumentViewerDialog
-            element={docElement}
-            onClose={() => {
-              setAppState({ openDialog: null });
-            }}
-          />
-        );
-      })()}
-      {appState.openDialog?.name === "imageViewer" && (() => {
-        const imgElement = app.scene
-          .getElementsIncludingDeleted()
-          .find(
-            (el) =>
-              el.id === (appState.openDialog as any).imageElementId &&
-              isImageElement(el),
+        })()}
+      {appState.openDialog?.name === "imageViewer" &&
+        (() => {
+          const imgElement = app.scene
+            .getElementsIncludingDeleted()
+            .find(
+              (el) =>
+                el.id === (appState.openDialog as any).imageElementId &&
+                isImageElement(el),
+            );
+          if (!imgElement || !isImageElement(imgElement)) {
+            return null;
+          }
+          return (
+            <ImageViewerDialog
+              imageElementId={imgElement.id}
+              onClose={() => {
+                setAppState({ openDialog: null });
+              }}
+            />
           );
-        if (!imgElement || !isImageElement(imgElement)) {
-          return null;
-        }
-        return (
-          <ImageViewerDialog
-            imageElementId={imgElement.id}
-            onClose={() => {
-              setAppState({ openDialog: null });
-            }}
-          />
-        );
-      })()}
+        })()}
       {appState.openDialog?.name === "searchMenu" && (
         <SearchMenu
           onClose={() => {

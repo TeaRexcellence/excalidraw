@@ -5,10 +5,7 @@ import { Card } from "@excalidraw/excalidraw/components/Card";
 import { ToolButton } from "@excalidraw/excalidraw/components/ToolButton";
 import { ProjectsIcon } from "@excalidraw/excalidraw/components/icons";
 import { useI18n } from "@excalidraw/excalidraw/i18n";
-import {
-  DEFAULT_SIDEBAR,
-  PROJECTS_SIDEBAR_TAB,
-} from "@excalidraw/common";
+import { DEFAULT_SIDEBAR, PROJECTS_SIDEBAR_TAB } from "@excalidraw/common";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 import type {
@@ -82,7 +79,15 @@ export const SaveAsProject: React.FC<{
   onError: (error: Error) => void;
   onSuccess: () => void;
   excalidrawAPI: ExcalidrawImperativeAPI;
-}> = ({ elements, appState, files, name, onError, onSuccess, excalidrawAPI }) => {
+}> = ({
+  elements,
+  appState,
+  files,
+  name,
+  onError,
+  onSuccess,
+  excalidrawAPI,
+}) => {
   const { t } = useI18n();
 
   return (

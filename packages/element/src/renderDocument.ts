@@ -1,13 +1,14 @@
-import type { ExcalidrawDocumentElement } from "./types";
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
+
+import type { ExcalidrawDocumentElement } from "./types";
 
 // Reference dimensions — all drawing is done at this size, then scaled
 const REF_W = 200;
 const REF_H = 80;
 
 const CORNER_RADIUS = 8;
-const NAME_FONT = 'bold 13px sans-serif';
-const BADGE_FONT = 'bold 22px sans-serif';
+const NAME_FONT = "bold 13px sans-serif";
+const BADGE_FONT = "bold 22px sans-serif";
 const LIGHT_BG = "#f5f5f5";
 const DARK_BG = "#2d2d2d";
 const LIGHT_TEXT = "#333333";
@@ -132,7 +133,7 @@ export const drawDocumentOnCanvas = (
   if (context.measureText(displayName).width > maxNameWidth) {
     while (
       displayName.length > 0 &&
-      context.measureText(displayName + "…").width > maxNameWidth
+      context.measureText(`${displayName}…`).width > maxNameWidth
     ) {
       displayName = displayName.slice(0, -1);
     }

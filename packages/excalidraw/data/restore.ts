@@ -514,18 +514,27 @@ export const restoreElement = (
       return restoreElementWithProperties(element, {
         rows: (element as any).rows || 3,
         columns: (element as any).columns || 3,
-        cells: (element as any).cells || Array.from({ length: (element as any).rows || 3 }, () => Array((element as any).columns || 3).fill("")),
-        columnWidths: (element as any).columnWidths || Array((element as any).columns || 3).fill(120),
-        rowHeights: (element as any).rowHeights || Array((element as any).rows || 3).fill(36),
+        cells:
+          (element as any).cells ||
+          Array.from({ length: (element as any).rows || 3 }, () =>
+            Array((element as any).columns || 3).fill(""),
+          ),
+        columnWidths:
+          (element as any).columnWidths ||
+          Array((element as any).columns || 3).fill(120),
+        rowHeights:
+          (element as any).rowHeights ||
+          Array((element as any).rows || 3).fill(36),
         headerRow: (element as any).headerRow ?? true,
         scrollOffsetY: (element as any).scrollOffsetY ?? 0,
       });
     case "codeblock":
       return restoreElementWithProperties(element, {
         code: (element as any).code ?? "",
-        language: (element as any).language ?? "javascript",
+        language: (element as any).language ?? "plaintext",
         showLineNumbers: (element as any).showLineNumbers ?? true,
         scrollOffsetY: (element as any).scrollOffsetY ?? 0,
+        fontSize: (element as any).fontSize ?? 13,
       });
     case "document":
       return restoreElementWithProperties(element, {

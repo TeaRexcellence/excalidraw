@@ -14,8 +14,7 @@ export const actionEditProjectLink = register({
       appState,
     );
     return (
-      selectedElements.length === 1 &&
-      isProjectLinkElement(selectedElements[0])
+      selectedElements.length === 1 && isProjectLinkElement(selectedElements[0])
     );
   },
   perform: (_elements, appState, _data, app) => {
@@ -23,7 +22,10 @@ export const actionEditProjectLink = register({
       app.scene.getNonDeletedElements(),
       appState,
     );
-    if (selectedElements.length !== 1 || !isProjectLinkElement(selectedElements[0])) {
+    if (
+      selectedElements.length !== 1 ||
+      !isProjectLinkElement(selectedElements[0])
+    ) {
       return { appState, captureUpdate: CaptureUpdateAction.EVENTUALLY };
     }
     return {
@@ -59,7 +61,10 @@ export const actionNavigateToProject = register({
       app.scene.getNonDeletedElements(),
       appState,
     );
-    if (selectedElements.length !== 1 || !isProjectLinkElement(selectedElements[0])) {
+    if (
+      selectedElements.length !== 1 ||
+      !isProjectLinkElement(selectedElements[0])
+    ) {
       return { appState, captureUpdate: CaptureUpdateAction.EVENTUALLY };
     }
     const projectId = (selectedElements[0] as any).projectId;

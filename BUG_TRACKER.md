@@ -1,12 +1,11 @@
 # Excalidraw Fork - Bug Tracker
 
-> **Generated:** 2026-01-13
-> **Total Issues:** 67
-> **Status Legend:** 🔴 Open | 🟡 In Progress | 🟢 Fixed
+> **Generated:** 2026-01-13 **Total Issues:** 67 **Status Legend:** 🔴 Open | 🟡 In Progress | 🟢 Fixed
 
 ---
 
 ## Table of Contents
+
 1. [Critical Issues (P0)](#critical-issues-p0)
 2. [High Priority Issues (P1)](#high-priority-issues-p1)
 3. [Medium Priority Issues (P2)](#medium-priority-issues-p2)
@@ -17,18 +16,18 @@
 ## Critical Issues (P0)
 
 ### BUG-001: 🟢 Project Selection Uses Stale Index State
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 495-562
-**Symptom:** Clicking a project in the Project Manager doesn't switch to it
 
-**Root Cause:**
-The `handleSelectProject` callback is memoized with `useCallback` and depends on `index` state (line 561). When the user clicks a project:
+**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` **Lines:** 495-562 **Symptom:** Clicking a project in the Project Manager doesn't switch to it
+
+**Root Cause:** The `handleSelectProject` callback is memoized with `useCallback` and depends on `index` state (line 561). When the user clicks a project:
+
 1. The callback uses the `index` value captured at creation time
 2. If `index` was updated but React hasn't re-rendered yet, the callback has stale data
 3. The check `if (projectId === index.currentProjectId)` (line 500) may incorrectly return true
 4. The function returns early, doing nothing
 
 **Current Code (lines 496-503):**
+
 ```typescript
 const handleSelectProject = useCallback(
   async (projectId: string) => {
@@ -41,10 +40,13 @@ const handleSelectProject = useCallback(
 ```
 
 **Fix:**
+
 ```typescript
 // Add ref at component level (around line 135)
 const indexRef = useRef(index);
-useEffect(() => { indexRef.current = index; }, [index]);
+useEffect(() => {
+  indexRef.current = index;
+}, [index]);
 
 // Modify handleSelectProject (line 496)
 const handleSelectProject = useCallback(
@@ -63,18 +65,18 @@ const handleSelectProject = useCallback(
 ---
 
 ### BUG-002: 🟢 No Mutex on Project Operations Causes Race Conditions
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 495-562
-**Symptom:** Rapid clicking between projects can cause data loss or corruption
 
-**Root Cause:**
-No lock prevents concurrent execution of `handleSelectProject`. If user clicks Project A then immediately clicks Project B:
+**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` **Lines:** 495-562 **Symptom:** Rapid clicking between projects can cause data loss or corruption
+
+**Root Cause:** No lock prevents concurrent execution of `handleSelectProject`. If user clicks Project A then immediately clicks Project B:
+
 1. First call starts saving current project (line 508)
 2. Second call starts before first completes
 3. Both calls try to update `index` state
 4. Last write wins, potentially losing data
 
 **Current Code (no protection):**
+
 ```typescript
 const handleSelectProject = useCallback(
   async (projectId: string) => {
@@ -86,6 +88,7 @@ const handleSelectProject = useCallback(
 ```
 
 **Fix:**
+
 ```typescript
 // Add ref at component level (around line 136)
 const operationInProgress = useRef(false);
@@ -112,18 +115,18 @@ const handleSelectProject = useCallback(
 ---
 
 ### BUG-003: 🟢 Index Cache Divergence Between ProjectManagerData and ProjectManager
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` + `excalidraw-app/data/ProjectManagerData.ts`
-**Lines:** ProjectManager.tsx:43, 131, 558 | ProjectManagerData.ts:102, 137-144, 251-253
-**Symptom:** Auto-save may save to wrong project or UI shows wrong active project
 
-**Root Cause:**
-Two separate index states exist:
+**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` + `excalidraw-app/data/ProjectManagerData.ts` **Lines:** ProjectManager.tsx:43, 131, 558 | ProjectManagerData.ts:102, 137-144, 251-253 **Symptom:** Auto-save may save to wrong project or UI shows wrong active project
+
+**Root Cause:** Two separate index states exist:
+
 1. `cachedIndex` in ProjectManagerData.ts (line 102) - used by auto-save
 2. `index` state in ProjectManager.tsx (line 131) - used by UI
 
 They sync via `ProjectManagerData.updateCachedIndex(index)` (line 43) but ONLY when user manually saves. The debounced auto-save (lines 108-148 in ProjectManagerData.ts) updates `cachedIndex` without notifying the UI component.
 
 **Current Code (ProjectManager.tsx line 43):**
+
 ```typescript
 async saveIndex(index: ProjectsIndex): Promise<void> {
   // IMPORTANT: Also update the cached index in ProjectManagerData to prevent
@@ -134,6 +137,7 @@ async saveIndex(index: ProjectsIndex): Promise<void> {
 ```
 
 **Current Code (ProjectManagerData.ts lines 137-144):**
+
 ```typescript
 // Update the project's updatedAt timestamp
 if (cachedIndex) {
@@ -143,11 +147,12 @@ if (cachedIndex) {
       p.id === projectId ? { ...p, updatedAt: Date.now() } : p,
     ),
   };
-  await api.saveIndex(cachedIndex);  // UI doesn't know about this!
+  await api.saveIndex(cachedIndex); // UI doesn't know about this!
 }
 ```
 
 **Fix (ProjectManager.tsx - add around line 155):**
+
 ```typescript
 // Keep ProjectManagerData cache in sync with local state
 useEffect(() => {
@@ -158,23 +163,24 @@ useEffect(() => {
 ---
 
 ### BUG-004: 🔴 Blob URL Memory Leak in getVideoThumbnail
-**File:** `packages/element/src/embeddable.ts`
-**Lines:** 755-770
-**Symptom:** Memory usage grows over time when working with videos
 
-**Root Cause:**
-`URL.createObjectURL(blob)` creates a blob URL (line 763) that holds a reference to the blob in memory. This URL is returned but **never revoked** anywhere in the codebase. Each call leaks memory.
+**File:** `packages/element/src/embeddable.ts` **Lines:** 755-770 **Symptom:** Memory usage grows over time when working with videos
+
+**Root Cause:** `URL.createObjectURL(blob)` creates a blob URL (line 763) that holds a reference to the blob in memory. This URL is returned but **never revoked** anywhere in the codebase. Each call leaks memory.
 
 **Current Code:**
+
 ```typescript
-export const getVideoThumbnail = async (url: string): Promise<string | null> => {
+export const getVideoThumbnail = async (
+  url: string,
+): Promise<string | null> => {
   // ... YouTube handling ...
 
   if (isDirectVideoUrl(url)) {
     const cleanUrl = stripVideoOptionsFromUrl(url);
     const blob = await captureVideoFrame(cleanUrl);
     if (blob) {
-      return URL.createObjectURL(blob);  // LINE 763 - NEVER REVOKED!
+      return URL.createObjectURL(blob); // LINE 763 - NEVER REVOKED!
     }
   }
   return null;
@@ -182,24 +188,28 @@ export const getVideoThumbnail = async (url: string): Promise<string | null> => 
 ```
 
 **Fix Option A (caller manages lifecycle):**
+
 ```typescript
 // Return blob instead of URL, let caller create/revoke URL
 export const getVideoThumbnail = async (url: string): Promise<Blob | null> => {
   // ...
   if (isDirectVideoUrl(url)) {
     const cleanUrl = stripVideoOptionsFromUrl(url);
-    return await captureVideoFrame(cleanUrl);  // Return blob directly
+    return await captureVideoFrame(cleanUrl); // Return blob directly
   }
   return null;
 };
 ```
 
 **Fix Option B (document and add cleanup helper):**
+
 ```typescript
 // Add to embeddable.ts exports
 const videoThumbnailUrls = new Set<string>();
 
-export const getVideoThumbnail = async (url: string): Promise<string | null> => {
+export const getVideoThumbnail = async (
+  url: string,
+): Promise<string | null> => {
   // ...
   if (blob) {
     const blobUrl = URL.createObjectURL(blob);
@@ -209,7 +219,7 @@ export const getVideoThumbnail = async (url: string): Promise<string | null> => 
 };
 
 export const cleanupVideoThumbnails = () => {
-  videoThumbnailUrls.forEach(url => URL.revokeObjectURL(url));
+  videoThumbnailUrls.forEach((url) => URL.revokeObjectURL(url));
   videoThumbnailUrls.clear();
 };
 ```
@@ -217,30 +227,31 @@ export const cleanupVideoThumbnails = () => {
 ---
 
 ### BUG-005: 🟢 Blob URL Memory Leak in getVideoDimensions
-**File:** `packages/excalidraw/components/VideoEmbedDialog.tsx`
-**Lines:** 68-88
-**Symptom:** Memory leak when opening video dialog multiple times
 
-**Root Cause:**
-The function creates a blob URL (line 74) but if neither `onloadedmetadata` nor `onerror` fires (network hang, browser issue), the URL is never revoked. No timeout exists.
+**File:** `packages/excalidraw/components/VideoEmbedDialog.tsx` **Lines:** 68-88 **Symptom:** Memory leak when opening video dialog multiple times
+
+**Root Cause:** The function creates a blob URL (line 74) but if neither `onloadedmetadata` nor `onerror` fires (network hang, browser issue), the URL is never revoked. No timeout exists.
 
 **Current Code:**
+
 ```typescript
-const getVideoDimensions = (file: File): Promise<{ width: number; height: number }> => {
+const getVideoDimensions = (
+  file: File,
+): Promise<{ width: number; height: number }> => {
   return new Promise((resolve) => {
     const video = document.createElement("video");
     video.preload = "metadata";
 
-    const blobUrl = URL.createObjectURL(file);  // Line 74
+    const blobUrl = URL.createObjectURL(file); // Line 74
 
     video.onloadedmetadata = () => {
       resolve({ width: video.videoWidth, height: video.videoHeight });
-      URL.revokeObjectURL(blobUrl);  // Only revoked if this fires
+      URL.revokeObjectURL(blobUrl); // Only revoked if this fires
     };
 
     video.onerror = () => {
       resolve({ width: 560, height: 315 });
-      URL.revokeObjectURL(blobUrl);  // Only revoked if this fires
+      URL.revokeObjectURL(blobUrl); // Only revoked if this fires
     };
 
     video.src = blobUrl;
@@ -250,8 +261,11 @@ const getVideoDimensions = (file: File): Promise<{ width: number; height: number
 ```
 
 **Fix:**
+
 ```typescript
-const getVideoDimensions = (file: File): Promise<{ width: number; height: number }> => {
+const getVideoDimensions = (
+  file: File,
+): Promise<{ width: number; height: number }> => {
   return new Promise((resolve) => {
     const video = document.createElement("video");
     video.preload = "metadata";
@@ -294,52 +308,54 @@ const getVideoDimensions = (file: File): Promise<{ width: number; height: number
 ## High Priority Issues (P1)
 
 ### BUG-006: 🟢 Path Traversal Vulnerability in sanitizeFolderName
-**File:** `excalidraw-app/vite.config.mts`
-**Lines:** 16-25
-**Symptom:** Security vulnerability - malicious project names could escape projects directory
 
-**Root Cause:**
-The `sanitizeFolderName` function removes some characters but doesn't explicitly prevent `..` path traversal:
+**File:** `excalidraw-app/vite.config.mts` **Lines:** 16-25 **Symptom:** Security vulnerability - malicious project names could escape projects directory
+
+**Root Cause:** The `sanitizeFolderName` function removes some characters but doesn't explicitly prevent `..` path traversal:
 
 **Current Code:**
+
 ```typescript
 function sanitizeFolderName(name: string): string {
-  return name
-    .replace(/[\\/:*?"<>|]/g, "_")  // Removes slashes but not ".."
-    .replace(/^[\s.]+|[\s.]+$/g, "")  // Only removes leading/trailing dots
-    .substring(0, 100)
-    || "Untitled";
+  return (
+    name
+      .replace(/[\\/:*?"<>|]/g, "_") // Removes slashes but not ".."
+      .replace(/^[\s.]+|[\s.]+$/g, "") // Only removes leading/trailing dots
+      .substring(0, 100) || "Untitled"
+  );
 }
 ```
 
 **Attack Vector:** A name like `....//....//etc` after processing could become `....etc` or similar
 
 **Fix:**
+
 ```typescript
 function sanitizeFolderName(name: string): string {
-  return name
-    .replace(/\.\./g, "_")           // Prevent path traversal FIRST
-    .replace(/[\\/:*?"<>|]/g, "_")
-    .replace(/^[\s.]+|[\s.]+$/g, "")
-    .substring(0, 100)
-    || "Untitled";
+  return (
+    name
+      .replace(/\.\./g, "_") // Prevent path traversal FIRST
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .replace(/^[\s.]+|[\s.]+$/g, "")
+      .substring(0, 100) || "Untitled"
+  );
 }
 ```
 
 ---
 
 ### BUG-007: 🟢 captureVideoFrame Timeout Check Logic Error
-**File:** `packages/element/src/embeddable.ts`
-**Lines:** 731-737
-**Symptom:** Video frame capture can hang indefinitely
 
-**Root Cause:**
-The timeout only cleans up if `video.readyState` is falsy (0). But `readyState` can be 1 (HAVE_METADATA) and still not trigger `onloadeddata`. The promise hangs.
+**File:** `packages/element/src/embeddable.ts` **Lines:** 731-737 **Symptom:** Video frame capture can hang indefinitely
+
+**Root Cause:** The timeout only cleans up if `video.readyState` is falsy (0). But `readyState` can be 1 (HAVE_METADATA) and still not trigger `onloadeddata`. The promise hangs.
 
 **Current Code:**
+
 ```typescript
 setTimeout(() => {
-  if (!video.readyState) {  // Only checks if 0!
+  if (!video.readyState) {
+    // Only checks if 0!
     cleanup();
     resolve(null);
   }
@@ -347,10 +363,11 @@ setTimeout(() => {
 ```
 
 **Fix:**
+
 ```typescript
 const timeoutId = setTimeout(() => {
   cleanup();
-  resolve(null);  // Always resolve after timeout
+  resolve(null); // Always resolve after timeout
 }, 10000);
 
 // Clear timeout in success handlers
@@ -363,25 +380,25 @@ video.onloadeddata = () => {
 ---
 
 ### BUG-008: 🟢 VideoPlayer isSeekingRef Race Condition
-**File:** `packages/excalidraw/components/VideoPlayer.tsx`
-**Lines:** 35-42
-**Symptom:** Video loop sometimes fails to work correctly
 
-**Root Cause:**
-The `isSeekingRef` flag is reset via `requestAnimationFrame`, but RAF is not guaranteed to fire before the next `timeupdate` event. The flag may still be true when the next check happens.
+**File:** `packages/excalidraw/components/VideoPlayer.tsx` **Lines:** 35-42 **Symptom:** Video loop sometimes fails to work correctly
+
+**Root Cause:** The `isSeekingRef` flag is reset via `requestAnimationFrame`, but RAF is not guaranteed to fire before the next `timeupdate` event. The flag may still be true when the next check happens.
 
 **Current Code:**
+
 ```typescript
 if (loop) {
   isSeekingRef.current = true;
   video.currentTime = startTime;
   requestAnimationFrame(() => {
-    isSeekingRef.current = false;  // May fire AFTER next timeupdate!
+    isSeekingRef.current = false; // May fire AFTER next timeupdate!
   });
 }
 ```
 
 **Fix:**
+
 ```typescript
 if (loop) {
   isSeekingRef.current = true;
@@ -389,28 +406,27 @@ if (loop) {
 
   const onSeeked = () => {
     isSeekingRef.current = false;
-    video.removeEventListener('seeked', onSeeked);
+    video.removeEventListener("seeked", onSeeked);
   };
-  video.addEventListener('seeked', onSeeked);
+  video.addEventListener("seeked", onSeeked);
 }
 ```
 
 ---
 
 ### BUG-009: 🟢 Missing AbortController in VideoEmbedDialog useEffect
-**File:** `packages/excalidraw/components/VideoEmbedDialog.tsx`
-**Lines:** 191-199
-**Symptom:** Memory leak and potential state updates on unmounted component
 
-**Root Cause:**
-The useEffect fetches project ID but has no cleanup. If dialog closes before fetch completes, state update occurs on unmounted component.
+**File:** `packages/excalidraw/components/VideoEmbedDialog.tsx` **Lines:** 191-199 **Symptom:** Memory leak and potential state updates on unmounted component
+
+**Root Cause:** The useEffect fetches project ID but has no cleanup. If dialog closes before fetch completes, state update occurs on unmounted component.
 
 **Current Code:**
+
 ```typescript
 useEffect(() => {
   getCurrentProjectId().then((projectId) => {
     if (projectId) {
-      setDialogState("video-dialog");  // May update unmounted component!
+      setDialogState("video-dialog"); // May update unmounted component!
     } else {
       setDialogState("save-prompt");
     }
@@ -419,32 +435,36 @@ useEffect(() => {
 ```
 
 **Fix:**
+
 ```typescript
 useEffect(() => {
   let mounted = true;
 
-  getCurrentProjectId().then((projectId) => {
-    if (!mounted) return;
-    setDialogState(projectId ? "video-dialog" : "save-prompt");
-  }).catch(() => {
-    if (mounted) setDialogState("save-prompt");
-  });
+  getCurrentProjectId()
+    .then((projectId) => {
+      if (!mounted) return;
+      setDialogState(projectId ? "video-dialog" : "save-prompt");
+    })
+    .catch(() => {
+      if (mounted) setDialogState("save-prompt");
+    });
 
-  return () => { mounted = false; };
+  return () => {
+    mounted = false;
+  };
 }, []);
 ```
 
 ---
 
 ### BUG-010: 🟢 API Error Handling Missing in saveIndex
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 40-49
-**Symptom:** Silent failures when saving project index
 
-**Root Cause:**
-The `saveIndex` function updates the local cache BEFORE the fetch completes. If fetch fails, cache is out of sync with server.
+**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` **Lines:** 40-49 **Symptom:** Silent failures when saving project index
+
+**Root Cause:** The `saveIndex` function updates the local cache BEFORE the fetch completes. If fetch fails, cache is out of sync with server.
 
 **Current Code:**
+
 ```typescript
 async saveIndex(index: ProjectsIndex): Promise<void> {
   ProjectManagerData.updateCachedIndex(index);  // Updated BEFORE fetch!
@@ -458,6 +478,7 @@ async saveIndex(index: ProjectsIndex): Promise<void> {
 ```
 
 **Fix:**
+
 ```typescript
 async saveIndex(index: ProjectsIndex): Promise<boolean> {
   try {
@@ -483,18 +504,17 @@ async saveIndex(index: ProjectsIndex): Promise<boolean> {
 ---
 
 ### BUG-011: 🟢 Preview Generator Captures Stale Index
-**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx`
-**Lines:** 281-304
-**Symptom:** Preview saved to wrong folder after project rename
 
-**Root Cause:**
-The preview generator callback captures `index` in its closure (line 284, 304). If project is renamed after generator is registered but before it executes, the stale index causes wrong path calculation.
+**File:** `packages/excalidraw/components/ProjectManager/ProjectManager.tsx` **Lines:** 281-304 **Symptom:** Preview saved to wrong folder after project rename
+
+**Root Cause:** The preview generator callback captures `index` in its closure (line 284, 304). If project is renamed after generator is registered but before it executes, the stale index causes wrong path calculation.
 
 **Current Code:**
+
 ```typescript
 useEffect(() => {
   const generator = async (projectId: string) => {
-    const project = index.projects.find((p) => p.id === projectId);  // Uses stale index!
+    const project = index.projects.find((p) => p.id === projectId); // Uses stale index!
     if (project?.hasCustomPreview) {
       return;
     }
@@ -502,10 +522,11 @@ useEffect(() => {
   };
   ProjectManagerData.setPreviewGenerator(generator);
   // ...
-}, [generatePreview, index.projects]);  // index.projects in deps but closure is stale
+}, [generatePreview, index.projects]); // index.projects in deps but closure is stale
 ```
 
 **Fix:**
+
 ```typescript
 useEffect(() => {
   const generator = async (projectId: string) => {
@@ -519,20 +540,19 @@ useEffect(() => {
   };
   ProjectManagerData.setPreviewGenerator(generator);
   // ...
-}, [generatePreview]);  // Remove index.projects from deps
+}, [generatePreview]); // Remove index.projects from deps
 ```
 
 ---
 
 ### BUG-012: 🟢 Debounce Not Cancelled on Project Switch
-**File:** `excalidraw-app/data/ProjectManagerData.ts`
-**Lines:** 108-148, 212-220
-**Symptom:** Old project data may overwrite new project after switch
 
-**Root Cause:**
-When switching projects, the debounced save for the old project is not cancelled. It may fire with stale data.
+**File:** `excalidraw-app/data/ProjectManagerData.ts` **Lines:** 108-148, 212-220 **Symptom:** Old project data may overwrite new project after switch
+
+**Root Cause:** When switching projects, the debounced save for the old project is not cancelled. It may fire with stale data.
 
 **Current Code (no cancel):**
+
 ```typescript
 static save(
   elements: readonly ExcalidrawElement[],
@@ -547,6 +567,7 @@ static save(
 ```
 
 **Fix:**
+
 ```typescript
 static cancelPendingSave(): void {
   this.saveDebounced.cancel();
@@ -559,14 +580,13 @@ static cancelPendingSave(): void {
 ---
 
 ### BUG-013: 🟢 SVG Export Missing x/y Attributes on Video Thumbnails
-**File:** `packages/excalidraw/renderer/staticSvgScene.ts`
-**Lines:** 184-202
-**Symptom:** Video thumbnails positioned incorrectly in SVG exports
 
-**Root Cause:**
-SVG `<image>` elements require explicit `x` and `y` attributes. The code uses only `transform` for positioning.
+**File:** `packages/excalidraw/renderer/staticSvgScene.ts` **Lines:** 184-202 **Symptom:** Video thumbnails positioned incorrectly in SVG exports
+
+**Root Cause:** SVG `<image>` elements require explicit `x` and `y` attributes. The code uses only `transform` for positioning.
 
 **Current Code:**
+
 ```typescript
 if (videoThumbnailDataUrl) {
   const image = svgRoot.ownerDocument.createElementNS(SVG_NS, "image");
@@ -581,6 +601,7 @@ if (videoThumbnailDataUrl) {
 ```
 
 **Fix:**
+
 ```typescript
 image.setAttribute("x", "0");
 image.setAttribute("y", "0");
@@ -591,11 +612,11 @@ image.setAttribute("height", `${element.height}`);
 ---
 
 ### BUG-014: 🟢 getVideoDuration Has No Timeout
-**File:** `packages/excalidraw/components/hyperlink/Hyperlink.tsx`
-**Lines:** 89-106
-**Symptom:** Hyperlink panel hangs when video URL is CORS-blocked
+
+**File:** `packages/excalidraw/components/hyperlink/Hyperlink.tsx` **Lines:** 89-106 **Symptom:** Hyperlink panel hangs when video URL is CORS-blocked
 
 **Current Code:**
+
 ```typescript
 const getVideoDuration = async (url: string): Promise<number | null> => {
   return new Promise((resolve) => {
@@ -621,23 +642,24 @@ const getVideoDuration = async (url: string): Promise<number | null> => {
 ---
 
 ### BUG-015: 🟢 Image Loading Timeout Doesn't Cancel Load
-**File:** `packages/excalidraw/scene/videoThumbnails.ts`
-**Lines:** 43-65
-**Symptom:** Memory not released when image load times out
+
+**File:** `packages/excalidraw/scene/videoThumbnails.ts` **Lines:** 43-65 **Symptom:** Memory not released when image load times out
 
 **Current Code:**
+
 ```typescript
 const timeout = setTimeout(() => {
   if (!img.complete) {
-    resolve(null);  // Resolves but image keeps loading!
+    resolve(null); // Resolves but image keeps loading!
   }
 }, 10000);
 ```
 
 **Fix:**
+
 ```typescript
 const timeout = setTimeout(() => {
-  img.src = "";  // Cancel the load
+  img.src = ""; // Cancel the load
   resolve(null);
 }, 10000);
 ```
@@ -645,21 +667,22 @@ const timeout = setTimeout(() => {
 ---
 
 ### BUG-016: 🟢 Category Rename Doesn't Check for Conflicts
-**File:** `excalidraw-app/vite.config.mts`
-**Lines:** 327-354
-**Symptom:** Renaming category to existing name silently fails or overwrites
+
+**File:** `excalidraw-app/vite.config.mts` **Lines:** 327-354 **Symptom:** Renaming category to existing name silently fails or overwrites
 
 **Current Code:**
+
 ```typescript
 const oldPath = path.join(projectsDir, safeOldName);
 const newPath = path.join(projectsDir, safeNewName);
 
 if (oldPath !== newPath && fs.existsSync(oldPath)) {
-  fs.renameSync(oldPath, newPath);  // Will fail if newPath exists!
+  fs.renameSync(oldPath, newPath); // Will fail if newPath exists!
 }
 ```
 
 **Fix:**
+
 ```typescript
 if (oldPath !== newPath && fs.existsSync(oldPath)) {
   if (fs.existsSync(newPath)) {
@@ -674,11 +697,11 @@ if (oldPath !== newPath && fs.existsSync(oldPath)) {
 ---
 
 ### BUG-017: 🟢 Unhandled Promise Rejection in Auto-Save
-**File:** `excalidraw-app/data/ProjectManagerData.ts`
-**Lines:** 108-148
-**Symptom:** Silent save failures, inconsistent state
+
+**File:** `excalidraw-app/data/ProjectManagerData.ts` **Lines:** 108-148 **Symptom:** Silent save failures, inconsistent state
 
 **Current Code:**
+
 ```typescript
 private static saveDebounced = debounce(
   async (...) => {
@@ -699,30 +722,30 @@ private static saveDebounced = debounce(
 ## Medium Priority Issues (P2)
 
 ### BUG-018: 🟢 Context Menu Doesn't Close on Escape
-**File:** `packages/excalidraw/components/ProjectManager/ProjectCard.tsx`
-**Lines:** 131-138
-**Fix:** Add keydown listener for Escape key
+
+**File:** `packages/excalidraw/components/ProjectManager/ProjectCard.tsx` **Lines:** 131-138 **Fix:** Add keydown listener for Escape key
 
 ---
 
 ### BUG-023: 🟢 Grid Opacity Not Applied During Live Editing
-**File:** `packages/excalidraw/renderer/staticScene.ts`
-**Status:** Already fixed - `appState.gridOpacity` is passed to `strokeGrid`
+
+**File:** `packages/excalidraw/renderer/staticScene.ts` **Status:** Already fixed - `appState.gridOpacity` is passed to `strokeGrid`
 
 ---
 
 ### BUG-033: 🟢 Silent Thumbnail Failures in Export
+
 **Status:** Already fixed - added console.warn logging
 
 ---
 
 ## Implementation Tracking
 
-| Phase | Issues | Status | Date |
-|-------|--------|--------|------|
-| Phase 1: Critical | BUG-001 to BUG-003, BUG-005 | 🟢 Fixed | 2026-01-14 |
-| Phase 2: High P1 | BUG-006 to BUG-017 | 🟢 Fixed | 2026-01-14 |
-| Phase 3: Medium P2 | BUG-018, BUG-023, BUG-033 | 🟢 Fixed | 2026-01-14 |
+| Phase              | Issues                      | Status   | Date       |
+| ------------------ | --------------------------- | -------- | ---------- |
+| Phase 1: Critical  | BUG-001 to BUG-003, BUG-005 | 🟢 Fixed | 2026-01-14 |
+| Phase 2: High P1   | BUG-006 to BUG-017          | 🟢 Fixed | 2026-01-14 |
+| Phase 3: Medium P2 | BUG-018, BUG-023, BUG-033   | 🟢 Fixed | 2026-01-14 |
 
 **Summary:** 19 bugs fixed
 

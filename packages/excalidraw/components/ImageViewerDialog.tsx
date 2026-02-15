@@ -31,8 +31,7 @@ export const ImageViewerDialog = ({
     .getElementsIncludingDeleted()
     .find((el) => el.id === imageElementId && isImageElement(el));
 
-  const fileId =
-    element && isImageElement(element) ? element.fileId : null;
+  const fileId = element && isImageElement(element) ? element.fileId : null;
   const file = fileId ? app.files[fileId] : null;
   const dataURL = file?.dataURL ?? null;
 

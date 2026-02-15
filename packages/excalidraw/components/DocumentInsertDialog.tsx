@@ -21,14 +21,56 @@ interface PickedFile {
 
 const BINARY_EXTENSIONS = new Set([
   // Images
-  "png", "jpg", "jpeg", "gif", "bmp", "svg", "webp", "ico", "tiff", "tif", "avif", "heic",
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "bmp",
+  "svg",
+  "webp",
+  "ico",
+  "tiff",
+  "tif",
+  "avif",
+  "heic",
   // Video
-  "mp4", "webm", "avi", "mov", "mkv", "flv", "wmv", "m4v", "ogv",
+  "mp4",
+  "webm",
+  "avi",
+  "mov",
+  "mkv",
+  "flv",
+  "wmv",
+  "m4v",
+  "ogv",
   // Audio
-  "mp3", "wav", "flac", "aac", "ogg", "wma", "m4a",
+  "mp3",
+  "wav",
+  "flac",
+  "aac",
+  "ogg",
+  "wma",
+  "m4a",
   // Archives & binary
-  "zip", "rar", "7z", "tar", "gz", "exe", "dll", "so", "bin", "dat",
-  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "db", "sqlite",
+  "zip",
+  "rar",
+  "7z",
+  "tar",
+  "gz",
+  "exe",
+  "dll",
+  "so",
+  "bin",
+  "dat",
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "ppt",
+  "pptx",
+  "db",
+  "sqlite",
 ]);
 
 const MAX_CODEBLOCK_SIZE = 512 * 1024; // 512KB
@@ -112,7 +154,7 @@ export const DocumentInsertDialog: React.FC<DocumentInsertDialogProps> = ({
       appState: {
         ...app.state,
         selectedElementIds: { [element.id]: true },
-        openDialog: null,
+        openDialog: { name: "codeBlockEditor", elementId: element.id },
       },
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     });
@@ -176,16 +218,26 @@ export const DocumentInsertDialog: React.FC<DocumentInsertDialogProps> = ({
         {!file ? (
           <div className="DocumentInsertDialog__filePicker">
             <FilledButton
-              label={picking ? "Opening file dialog..." : t("documentDialog.selectFile")}
+              label={
+                picking
+                  ? "Opening file dialog..."
+                  : t("documentDialog.selectFile")
+              }
               onClick={picking ? undefined : handlePickFile}
             />
           </div>
         ) : (
           <div className="DocumentInsertDialog__options">
-            <div className="DocumentInsertDialog__fileName">{file.fileName}</div>
+            <div className="DocumentInsertDialog__fileName">
+              {file.fileName}
+            </div>
             <div className="DocumentInsertDialog__buttons">
               <button
-                className={`DocumentInsertDialog__option${codeBlockDisabled ? " DocumentInsertDialog__option--disabled" : ""}`}
+                className={`DocumentInsertDialog__option${
+                  codeBlockDisabled
+                    ? " DocumentInsertDialog__option--disabled"
+                    : ""
+                }`}
                 onClick={codeBlockDisabled ? undefined : insertAsCodeBlock}
                 title={codeBlockReason ?? undefined}
               >
@@ -205,7 +257,9 @@ export const DocumentInsertDialog: React.FC<DocumentInsertDialogProps> = ({
                 </svg>
                 <span>{t("documentDialog.displayAsCodeBlock")}</span>
                 {codeBlockReason && (
-                  <span className="DocumentInsertDialog__reason">{codeBlockReason}</span>
+                  <span className="DocumentInsertDialog__reason">
+                    {codeBlockReason}
+                  </span>
                 )}
               </button>
               <button

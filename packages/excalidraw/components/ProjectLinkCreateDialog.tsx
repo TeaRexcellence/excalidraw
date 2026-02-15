@@ -5,11 +5,11 @@ import { CaptureUpdateAction } from "@excalidraw/element";
 
 import { t } from "../i18n";
 
+import { ProjectManagerData } from "../../../excalidraw-app/data/ProjectManagerData";
+
 import { Dialog } from "./Dialog";
 import { FilledButton } from "./FilledButton";
 import { useApp } from "./App";
-
-import { ProjectManagerData } from "../../../excalidraw-app/data/ProjectManagerData";
 
 import "./ProjectLinkCreateDialog.scss";
 
@@ -121,7 +121,15 @@ export const ProjectLinkCreateDialog: React.FC<
     });
 
     onClose();
-  }, [app, title, description, selectedProjectId, selectedProject, imageBase64, onClose]);
+  }, [
+    app,
+    title,
+    description,
+    selectedProjectId,
+    selectedProject,
+    imageBase64,
+    onClose,
+  ]);
 
   return (
     <Dialog
@@ -153,18 +161,11 @@ export const ProjectLinkCreateDialog: React.FC<
 
         <div className="ProjectLinkCreateDialog__field">
           <label>{t("projectLinkDialog.image")}</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-          />
+          <input type="file" accept="image/*" onChange={handleImageUpload} />
           {imageBase64 && (
             <div className="ProjectLinkCreateDialog__imagePreview">
               <img src={imageBase64} alt="Preview" />
-              <button
-                type="button"
-                onClick={() => setImageBase64("")}
-              >
+              <button type="button" onClick={() => setImageBase64("")}>
                 {t("projectLinkDialog.removeImage")}
               </button>
             </div>
@@ -194,7 +195,9 @@ export const ProjectLinkCreateDialog: React.FC<
                   key={project.id}
                   type="button"
                   className={`ProjectLinkCreateDialog__projectItem ${
-                    selectedProjectId === project.id ? "ProjectLinkCreateDialog__projectItem--selected" : ""
+                    selectedProjectId === project.id
+                      ? "ProjectLinkCreateDialog__projectItem--selected"
+                      : ""
                   }`}
                   onClick={() => {
                     setSelectedProjectId(project.id);

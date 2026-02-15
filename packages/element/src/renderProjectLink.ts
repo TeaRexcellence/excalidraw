@@ -1,5 +1,6 @@
-import type { ExcalidrawProjectLinkElement } from "./types";
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
+
+import type { ExcalidrawProjectLinkElement } from "./types";
 
 // Design dimensions — all drawing uses these fixed values,
 // then the canvas is scaled to match the actual element size.
@@ -55,10 +56,13 @@ const truncateText = (
     return text;
   }
   let truncated = text;
-  while (truncated.length > 0 && ctx.measureText(truncated + "...").width > maxWidth) {
+  while (
+    truncated.length > 0 &&
+    ctx.measureText(`${truncated}...`).width > maxWidth
+  ) {
     truncated = truncated.slice(0, -1);
   }
-  return truncated + "...";
+  return `${truncated}...`;
 };
 
 const wrapText = (
@@ -100,7 +104,9 @@ const wrapText = (
  * Compute the "design" height for a given element's content,
  * matching the base width (BASE_WIDTH).
  */
-export const getProjectLinkBaseHeight = (element: ExcalidrawProjectLinkElement): number => {
+export const getProjectLinkBaseHeight = (
+  element: ExcalidrawProjectLinkElement,
+): number => {
   const hasDescription = !!element.description;
   const hasImage = !!element.imageBase64;
   let h = 56; // base: padding + title + project name
@@ -118,7 +124,8 @@ export const drawProjectLinkOnCanvas = (
   context: CanvasRenderingContext2D,
   renderConfig: StaticCanvasRenderConfig,
 ) => {
-  const { width, height, title, description, projectName, imageBase64 } = element;
+  const { width, height, title, description, projectName, imageBase64 } =
+    element;
   const isDark = renderConfig.theme === "dark";
 
   const baseHeight = getProjectLinkBaseHeight(element);
@@ -153,7 +160,12 @@ export const drawProjectLinkOnCanvas = (
   context.lineTo(BASE_WIDTH - CORNER_RADIUS, 0);
   context.quadraticCurveTo(BASE_WIDTH, 0, BASE_WIDTH, CORNER_RADIUS);
   context.lineTo(BASE_WIDTH, baseHeight - CORNER_RADIUS);
-  context.quadraticCurveTo(BASE_WIDTH, baseHeight, BASE_WIDTH - CORNER_RADIUS, baseHeight);
+  context.quadraticCurveTo(
+    BASE_WIDTH,
+    baseHeight,
+    BASE_WIDTH - CORNER_RADIUS,
+    baseHeight,
+  );
   context.lineTo(arrowX, baseHeight);
   context.closePath();
   context.fillStyle = arrowBg;
@@ -188,7 +200,11 @@ export const drawProjectLinkOnCanvas = (
     context.font = "11px sans-serif";
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillText("\uD83D\uDDBC", PADDING + contentWidth / 2, yPos + imgAreaHeight / 2);
+    context.fillText(
+      "\uD83D\uDDBC",
+      PADDING + contentWidth / 2,
+      yPos + imgAreaHeight / 2,
+    );
     yPos += imgAreaHeight + 6;
   }
 
@@ -207,7 +223,12 @@ export const drawProjectLinkOnCanvas = (
     context.font = DESC_FONT;
     context.fillStyle = descColor;
     const maxDescLines = imageBase64 ? 2 : 3;
-    const descLines = wrapText(context, description, contentWidth, maxDescLines);
+    const descLines = wrapText(
+      context,
+      description,
+      contentWidth,
+      maxDescLines,
+    );
     for (const line of descLines) {
       context.fillText(line, PADDING, yPos);
       yPos += 15;
