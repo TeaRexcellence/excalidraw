@@ -5,7 +5,10 @@ import { CaptureUpdateAction, getCommonBounds } from "@excalidraw/element";
 
 import { useAtom, useAtomValue } from "../../../../excalidraw-app/app-jotai";
 
+import { MIME_TYPES } from "@excalidraw/common";
+
 import { getDefaultAppState } from "../../appState";
+import { loadSceneOrLibraryFromBlob } from "../../data/blob";
 import { t } from "../../i18n";
 import { useApp } from "../App";
 import { exportToCanvas } from "../../scene/export";
@@ -882,6 +885,36 @@ export const ProjectManager: React.FC = () => {
     };
   }, [handleSelectProject]);
 
+  // Listen for external import events (from drag-and-drop or Open dialog)
+  useEffect(() => {
+    const handler = async (e: Event) => {
+      const projectId = (e as CustomEvent).detail?.projectId;
+      if (projectId) {
+        // Refresh index from server to include the newly imported project
+        const newIndex = await api.getIndex();
+        indexRef.current = newIndex;
+        setIndex(newIndex);
+        // Switch to the imported project
+        handleSelectProject(projectId);
+      }
+    };
+    window.addEventListener("excalidraw-import-project", handler);
+    return () => {
+      window.removeEventListener("excalidraw-import-project", handler);
+    };
+  }, [handleSelectProject]);
+
+  // Listen for Ctrl+S save project events
+  useEffect(() => {
+    const handler = () => {
+      setSaveTrigger((n) => n + 1);
+    };
+    window.addEventListener("excalidraw-save-project", handler);
+    return () => {
+      window.removeEventListener("excalidraw-save-project", handler);
+    };
+  }, [setSaveTrigger]);
+
   // Open project in new tab
   const handleOpenInNewTab = useCallback(
     async (projectId: string) => {
@@ -1326,8 +1359,21 @@ export const ProjectManager: React.FC = () => {
       // Reset input for re-selection
       e.target.value = "";
 
-      if (!file.name.endsWith(".zip")) {
-        setImportError("Please select a .zip file");
+      const isImage =
+        file.type === MIME_TYPES.png ||
+        file.type === MIME_TYPES.svg ||
+        file.name.endsWith(".png") ||
+        file.name.endsWith(".svg");
+
+      if (
+        !file.name.endsWith(".zip") &&
+        !file.name.endsWith(".excalidraw") &&
+        !file.name.endsWith(".json") &&
+        !isImage
+      ) {
+        setImportError(
+          "Please select a .zip, .excalidraw, .json, .png, or .svg file",
+        );
         return;
       }
 
@@ -1335,10 +1381,36 @@ export const ProjectManager: React.FC = () => {
       setImportError(null);
 
       try {
-        const response = await fetch("/api/projects/import", {
-          method: "POST",
-          body: file,
-        });
+        // For PNG/SVG files, extract embedded scene data client-side first
+        let fileToSend: File | Blob = file;
+        let filenameToSend = file.name;
+
+        if (isImage) {
+          const ret = await loadSceneOrLibraryFromBlob(file, null, null);
+          if (ret.type !== MIME_TYPES.excalidraw) {
+            throw new Error("Image doesn't contain Excalidraw scene data");
+          }
+          // Re-serialize as JSON for the server
+          const jsonData = JSON.stringify({
+            type: "excalidraw",
+            version: 2,
+            elements: ret.data.elements,
+            appState: ret.data.appState,
+            files: ret.data.files,
+          });
+          filenameToSend = file.name.replace(/\.(png|svg)$/i, ".excalidraw");
+          fileToSend = new File([jsonData], filenameToSend, {
+            type: "application/json",
+          });
+        }
+
+        const response = await fetch(
+          `/api/projects/import?filename=${encodeURIComponent(filenameToSend)}`,
+          {
+            method: "POST",
+            body: fileToSend,
+          },
+        );
 
         const data = await response.json();
 
@@ -1468,6 +1540,7 @@ export const ProjectManager: React.FC = () => {
                 <DropdownMenu.Item
                   onSelect={handleImportClick}
                   icon={LoadIcon}
+                  title="Import a project .zip or .excalidraw json file"
                 >
                   Import Project
                 </DropdownMenu.Item>
@@ -1621,13 +1694,14 @@ export const ProjectManager: React.FC = () => {
             <p
               style={{ marginBottom: "1rem", color: "var(--color-on-surface)" }}
             >
-              Select a project zip file to import. The project will be added to
+              Select a project .zip, .excalidraw, .json, or image file (.png,
+              .svg with embedded data) to import. The project will be added to
               your Uncategorized folder.
             </p>
             <input
               ref={importInputRef}
               type="file"
-              accept=".zip"
+              accept=".zip,.excalidraw,.json,.png,.svg"
               onChange={handleImportFileSelect}
               style={{ display: "none" }}
             />

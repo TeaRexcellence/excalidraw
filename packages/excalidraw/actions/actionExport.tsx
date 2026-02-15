@@ -1,7 +1,9 @@
 import {
   KEYS,
   DEFAULT_EXPORT_PADDING,
+  DEFAULT_SIDEBAR,
   EXPORT_SCALES,
+  PROJECTS_SIDEBAR_TAB,
   THEME,
 } from "@excalidraw/common";
 
@@ -19,8 +21,8 @@ import { ToolButton } from "../components/ToolButton";
 import { Tooltip } from "../components/Tooltip";
 import { ExportIcon, questionCircle, saveAs } from "../components/icons";
 import { loadFromJSON, saveAsJSON } from "../data";
-import { isImageFileHandle } from "../data/blob";
-import { nativeFileSystemSupported } from "../data/filesystem";
+import { isImageFileHandle, loadFromBlob } from "../data/blob";
+import { fileOpen, nativeFileSystemSupported } from "../data/filesystem";
 import { resaveAsImageWithScene } from "../data/resave";
 
 import { t } from "../i18n";
@@ -155,51 +157,22 @@ export const actionSaveToActiveFile = register({
   label: "buttons.save",
   icon: ExportIcon,
   trackEvent: { category: "export" },
-  predicate: (elements, appState, props, app) => {
-    return (
-      !!app.props.UIOptions.canvasActions.saveToActiveFile &&
-      !!appState.fileHandle &&
-      !appState.viewModeEnabled
-    );
+  predicate: (_elements, appState) => {
+    return !appState.viewModeEnabled;
   },
-  perform: async (elements, appState, value, app) => {
-    const fileHandleExists = !!appState.fileHandle;
-
-    try {
-      const { fileHandle } = isImageFileHandle(appState.fileHandle)
-        ? await resaveAsImageWithScene(
-            elements,
-            appState,
-            app.files,
-            app.getName(),
-          )
-        : await saveAsJSON(elements, appState, app.files, app.getName());
-
-      return {
-        captureUpdate: CaptureUpdateAction.EVENTUALLY,
-        appState: {
-          ...appState,
-          fileHandle,
-          toast: fileHandleExists
-            ? {
-                message: fileHandle?.name
-                  ? t("toast.fileSavedToFilename").replace(
-                      "{filename}",
-                      `"${fileHandle.name}"`,
-                    )
-                  : t("toast.fileSaved"),
-              }
-            : null,
+  perform: async (_elements, appState) => {
+    // Open sidebar to Projects tab and trigger Save Project flow
+    window.dispatchEvent(new CustomEvent("excalidraw-save-project"));
+    return {
+      appState: {
+        ...appState,
+        openSidebar: {
+          name: DEFAULT_SIDEBAR.name,
+          tab: PROJECTS_SIDEBAR_TAB,
         },
-      };
-    } catch (error: any) {
-      if (error?.name !== "AbortError") {
-        console.error(error);
-      } else {
-        console.warn(error);
-      }
-      return { captureUpdate: CaptureUpdateAction.EVENTUALLY };
-    }
+      },
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    };
   },
   keyTest: (event) =>
     event.key === KEYS.S && event[KEYS.CTRL_OR_CMD] && !event.shiftKey,
@@ -267,11 +240,38 @@ export const actionLoadScene = register({
   },
   perform: async (elements, appState, _, app) => {
     try {
+      const file = await fileOpen({
+        description: "Excalidraw or Project files",
+      });
+
+      // Handle ZIP files → import as project
+      if (
+        file.name?.endsWith(".zip") ||
+        file.type === "application/zip"
+      ) {
+        const response = await fetch(
+          `/api/projects/import?filename=${encodeURIComponent(file.name)}`,
+          { method: "POST", body: file },
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Import failed");
+        }
+        // Signal ProjectManager to refresh index and switch to project
+        window.dispatchEvent(
+          new CustomEvent("excalidraw-import-project", {
+            detail: { projectId: data.projectId },
+          }),
+        );
+        return false;
+      }
+
+      // Handle JSON/excalidraw/image files → load into canvas
       const {
         elements: loadedElements,
         appState: loadedAppState,
         files,
-      } = await loadFromJSON(appState, elements);
+      } = await loadFromBlob(file, appState, elements, file.handle);
       return {
         elements: loadedElements,
         appState: loadedAppState,

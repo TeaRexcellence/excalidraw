@@ -11747,6 +11747,29 @@ class App extends React.Component<AppProps, AppState> {
     fileHandle: FileSystemHandle | null,
   ) => {
     file = await normalizeFile(file);
+
+    // Handle ZIP files → import as project
+    if (file.name?.endsWith(".zip") || file.type === "application/zip") {
+      try {
+        const response = await fetch(
+          `/api/projects/import?filename=${encodeURIComponent(file.name)}`,
+          { method: "POST", body: file },
+        );
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Import failed");
+        }
+        window.dispatchEvent(
+          new CustomEvent("excalidraw-import-project", {
+            detail: { projectId: data.projectId },
+          }),
+        );
+      } catch (error: any) {
+        this.setState({ isLoading: false, errorMessage: error.message });
+      }
+      return;
+    }
+
     try {
       const elements = this.scene.getElementsIncludingDeleted();
       let ret;
