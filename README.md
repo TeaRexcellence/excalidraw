@@ -6,6 +6,52 @@ Shape libraries still work. Online collaboration, cloud storage, sharing, and te
 
 ---
 
+## Setup
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18+)
+- [Yarn](https://yarnpkg.com/) (`npm install -g yarn`)
+
+### Install & Build
+
+```bash
+git clone https://github.com/TeaRexcellence/excalidraw.git
+cd excalidraw
+yarn install
+yarn build
+npm install -g http-server
+```
+
+### Run
+
+**Double-click `start-excalidraw.bat`** — starts (or restarts) the server silently in the background.
+
+Open **http://localhost:6969** in your browser. Set it as your homepage for instant access.
+
+To stop the server, double-click **`stop-excalidraw.bat`**.
+
+### Auto-start on boot
+
+The `start-excalidraw.vbs` script runs the server with no terminal window. To have it launch on login, copy it to your Startup folder:
+
+```
+Win+R → shell:startup → paste start-excalidraw.vbs
+```
+
+### Development
+
+```bash
+yarn start        # Dev server with hot reload on port 3000
+yarn build        # Rebuild production after code changes
+yarn test:typecheck  # TypeScript checks
+yarn fix          # Auto-fix formatting and linting
+```
+
+After making code changes, run `yarn build` to update the production server. The running server picks up the new files automatically.
+
+---
+
 ## Features at a Glance
 
 | Feature | Description |
@@ -13,7 +59,7 @@ Shape libraries still work. Online collaboration, cloud storage, sharing, and te
 | [Project Manager](#project-manager) | File-based project save/load with categories, favorites, export/import |
 | [Video Embed](#video-embed) | YouTube, direct URL, and local video file embedding with playback controls |
 | [Table Element](#table-element) | Spreadsheet-style tables with editable cells, resizable columns, CSV import |
-| [Code Block Element](#code-block-element) | Syntax-highlighted code blocks with 6 language modes |
+| [Code Block Element](#code-block-element) | Syntax-highlighted code blocks with 28 languages, auto-detection, file import |
 | [Document Element](#document-element) | Embed local files as code blocks or thumbnail cards |
 | [Project Link Card](#project-link-card) | Clickable cards that navigate between projects |
 | [Search](#search) | Find text elements and frames on the canvas (`Ctrl+F`) |
