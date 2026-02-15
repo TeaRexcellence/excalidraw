@@ -2386,6 +2386,22 @@ export const gridIcon = createIcon(
   tablerIconProps,
 );
 
+export const dotGridIcon = createIcon(
+  <g>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    <circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="18" cy="6" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="18" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none" />
+    <circle cx="18" cy="18" r="1.5" fill="currentColor" stroke="none" />
+  </g>,
+  tablerIconProps,
+);
+
 export const lineEditorIcon = createIcon(
   <g strokeWidth={1.5}>
     <path stroke="none" d="M0 0h24v24H0z" fill="none" />

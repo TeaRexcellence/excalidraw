@@ -262,4 +262,9 @@
     opacity: 1;
     pointer-events: auto;
   }
+
+  &--hidden .tool-hover-dropdown__panel {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 }

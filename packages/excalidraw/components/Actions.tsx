@@ -1241,6 +1241,9 @@ export const ShapesSwitcher = ({
     INSERT_GROUP.find((s) => s.type === preferredInsert) ||
     INSERT_GROUP[0];
 
+  // Track which dropdown to temporarily hide after a selection
+  const [hiddenDropdown, setHiddenDropdown] = useState<string | null>(null);
+
   // Track whether we already rendered the shape group (skip duplicates)
   let shapeGroupRendered = false;
 
@@ -1274,7 +1277,18 @@ export const ShapesSwitcher = ({
             );
 
             return (
-              <div key="shape-group" className="tool-hover-dropdown">
+              <div
+                key="shape-group"
+                className={clsx("tool-hover-dropdown", {
+                  "tool-hover-dropdown--hidden":
+                    hiddenDropdown === "shape-group",
+                })}
+                onMouseLeave={() => {
+                  if (hiddenDropdown === "shape-group") {
+                    setHiddenDropdown(null);
+                  }
+                }}
+              >
                 <ToolButton
                   className={clsx("Shape", { fillable: true })}
                   type="radio"
@@ -1315,6 +1329,7 @@ export const ShapesSwitcher = ({
                           }
                           app.setActiveTool({ type: shape.type as any });
                           setPreferredShape(shape.type);
+                          setHiddenDropdown("shape-group");
                         }}
                       />
                     ))}
@@ -1331,7 +1346,18 @@ export const ShapesSwitcher = ({
             );
 
             return (
-              <div key="insert-group" className="tool-hover-dropdown">
+              <div
+                key="insert-group"
+                className={clsx("tool-hover-dropdown", {
+                  "tool-hover-dropdown--hidden":
+                    hiddenDropdown === "insert-group",
+                })}
+                onMouseLeave={() => {
+                  if (hiddenDropdown === "insert-group") {
+                    setHiddenDropdown(null);
+                  }
+                }}
+              >
                 <ToolButton
                   className={clsx("Shape", { fillable: false })}
                   type="radio"
@@ -1365,6 +1391,7 @@ export const ShapesSwitcher = ({
                         onClick={() => {
                           item.action();
                           setPreferredInsert(item.type);
+                          setHiddenDropdown("insert-group");
                           trackEvent("toolbar", item.type, "ui");
                         }}
                       />

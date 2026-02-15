@@ -205,6 +205,7 @@ export type StaticCanvasAppState = Readonly<
     selectedElementsAreBeingDragged: AppState["selectedElementsAreBeingDragged"];
     gridSize: AppState["gridSize"];
     gridStep: AppState["gridStep"];
+    gridType: AppState["gridType"];
     gridOpacity: AppState["gridOpacity"];
     frameRendering: AppState["frameRendering"];
     currentHoveredFontFamily: AppState["currentHoveredFontFamily"];
@@ -420,6 +421,8 @@ export interface AppState {
   gridSize: number;
   gridStep: number;
   gridModeEnabled: boolean;
+  /** grid visual style */
+  gridType: "line" | "dot";
   /** grid opacity 0-100 */
   gridOpacity: number;
   viewModeEnabled: boolean;

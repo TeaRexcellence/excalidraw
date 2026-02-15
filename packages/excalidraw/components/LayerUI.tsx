@@ -54,7 +54,13 @@ import MainMenu from "./main-menu/MainMenu";
 import { ActiveConfirmDialog } from "./ActiveConfirmDialog";
 import { useEditorInterface, useStylesPanelMode } from "./App";
 import { OverwriteConfirmDialog } from "./OverwriteConfirm/OverwriteConfirm";
-import { sidebarRightIcon, gridIcon, magnetIcon, searchIcon } from "./icons";
+import {
+  sidebarRightIcon,
+  gridIcon,
+  dotGridIcon,
+  magnetIcon,
+  searchIcon,
+} from "./icons";
 import { DefaultSidebar } from "./DefaultSidebar";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
 import { Stats } from "./Stats";
@@ -151,6 +157,73 @@ const DefaultOverwriteConfirmDialog = () => {
       <OverwriteConfirmDialog.Actions.SaveToDisk />
       <OverwriteConfirmDialog.Actions.ExportToImage />
     </OverwriteConfirmDialog>
+  );
+};
+
+const GRID_TYPES = [
+  { type: "line" as const, icon: gridIcon, label: "labels.lineGrid" as const },
+  { type: "dot" as const, icon: dotGridIcon, label: "labels.dotGrid" as const },
+];
+
+const GridTypeDropdown = ({
+  appState,
+  setAppState,
+  actionManager,
+}: {
+  appState: UIAppState;
+  setAppState: React.Component<any, AppState>["setState"];
+  actionManager: ActionManager;
+}) => {
+  const [hiddenDropdown, setHiddenDropdown] = React.useState(false);
+
+  const currentType =
+    GRID_TYPES.find((g) => g.type === appState.gridType) || GRID_TYPES[0];
+  const otherTypes = GRID_TYPES.filter((g) => g.type !== currentType.type);
+
+  return (
+    <div
+      className={clsx("tool-hover-dropdown", {
+        "tool-hover-dropdown--hidden": hiddenDropdown,
+      })}
+      onMouseLeave={() => {
+        if (hiddenDropdown) {
+          setHiddenDropdown(false);
+        }
+      }}
+    >
+      <ToolButton
+        className="Shape"
+        type="button"
+        icon={currentType.icon}
+        selected={appState.gridModeEnabled}
+        title={`${t("labels.toggleGrid")} — Ctrl+'`}
+        aria-label={t("labels.toggleGrid")}
+        data-testid="toolbar-grid"
+        onClick={() => {
+          actionManager.executeAction(actionToggleGridMode);
+        }}
+      />
+      <div className="tool-hover-dropdown__panel">
+        <div className="tool-hover-dropdown__shapes">
+          {otherTypes.map((gridType) => (
+            <ToolButton
+              key={gridType.type}
+              className="Shape"
+              type="button"
+              icon={gridType.icon}
+              name={`grid-type-${gridType.type}`}
+              title={t(gridType.label)}
+              aria-label={t(gridType.label)}
+              data-testid={`toolbar-grid-${gridType.type}`}
+              onClick={() => {
+                setAppState({ gridType: gridType.type });
+                setHiddenDropdown(true);
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -377,19 +450,10 @@ const LayerUI = ({
                           })}
                         >
                           <Stack.Row gap={spacing.toolbarInnerRowGap}>
-                            <ToolButton
-                              className="Shape"
-                              type="button"
-                              icon={gridIcon}
-                              selected={appState.gridModeEnabled}
-                              title={`${t("labels.toggleGrid")} — Ctrl+'`}
-                              aria-label={t("labels.toggleGrid")}
-                              data-testid="toolbar-grid"
-                              onClick={() => {
-                                actionManager.executeAction(
-                                  actionToggleGridMode,
-                                );
-                              }}
+                            <GridTypeDropdown
+                              appState={appState}
+                              setAppState={setAppState}
+                              actionManager={actionManager}
                             />
                             <ToolButton
                               className="Shape"

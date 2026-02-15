@@ -67,16 +67,56 @@ const strokeGrid = (
   height: number,
   /** grid opacity 0-100 */
   opacity: number = 100,
+  /** grid visual style */
+  gridType: "line" | "dot" = "line",
 ) => {
   const offsetX = (scrollX % gridSize) - gridSize;
   const offsetY = (scrollY % gridSize) - gridSize;
 
   const actualGridSize = gridSize * zoom.value;
 
-  const spaceWidth = 1 / zoom.value;
-
   context.save();
   context.globalAlpha = opacity / 100;
+
+  if (gridType === "dot") {
+    // Dot grid: draw circles at each grid intersection
+    for (let x = offsetX; x < offsetX + width + gridSize * 2; x += gridSize) {
+      for (
+        let y = offsetY;
+        y < offsetY + height + gridSize * 2;
+        y += gridSize
+      ) {
+        const isBoldX =
+          gridStep > 1 &&
+          Math.round(x - scrollX) % (gridStep * gridSize) === 0;
+        const isBoldY =
+          gridStep > 1 &&
+          Math.round(y - scrollY) % (gridStep * gridSize) === 0;
+        const isBold = isBoldX && isBoldY;
+
+        // skip regular dots when zoomed out
+        if (!isBold && actualGridSize < 10) {
+          continue;
+        }
+
+        const radius = isBold
+          ? Math.min(2.5 / zoom.value, 4)
+          : Math.min(1 / zoom.value, 2);
+
+        context.beginPath();
+        context.fillStyle = isBold
+          ? GridLineColor[theme].bold
+          : GridLineColor[theme].regular;
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+    context.restore();
+    return;
+  }
+
+  // Line grid (original behavior)
+  const spaceWidth = 1 / zoom.value;
 
   // Offset rendering by 0.5 to ensure that 1px wide lines are crisp.
   // We only do this when zoomed to 100% because otherwise the offset is
@@ -276,6 +316,7 @@ const _renderStaticScene = ({
       normalizedWidth / appState.zoom.value,
       normalizedHeight / appState.zoom.value,
       appState.gridOpacity,
+      appState.gridType,
     );
   }
 
