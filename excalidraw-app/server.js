@@ -96,32 +96,44 @@ function getIndex() {
   }
 }
 
+// ID-based project path resolution.
+// Structure: PROJECTS_DIR/{projectId}/{humanReadableChild}/
+// The child folder name is cosmetic — we just find whatever single
+// directory exists inside the ID folder.
 function getProjectPath(projectId) {
-  const index = getIndex();
-  const project = index.projects.find((p) => p.id === projectId);
-  if (!project) return null;
+  const idDir = path.join(PROJECTS_DIR, projectId);
+  if (!fs.existsSync(idDir)) return null;
 
-  const categoryName = project.groupId
-    ? index.groups.find((g) => g.id === project.groupId)?.name ||
-      "Uncategorized"
-    : "Uncategorized";
+  // Find the child folder (there should be exactly one)
+  const children = fs.readdirSync(idDir).filter((name) => {
+    return fs.statSync(path.join(idDir, name)).isDirectory();
+  });
 
-  const safeCat = sanitizeFolderName(categoryName);
-  const safeTitle = sanitizeFolderName(project.title);
+  if (children.length > 0) {
+    return path.join(idDir, children[0]);
+  }
 
-  const newPath = path.join(PROJECTS_DIR, safeCat, `${safeTitle}_${projectId}`);
-  if (fs.existsSync(newPath)) return newPath;
-
-  const legacyPath = path.join(PROJECTS_DIR, safeCat, safeTitle);
-  if (fs.existsSync(legacyPath)) return legacyPath;
-
-  return newPath;
+  // No child folder yet — return the ID dir itself as fallback
+  // (saveScene will create the proper structure)
+  return idDir;
 }
 
+// Stable URL path — only uses project ID, never title/category.
 function getProjectUrlPath(projectId) {
+  return `/projects/${projectId}`;
+}
+
+// Resolve a static file request like /projects/{id}/preview.png
+// to the actual filesystem path PROJECTS_DIR/{id}/{child}/preview.png
+function resolveProjectStaticPath(projectId, filePath) {
   const projectDir = getProjectPath(projectId);
   if (!projectDir) return null;
-  return `/projects/${path.relative(PROJECTS_DIR, projectDir).replace(/\\/g, "/")}`;
+  const resolved = path.join(projectDir, filePath);
+  // Safety: ensure it's still under PROJECTS_DIR
+  if (!path.resolve(resolved).startsWith(path.resolve(PROJECTS_DIR))) {
+    return null;
+  }
+  return resolved;
 }
 
 function readBody(req) {
@@ -225,8 +237,18 @@ async function handleAPI(req, res, urlPath) {
   // ── Projects: save scene ──
   const scenePostMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/scene$/);
   if (req.method === "POST" && scenePostMatch) {
-    const projectDir = getProjectPath(scenePostMatch[1]);
-    if (!projectDir) return json(res, { error: "Project not found" }, 404);
+    const projectId = scenePostMatch[1];
+    let projectDir = getProjectPath(projectId);
+
+    if (!projectDir) {
+      // Project exists in index but no folder yet — create {id}/{title}/
+      const index = getIndex();
+      const project = index.projects.find((p) => p.id === projectId);
+      if (!project) return json(res, { error: "Project not found" }, 404);
+      const safeTitle = sanitizeFolderName(project.title);
+      projectDir = path.join(PROJECTS_DIR, projectId, safeTitle);
+    }
+
     if (!fs.existsSync(projectDir))
       fs.mkdirSync(projectDir, { recursive: true });
     const body = (await readBody(req)).toString();
@@ -239,29 +261,22 @@ async function handleAPI(req, res, urlPath) {
   if (req.method === "POST" && previewMatch) {
     const projectId = previewMatch[1];
     const projectDir = getProjectPath(projectId);
-    const projectUrlPath = getProjectUrlPath(projectId);
-    if (!projectDir || !projectUrlPath)
+    if (!projectDir)
       return json(res, { error: "Project not found" }, 404);
     if (!fs.existsSync(projectDir))
       fs.mkdirSync(projectDir, { recursive: true });
     const buffer = await readBody(req);
     fs.writeFileSync(path.join(projectDir, "preview.png"), buffer);
-    return json(res, { url: `${projectUrlPath}/preview.png` });
+    return json(res, { url: `/projects/${projectId}/preview.png` });
   }
 
   // ── Projects: delete ──
   const deleteMatch = urlPath.match(/^\/api\/projects\/([^/]+)$/);
   if (req.method === "DELETE" && deleteMatch) {
-    const projectDir = getProjectPath(deleteMatch[1]);
-    if (projectDir && fs.existsSync(projectDir)) {
-      fs.rmSync(projectDir, { recursive: true, force: true });
-      const categoryDir = path.dirname(projectDir);
-      if (
-        fs.existsSync(categoryDir) &&
-        fs.readdirSync(categoryDir).length === 0
-      ) {
-        fs.rmdirSync(categoryDir);
-      }
+    const projectId = deleteMatch[1];
+    const idDir = path.join(PROJECTS_DIR, projectId);
+    if (fs.existsSync(idDir)) {
+      fs.rmSync(idDir, { recursive: true, force: true });
     }
     return json(res, { deleted: true });
   }
@@ -289,74 +304,38 @@ async function handleAPI(req, res, urlPath) {
     return true;
   }
 
-  // ── Projects: move folder ──
-  const moveMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/move$/);
-  if (req.method === "POST" && moveMatch) {
-    const projectId = moveMatch[1];
-    const body = JSON.parse((await readBody(req)).toString());
+  // ── Projects: rename (rename child folder only) ──
+  const renameMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/rename$/);
+  if (req.method === "POST" && renameMatch) {
+    const projectId = renameMatch[1];
     try {
-      const { oldCategoryName, oldTitle, newCategoryName, newTitle } = body;
-      const safeOldCat = sanitizeFolderName(oldCategoryName || "Uncategorized");
-      const safeOldTitle = sanitizeFolderName(oldTitle);
-      const safeNewCat = sanitizeFolderName(newCategoryName || "Uncategorized");
+      const { newTitle } = JSON.parse((await readBody(req)).toString());
+      const idDir = path.join(PROJECTS_DIR, projectId);
+      if (!fs.existsSync(idDir))
+        return json(res, { error: "Project not found" }, 404);
+
       const safeNewTitle = sanitizeFolderName(newTitle);
 
-      const oldPath = path.join(
-        PROJECTS_DIR,
-        safeOldCat,
-        `${safeOldTitle}_${projectId}`,
+      // Find current child folder
+      const children = fs.readdirSync(idDir).filter((name) =>
+        fs.statSync(path.join(idDir, name)).isDirectory(),
       );
-      const newPath = path.join(
-        PROJECTS_DIR,
-        safeNewCat,
-        `${safeNewTitle}_${projectId}`,
-      );
-      const legacyOldPath = path.join(PROJECTS_DIR, safeOldCat, safeOldTitle);
-      const actualOldPath = fs.existsSync(oldPath)
-        ? oldPath
-        : fs.existsSync(legacyOldPath)
-          ? legacyOldPath
-          : null;
 
-      if (actualOldPath && actualOldPath !== newPath) {
-        const newCatDir = path.join(PROJECTS_DIR, safeNewCat);
-        if (!fs.existsSync(newCatDir))
-          fs.mkdirSync(newCatDir, { recursive: true });
-        fs.renameSync(actualOldPath, newPath);
-        const oldCatDir = path.dirname(actualOldPath);
-        if (
-          fs.existsSync(oldCatDir) &&
-          fs.readdirSync(oldCatDir).length === 0
-        ) {
-          fs.rmdirSync(oldCatDir);
+      if (children.length > 0) {
+        const oldChildPath = path.join(idDir, children[0]);
+        const newChildPath = path.join(idDir, safeNewTitle);
+        if (oldChildPath !== newChildPath) {
+          fs.renameSync(oldChildPath, newChildPath);
         }
+      } else {
+        // No child folder yet — create one
+        fs.mkdirSync(path.join(idDir, safeNewTitle), { recursive: true });
       }
-      return json(res, { success: true });
-    } catch (err) {
-      console.error("Failed to move project:", err);
-      return json(res, { error: "Failed to move project" }, 500);
-    }
-  }
 
-  // ── Projects: rename category ──
-  if (req.method === "POST" && urlPath === "/api/projects/rename-category") {
-    try {
-      const { oldName, newName } = JSON.parse(
-        (await readBody(req)).toString(),
-      );
-      const safeOld = sanitizeFolderName(oldName);
-      const safeNew = sanitizeFolderName(newName);
-      const oldP = path.join(PROJECTS_DIR, safeOld);
-      const newP = path.join(PROJECTS_DIR, safeNew);
-      if (oldP !== newP && fs.existsSync(oldP)) {
-        if (fs.existsSync(newP))
-          return json(res, { error: "Category name already exists" }, 409);
-        fs.renameSync(oldP, newP);
-      }
       return json(res, { success: true });
     } catch (err) {
-      console.error("Failed to rename category:", err);
-      return json(res, { error: "Failed to rename category" }, 500);
+      console.error("Failed to rename project:", err);
+      return json(res, { error: "Failed to rename project" }, 500);
     }
   }
 
@@ -436,15 +415,13 @@ async function handleAPI(req, res, urlPath) {
       }
       projectTitle = finalTitle;
 
+      // New structure: {projectId}/{sanitizedTitle}/
       const targetDir = path.join(
         PROJECTS_DIR,
-        "Uncategorized",
+        newProjectId,
         sanitizeFolderName(projectTitle),
       );
-      if (!fs.existsSync(path.join(PROJECTS_DIR, "Uncategorized")))
-        fs.mkdirSync(path.join(PROJECTS_DIR, "Uncategorized"), {
-          recursive: true,
-        });
+      fs.mkdirSync(targetDir, { recursive: true });
       fs.cpSync(projectFolder, targetDir, { recursive: true });
 
       index.projects.push({
@@ -588,8 +565,7 @@ async function handleAPI(req, res, urlPath) {
     if (!filename) return json(res, { error: "filename required" }, 400);
 
     const projectDir = getProjectPath(projectId);
-    const projectUrlPath = getProjectUrlPath(projectId);
-    if (!projectDir || !projectUrlPath)
+    if (!projectDir)
       return json(res, { error: "Project not found" }, 404);
 
     const videosDir = path.join(projectDir, "videos");
@@ -599,7 +575,8 @@ async function handleAPI(req, res, urlPath) {
     const safeFilename = path.basename(filename);
     const buffer = await readBody(req);
     fs.writeFileSync(path.join(videosDir, safeFilename), buffer);
-    return json(res, { url: `${projectUrlPath}/videos/${safeFilename}` });
+    // Stable URL — uses project ID only, never title/category
+    return json(res, { url: `/projects/${projectId}/videos/${safeFilename}` });
   }
 
   // ── Videos: delete ──
@@ -607,10 +584,17 @@ async function handleAPI(req, res, urlPath) {
     const videoPath = decodeURIComponent(urlPath.replace("/api/videos/", ""));
     let filePath;
     if (videoPath.startsWith("projects/")) {
-      filePath = path.join(PUBLIC_DIR, videoPath);
+      // New format: projects/{projectId}/videos/{filename}
+      const parts = videoPath.replace(/^projects\//, "").split("/");
+      const projectId = parts[0];
+      const rest = parts.slice(1).join("/");
+      const resolved = resolveProjectStaticPath(projectId, rest);
+      filePath = resolved;
     } else {
+      // Legacy format: videos/{filename}
       filePath = path.join(PUBLIC_DIR, "videos", videoPath);
     }
+    if (!filePath) return json(res, { error: "Invalid path" }, 403);
     const resolved = path.resolve(filePath);
     if (!resolved.startsWith(path.resolve(PUBLIC_DIR)))
       return json(res, { error: "Invalid path" }, 403);
@@ -642,11 +626,17 @@ async function handleAPI(req, res, urlPath) {
 // ── Static file serving ─────────────────────────────────────────────
 
 function handleStatic(req, res, urlPath) {
-  // Serve /projects/* from public/projects/ (canonical data, not build snapshot)
+  // Serve /projects/{projectId}/* by resolving through the child folder.
+  // URL: /projects/{id}/preview.png → disk: PROJECTS_DIR/{id}/{child}/preview.png
   if (urlPath.startsWith("/projects/")) {
-    const filePath = path.join(PUBLIC_DIR, urlPath);
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-      return serveStaticFile(filePath, res);
+    const parts = urlPath.replace(/^\/projects\//, "").split("/");
+    const projectId = parts[0];
+    const filePart = parts.slice(1).join("/");
+    if (projectId && filePart) {
+      const resolved = resolveProjectStaticPath(projectId, filePart);
+      if (resolved && fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+        return serveStaticFile(resolved, res);
+      }
     }
   }
 

@@ -34,7 +34,7 @@ function sanitizeFolderName(name: string): string {
 }
 
 // Plugin to handle local project file management
-// Folder structure: projects/{CategoryName}/{ProjectTitle}/scene.excalidraw
+// Folder structure: projects/{projectId}/{sanitizedTitle}/scene.excalidraw
 function projectFilePlugin(): Plugin {
   const publicDir = path.resolve(__dirname, "../public");
   const projectsDir = path.join(publicDir, "projects");
@@ -64,45 +64,43 @@ function projectFilePlugin(): Plugin {
     }
   };
 
-  // Get the folder path for a project based on its category and title.
-  // Prefers the new ID-suffixed format, falls back to legacy format if
-  // the folder already exists there. Never renames — that would steal
-  // data from other projects that sanitize to the same folder name.
+  // ID-based project path resolution.
+  // Structure: projectsDir/{projectId}/{humanReadableChild}/
+  // The child folder name is cosmetic — we just find whatever single
+  // directory exists inside the ID folder.
   const getProjectPath = (projectId: string): string | null => {
-    const index = getIndex();
-    const project = index.projects.find((p: any) => p.id === projectId);
-    if (!project) return null;
+    const idDir = path.join(projectsDir, projectId);
+    if (!fs.existsSync(idDir)) return null;
 
-    const categoryName = project.groupId
-      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
-      : "Uncategorized";
+    // Find the child folder (there should be exactly one)
+    const children = fs.readdirSync(idDir).filter((name: string) => {
+      return fs.statSync(path.join(idDir, name)).isDirectory();
+    });
 
-    const safeCategoryName = sanitizeFolderName(categoryName);
-    const safeProjectTitle = sanitizeFolderName(project.title);
-
-    // New format: includes ID to prevent collisions
-    const newPath = path.join(projectsDir, safeCategoryName, `${safeProjectTitle}_${projectId}`);
-    if (fs.existsSync(newPath)) {
-      return newPath;
+    if (children.length > 0) {
+      return path.join(idDir, children[0]);
     }
 
-    // Legacy format: without ID suffix
-    const legacyPath = path.join(projectsDir, safeCategoryName, safeProjectTitle);
-    if (fs.existsSync(legacyPath)) {
-      return legacyPath;
-    }
-
-    // Neither exists — use new format (folder created on first save)
-    return newPath;
+    // No child folder yet — return the ID dir itself as fallback
+    return idDir;
   };
 
-  // Get the URL path for a project (for serving static files).
-  // Must match the actual folder returned by getProjectPath.
-  const getProjectUrlPath = (projectId: string): string | null => {
+  // Stable URL path — only uses project ID, never title/category.
+  const getProjectUrlPath = (projectId: string): string => {
+    return `/projects/${projectId}`;
+  };
+
+  // Resolve a static file request like /projects/{id}/preview.png
+  // to the actual filesystem path projectsDir/{id}/{child}/preview.png
+  const resolveProjectStaticPath = (projectId: string, filePath: string): string | null => {
     const projectDir = getProjectPath(projectId);
     if (!projectDir) return null;
-    // Return the path relative to projectsDir, prefixed with /projects/
-    return `/projects/${path.relative(projectsDir, projectDir).replace(/\\/g, "/")}`;
+    const resolved = path.join(projectDir, filePath);
+    // Safety: ensure it's still under projectsDir
+    if (!path.resolve(resolved).startsWith(path.resolve(projectsDir))) {
+      return null;
+    }
+    return resolved;
   };
 
   // Shared middleware for both dev and preview (production) servers
@@ -194,18 +192,22 @@ function projectFilePlugin(): Plugin {
         const scenePostMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/scene$/);
         if (req.method === "POST" && scenePostMatch) {
           const projectId = scenePostMatch[1];
-          const projectDir = getProjectPath(projectId);
+          let projectDir = getProjectPath(projectId);
 
           if (!projectDir) {
-            res.statusCode = 404;
-            res.end(JSON.stringify({ error: "Project not found in index" }));
-            return;
+            // ID folder doesn't exist yet — create {id}/{title}/ structure
+            const index = getIndex();
+            const project = index.projects.find((p: any) => p.id === projectId);
+            if (!project) {
+              res.statusCode = 404;
+              res.end(JSON.stringify({ error: "Project not found in index" }));
+              return;
+            }
+            const safeTitle = sanitizeFolderName(project.title);
+            projectDir = path.join(projectsDir, projectId, safeTitle);
           }
 
           if (!fs.existsSync(projectDir)) {
-            // Safe to auto-create: getProjectPath already verified this
-            // project exists in the index, so it's not a stale save for a
-            // deleted project (those return null at the check above).
             fs.mkdirSync(projectDir, { recursive: true });
           }
 
@@ -226,13 +228,19 @@ function projectFilePlugin(): Plugin {
         const previewMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/preview$/);
         if (req.method === "POST" && previewMatch) {
           const projectId = previewMatch[1];
-          const projectDir = getProjectPath(projectId);
-          const projectUrlPath = getProjectUrlPath(projectId);
+          let projectDir = getProjectPath(projectId);
 
-          if (!projectDir || !projectUrlPath) {
-            res.statusCode = 404;
-            res.end(JSON.stringify({ error: "Project not found in index" }));
-            return;
+          if (!projectDir) {
+            // ID folder doesn't exist yet — create {id}/{title}/ structure
+            const index = getIndex();
+            const project = index.projects.find((p: any) => p.id === projectId);
+            if (!project) {
+              res.statusCode = 404;
+              res.end(JSON.stringify({ error: "Project not found in index" }));
+              return;
+            }
+            const safeTitle = sanitizeFolderName(project.title);
+            projectDir = path.join(projectsDir, projectId, safeTitle);
           }
 
           if (!fs.existsSync(projectDir)) {
@@ -247,24 +255,19 @@ function projectFilePlugin(): Plugin {
             const buffer = Buffer.concat(chunks);
             fs.writeFileSync(previewPath, buffer);
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ url: `${projectUrlPath}/preview.png` }));
+            res.end(JSON.stringify({ url: `/projects/${projectId}/preview.png` }));
           });
           return;
         }
 
-        // Delete project
+        // Delete project — remove the entire {id}/ folder
         const deleteMatch = urlPath.match(/^\/api\/projects\/([^/]+)$/);
         if (req.method === "DELETE" && deleteMatch) {
           const projectId = deleteMatch[1];
-          const projectDir = getProjectPath(projectId);
+          const idDir = path.join(projectsDir, projectId);
 
-          if (projectDir && fs.existsSync(projectDir)) {
-            fs.rmSync(projectDir, { recursive: true, force: true });
-            // Clean up empty category folder
-            const categoryDir = path.dirname(projectDir);
-            if (fs.existsSync(categoryDir) && fs.readdirSync(categoryDir).length === 0) {
-              fs.rmdirSync(categoryDir);
-            }
+          if (fs.existsSync(idDir)) {
+            fs.rmSync(idDir, { recursive: true, force: true });
           }
           res.setHeader("Content-Type", "application/json");
           res.end(JSON.stringify({ deleted: true }));
@@ -456,90 +459,45 @@ function projectFilePlugin(): Plugin {
           return;
         }
 
-        // Move project folder (when renamed or category changed)
-        const moveMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/move$/);
-        if (req.method === "POST" && moveMatch) {
-          const projectId = moveMatch[1];
+        // Rename project — only renames the child folder inside {id}/
+        const renameMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/rename$/);
+        if (req.method === "POST" && renameMatch) {
+          const projectId = renameMatch[1];
           const chunks: Buffer[] = [];
 
           req.on("data", (chunk: Buffer) => chunks.push(chunk));
           req.on("end", () => {
             try {
-              const { oldCategoryName, oldTitle, newCategoryName, newTitle } = JSON.parse(Buffer.concat(chunks).toString());
+              const { newTitle } = JSON.parse(Buffer.concat(chunks).toString());
+              const idDir = path.join(projectsDir, projectId);
 
-              const safeOldCategory = sanitizeFolderName(oldCategoryName || "Uncategorized");
-              const safeOldTitle = sanitizeFolderName(oldTitle);
-              const safeNewCategory = sanitizeFolderName(newCategoryName || "Uncategorized");
+              if (!fs.existsSync(idDir)) {
+                res.setHeader("Content-Type", "application/json");
+                res.end(JSON.stringify({ success: true }));
+                return;
+              }
+
+              // Find current child folder
+              const children = fs.readdirSync(idDir).filter((name: string) => {
+                return fs.statSync(path.join(idDir, name)).isDirectory();
+              });
+
               const safeNewTitle = sanitizeFolderName(newTitle);
+              const newChildPath = path.join(idDir, safeNewTitle);
 
-              const oldPath = path.join(projectsDir, safeOldCategory, `${safeOldTitle}_${projectId}`);
-              const newPath = path.join(projectsDir, safeNewCategory, `${safeNewTitle}_${projectId}`);
-
-              // Also check legacy path (without ID suffix) for migration
-              const legacyOldPath = path.join(projectsDir, safeOldCategory, safeOldTitle);
-
-              // Use ID-suffixed path, fall back to legacy path for migration
-              const actualOldPath = fs.existsSync(oldPath) ? oldPath : (fs.existsSync(legacyOldPath) ? legacyOldPath : null);
-
-              if (actualOldPath && actualOldPath !== newPath) {
-                // Ensure new category folder exists
-                const newCategoryDir = path.join(projectsDir, safeNewCategory);
-                if (!fs.existsSync(newCategoryDir)) {
-                  fs.mkdirSync(newCategoryDir, { recursive: true });
-                }
-
-                // Move the folder
-                fs.renameSync(actualOldPath, newPath);
-
-                // Clean up empty old category folder
-                const oldCategoryDir = path.dirname(actualOldPath);
-                if (fs.existsSync(oldCategoryDir) && fs.readdirSync(oldCategoryDir).length === 0) {
-                  fs.rmdirSync(oldCategoryDir);
+              if (children.length > 0) {
+                const oldChildPath = path.join(idDir, children[0]);
+                if (oldChildPath !== newChildPath) {
+                  fs.renameSync(oldChildPath, newChildPath);
                 }
               }
 
               res.setHeader("Content-Type", "application/json");
               res.end(JSON.stringify({ success: true }));
             } catch (err) {
-              console.error("Failed to move project:", err);
+              console.error("Failed to rename project:", err);
               res.statusCode = 500;
-              res.end(JSON.stringify({ error: "Failed to move project" }));
-            }
-          });
-          return;
-        }
-
-        // Rename category folder
-        if (req.method === "POST" && urlPath === "/api/projects/rename-category") {
-          const chunks: Buffer[] = [];
-
-          req.on("data", (chunk: Buffer) => chunks.push(chunk));
-          req.on("end", () => {
-            try {
-              const { oldName, newName } = JSON.parse(Buffer.concat(chunks).toString());
-
-              const safeOldName = sanitizeFolderName(oldName);
-              const safeNewName = sanitizeFolderName(newName);
-
-              const oldPath = path.join(projectsDir, safeOldName);
-              const newPath = path.join(projectsDir, safeNewName);
-
-              if (oldPath !== newPath && fs.existsSync(oldPath)) {
-                // Check if new category name already exists
-                if (fs.existsSync(newPath)) {
-                  res.statusCode = 409;
-                  res.end(JSON.stringify({ error: "Category name already exists" }));
-                  return;
-                }
-                fs.renameSync(oldPath, newPath);
-              }
-
-              res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify({ success: true }));
-            } catch (err) {
-              console.error("Failed to rename category:", err);
-              res.statusCode = 500;
-              res.end(JSON.stringify({ error: "Failed to rename category" }));
+              res.end(JSON.stringify({ error: "Failed to rename project" }));
             }
           });
           return;
@@ -655,11 +613,10 @@ function projectFilePlugin(): Plugin {
               }
               projectTitle = finalTitle;
 
-              // Move to Uncategorized folder
-              const targetDir = path.join(projectsDir, "Uncategorized", sanitizeFolderName(projectTitle));
-              if (!fs.existsSync(path.join(projectsDir, "Uncategorized"))) {
-                fs.mkdirSync(path.join(projectsDir, "Uncategorized"), { recursive: true });
-              }
+              // Create {id}/{title}/ structure
+              const safeTitle = sanitizeFolderName(projectTitle);
+              const targetDir = path.join(projectsDir, newProjectId, safeTitle);
+              fs.mkdirSync(targetDir, { recursive: true });
 
               // Copy files to target (use copy instead of rename for cross-device compatibility)
               fs.cpSync(projectFolder, targetDir, { recursive: true });
@@ -732,21 +689,69 @@ function projectFilePlugin(): Plugin {
         next();
   };
 
+  // Middleware to resolve /projects/{id}/file.png → projectsDir/{id}/{child}/file.png
+  // Vite's built-in static serving can't handle the child folder indirection,
+  // so we intercept these requests and serve the files ourselves.
+  const projectStaticMiddleware = (req: any, res: any, next: any) => {
+    const urlPath = (req.url || "").split("?")[0];
+    if (!urlPath.startsWith("/projects/")) {
+      return next();
+    }
+
+    const parts = urlPath.replace(/^\/projects\//, "").split("/");
+    const projectId = parts[0];
+    const filePart = parts.slice(1).join("/");
+
+    if (!projectId || !filePart) {
+      return next();
+    }
+
+    const resolved = resolveProjectStaticPath(projectId, filePart);
+    if (resolved && fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+      const ext = path.extname(resolved).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+        ".webp": "image/webp",
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mov": "video/quicktime",
+        ".mkv": "video/x-matroska",
+        ".avi": "video/x-msvideo",
+        ".json": "application/json",
+        ".excalidraw": "application/json",
+      };
+      const contentType = mimeTypes[ext] || "application/octet-stream";
+      const data = fs.readFileSync(resolved);
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Content-Length", data.length);
+      res.end(data);
+      return;
+    }
+
+    next();
+  };
+
   return {
     name: "project-file-plugin",
     configureServer(server) {
       ensureProjectsDir();
       server.middlewares.use(projectMiddleware);
+      server.middlewares.use(projectStaticMiddleware);
     },
     configurePreviewServer(server) {
       ensureProjectsDir();
       server.middlewares.use(projectMiddleware);
+      server.middlewares.use(projectStaticMiddleware);
     },
   };
 }
 
 // Plugin to handle local video file management
-// Videos are stored in public/projects/{CategoryName}/{ProjectTitle}/videos/
+// Videos are stored in projects/{projectId}/{childFolder}/videos/
 function videoFilePlugin(): Plugin {
   const publicDir = path.resolve(__dirname, "../public");
   const projectsDir = path.join(publicDir, "projects");
@@ -762,38 +767,25 @@ function videoFilePlugin(): Plugin {
     }
   };
 
-  // Get the folder path for a project — same logic as projectFilePlugin:
-  // prefer new ID-suffixed folder, fall back to legacy, never rename.
+  // ID-based project path resolution — same logic as projectFilePlugin.
   const getProjectPath = (projectId: string): string | null => {
-    const index = getIndex();
-    const project = index.projects.find((p: any) => p.id === projectId);
-    if (!project) return null;
+    const idDir = path.join(projectsDir, projectId);
+    if (!fs.existsSync(idDir)) return null;
 
-    const categoryName = project.groupId
-      ? index.groups.find((g: any) => g.id === project.groupId)?.name || "Uncategorized"
-      : "Uncategorized";
+    const children = fs.readdirSync(idDir).filter((name: string) => {
+      return fs.statSync(path.join(idDir, name)).isDirectory();
+    });
 
-    const safeCategoryName = sanitizeFolderName(categoryName);
-    const safeProjectTitle = sanitizeFolderName(project.title);
-
-    const newPath = path.join(projectsDir, safeCategoryName, `${safeProjectTitle}_${projectId}`);
-    if (fs.existsSync(newPath)) {
-      return newPath;
+    if (children.length > 0) {
+      return path.join(idDir, children[0]);
     }
 
-    const legacyPath = path.join(projectsDir, safeCategoryName, safeProjectTitle);
-    if (fs.existsSync(legacyPath)) {
-      return legacyPath;
-    }
-
-    return newPath;
+    return idDir;
   };
 
-  // Get the URL path for a project — must match actual folder on disk.
-  const getProjectUrlPath = (projectId: string): string | null => {
-    const projectDir = getProjectPath(projectId);
-    if (!projectDir) return null;
-    return `/projects/${path.relative(projectsDir, projectDir).replace(/\\/g, "/")}`;
+  // Stable URL path — only uses project ID.
+  const getProjectUrlPath = (projectId: string): string => {
+    return `/projects/${projectId}`;
   };
 
   // Shared middleware for both dev and preview (production) servers
