@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 
-import { CaptureUpdateAction } from "@excalidraw/element";
+import { CaptureUpdateAction, getCommonBounds } from "@excalidraw/element";
 
 import { useAtom, useAtomValue } from "../../../../excalidraw-app/app-jotai";
 
@@ -384,6 +384,13 @@ export const ProjectManager: React.FC = () => {
       // Use the same exportToCanvas function as the export dialog
       // Match preview theme to current UI theme
       const isDark = app.state.theme === "dark";
+
+      // Proportional padding: 10% of the larger content dimension, min 30px
+      const [minX, minY, maxX, maxY] = getCommonBounds(elements);
+      const contentW = maxX - minX;
+      const contentH = maxY - minY;
+      const padding = Math.max(30, Math.round(Math.max(contentW, contentH) * 0.5));
+
       const canvas = await exportToCanvas(
         elements,
         {
@@ -394,7 +401,7 @@ export const ProjectManager: React.FC = () => {
         app.files,
         {
           exportBackground: true,
-          exportPadding: 20,
+          exportPadding: padding,
           viewBackgroundColor: app.state.viewBackgroundColor,
         },
         // Custom canvas creator to limit preview size
