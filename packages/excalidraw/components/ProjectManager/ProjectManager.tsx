@@ -11,7 +11,8 @@ import { useApp } from "../App";
 import { exportToCanvas } from "../../scene/export";
 import { Dialog } from "../Dialog";
 import { FilledButton } from "../FilledButton";
-import { DotsIcon } from "../icons";
+import { DotsIcon, ExportIcon, LoadIcon, TrashIcon } from "../icons";
+import DropdownMenu from "../dropdownMenu/DropdownMenu";
 import {
   triggerSaveProjectAtom,
   triggerRefreshProjectsAtom,
@@ -266,7 +267,6 @@ export const ProjectManager: React.FC = () => {
 
   // Settings dropdown state
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
 
   // Import/Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -1326,23 +1326,7 @@ export const ProjectManager: React.FC = () => {
     setCardSize((prev) => Math.max(prev - CARD_SIZE_STEP, MIN_CARD_SIZE));
   }, []);
 
-  // Close settings dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        settingsRef.current &&
-        !settingsRef.current.contains(e.target as Node)
-      ) {
-        setSettingsOpen(false);
-      }
-    };
-
-    if (settingsOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [settingsOpen]);
+  // (click-outside for settings dropdown handled by DropdownMenu component)
 
   // Export current project as zip
   const handleExportProject = useCallback(async () => {
@@ -1525,32 +1509,40 @@ export const ProjectManager: React.FC = () => {
       <div className="ProjectManager__header">
         <div className="ProjectManager__title">{t("projectManager.title")}</div>
         <div className="ProjectManager__headerControls">
-          <div className="ProjectManager__settings" ref={settingsRef}>
-            <button
-              className="ProjectManager__settingsBtn"
-              onClick={() => setSettingsOpen(!settingsOpen)}
-              title="Settings"
-            >
-              {DotsIcon}
-            </button>
-            {settingsOpen && (
-              <div className="ProjectManager__settingsDropdown">
-                <button
-                  onClick={handleExportProject}
+          <div className="ProjectManager__settings">
+            <DropdownMenu open={settingsOpen}>
+              <DropdownMenu.Trigger
+                onToggle={() => setSettingsOpen(!settingsOpen)}
+              >
+                {DotsIcon}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content
+                onClickOutside={() => setSettingsOpen(false)}
+                onSelect={() => setSettingsOpen(false)}
+                style={{ right: 0, left: "auto" }}
+              >
+                <DropdownMenu.Item
+                  onSelect={handleExportProject}
+                  icon={ExportIcon}
                   disabled={!index.currentProjectId || isExporting}
                 >
                   {isExporting ? "Exporting..." : "Export Project"}
-                </button>
-                <button onClick={handleImportClick}>Import Project</button>
-                <div className="ProjectManager__settingsDropdown__divider" />
-                <button
-                  className="ProjectManager__settingsDropdown__danger"
-                  onClick={handleResetClick}
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  onSelect={handleImportClick}
+                  icon={LoadIcon}
+                >
+                  Import Project
+                </DropdownMenu.Item>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item
+                  onSelect={handleResetClick}
+                  icon={TrashIcon}
                 >
                   Reset Project Manager
-                </button>
-              </div>
-            )}
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -1567,7 +1559,8 @@ export const ProjectManager: React.FC = () => {
           className="ProjectManager__actionBtn"
           onClick={handleNewProjectClick}
         >
-          + {t("projectManager.newProject")}
+          <span style={{ fontSize: "1.2rem", lineHeight: 1, position: "relative", top: "1px" }}>+</span>
+          {t("projectManager.newProject")}
         </button>
       </div>
 
@@ -1995,7 +1988,9 @@ export const ProjectManager: React.FC = () => {
             disabled={cardSize <= MIN_CARD_SIZE}
             title="Zoom out"
           >
-            −
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
           </button>
           <button
             className="ProjectManager__zoomBtn"
@@ -2003,7 +1998,10 @@ export const ProjectManager: React.FC = () => {
             disabled={cardSize >= MAX_CARD_SIZE}
             title="Zoom in"
           >
-            +
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
           </button>
         </div>
       )}

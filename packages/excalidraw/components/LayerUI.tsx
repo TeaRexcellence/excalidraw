@@ -221,6 +221,23 @@ const GridTypeDropdown = ({
               }}
             />
           ))}
+          <div
+            className="grid-opacity-vertical-slider"
+            title={t("labels.gridOpacity")}
+          >
+            <input
+              type="range"
+              min="10"
+              max="100"
+              step="10"
+              value={appState.gridOpacity}
+              onChange={(e) => {
+                setAppState({ gridOpacity: +e.target.value });
+              }}
+              className="range-input"
+              data-testid="grid-opacity-slider"
+            />
+          </div>
         </div>
       </div>
     </div>

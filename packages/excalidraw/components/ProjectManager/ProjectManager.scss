@@ -96,8 +96,8 @@
     border-radius: 6px;
     background: transparent;
     color: var(--color-on-surface);
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: 2.25rem;
+    font-weight: 900;
     font-family: var(--ui-font);
     cursor: pointer;
     transition: all var(--pm-transition);
@@ -255,6 +255,10 @@
     padding: 7px 14px;
     border: 0;
     border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     background: var(--color-surface-mid);
     color: var(--color-gray-50);
     font-size: 0.8125rem;

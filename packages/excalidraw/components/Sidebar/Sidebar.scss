@@ -21,7 +21,7 @@
     overflow: hidden;
     border-radius: 0;
 
-    border-left: 2px solid var(--sidebar-border-color);
+    border-left: none;
 
     :root[dir="rtl"] & {
       left: 0;
@@ -37,8 +37,8 @@
     }
 
     :root[dir="rtl"] & {
-      border-right: 2px solid var(--sidebar-border-color);
-      border-left: 0;
+      border-right: none;
+      border-left: none;
     }
 
     &--portaled {
@@ -57,21 +57,13 @@
     top: 0;
     bottom: 0;
     left: 0;
-    width: 2px;
+    width: 3px;
     cursor: ew-resize;
-    background: transparent;
+    background: var(--sidebar-border-color);
     z-index: 10;
-    transition: background-color 0.15s ease, width 0.15s ease;
 
     &:hover {
-      background-color: var(--sidebar-border-color);
-      width: 3px;
-    }
-
-    &:active {
-      background-color: var(--text-primary-color);
-      opacity: 0.3;
-      width: 3px;
+      background: #3c3b49;
     }
 
     :root[dir="rtl"] & {
