@@ -19,7 +19,9 @@ import { ShareableLinkDialog } from "@excalidraw/excalidraw/components/Shareable
 import Trans from "@excalidraw/excalidraw/components/Trans";
 import {
   APP_NAME,
+  DEFAULT_SIDEBAR,
   EVENT,
+  PROJECTS_SIDEBAR_TAB,
   THEME,
   VERSION_TIMEOUT,
   debounce,
@@ -122,7 +124,11 @@ import {
   LocalData,
   localStorageQuotaExceededAtom,
 } from "./data/LocalData";
-import { ProjectManagerData } from "./data/ProjectManagerData";
+import {
+  ProjectManagerData,
+  triggerSaveProjectAtom,
+  hasCurrentProjectAtom,
+} from "./data/ProjectManagerData";
 import { isBrowserStorageStateNewer } from "./data/tabSync";
 import { ShareDialog, shareDialogStateAtom } from "./share/ShareDialog";
 import CollabError, { collabErrorIndicatorAtom } from "./collab/CollabError";
@@ -705,6 +711,42 @@ const ExcalidrawWrapper = () => {
     window.addEventListener(EVENT.BEFORE_UNLOAD, unloadHandler);
     return () => {
       window.removeEventListener(EVENT.BEFORE_UNLOAD, unloadHandler);
+    };
+  }, [excalidrawAPI]);
+
+  // Handle Ctrl+S / save-project event at app level so we can decide
+  // whether to open the sidebar (first-time save) or save silently.
+  useEffect(() => {
+    if (!excalidrawAPI) {
+      return;
+    }
+    const handler = () => {
+      const hasProject = appJotaiStore.get(hasCurrentProjectAtom);
+      if (!hasProject) {
+        // First-time save: open sidebar + trigger save modal
+        excalidrawAPI.updateScene({
+          appState: {
+            openSidebar: {
+              name: DEFAULT_SIDEBAR.name,
+              tab: PROJECTS_SIDEBAR_TAB,
+            },
+          },
+          captureUpdate: CaptureUpdateAction.EVENTUALLY,
+        });
+        appJotaiStore.set(triggerSaveProjectAtom, (n: number) => n + 1);
+      } else {
+        // Already saved: save silently + toast (no sidebar)
+        const elements = excalidrawAPI.getSceneElementsIncludingDeleted();
+        const appState = excalidrawAPI.getAppState();
+        const files = excalidrawAPI.getFiles();
+        ProjectManagerData.save(elements, appState, files);
+        ProjectManagerData.flushSave();
+        excalidrawAPI.setToast({ message: "Project saved" });
+      }
+    };
+    window.addEventListener("excalidraw-save-project", handler);
+    return () => {
+      window.removeEventListener("excalidraw-save-project", handler);
     };
   }, [excalidrawAPI]);
 

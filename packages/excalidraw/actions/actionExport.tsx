@@ -161,16 +161,11 @@ export const actionSaveToActiveFile = register({
     return !appState.viewModeEnabled;
   },
   perform: async (_elements, appState) => {
-    // Open sidebar to Projects tab and trigger Save Project flow
+    // Dispatch event — the app-level handler decides whether to open
+    // the sidebar (first-time save) or save silently (already saved).
     window.dispatchEvent(new CustomEvent("excalidraw-save-project"));
     return {
-      appState: {
-        ...appState,
-        openSidebar: {
-          name: DEFAULT_SIDEBAR.name,
-          tab: PROJECTS_SIDEBAR_TAB,
-        },
-      },
+      appState,
       captureUpdate: CaptureUpdateAction.EVENTUALLY,
     };
   },

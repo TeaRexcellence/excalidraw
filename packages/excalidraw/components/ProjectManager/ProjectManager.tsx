@@ -904,17 +904,6 @@ export const ProjectManager: React.FC = () => {
     };
   }, [handleSelectProject]);
 
-  // Listen for Ctrl+S save project events
-  useEffect(() => {
-    const handler = () => {
-      setSaveTrigger((n) => n + 1);
-    };
-    window.addEventListener("excalidraw-save-project", handler);
-    return () => {
-      window.removeEventListener("excalidraw-save-project", handler);
-    };
-  }, [setSaveTrigger]);
-
   // Open project in new tab
   const handleOpenInNewTab = useCallback(
     async (projectId: string) => {
