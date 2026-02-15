@@ -57,7 +57,8 @@ interface ProjectGroupProps {
   getPreviewUrl: (projectId: string) => string | null;
   label?: string; // custom label override (e.g. "★ Favorites")
   icon?: string; // optional icon before label
-  showCategoryBadge?: boolean;
+  dragHandleProps?: Record<string, any>;
+  forceCollapsed?: boolean;
 }
 
 export const ProjectGroup: React.FC<ProjectGroupProps> = ({
@@ -86,7 +87,8 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
   getPreviewUrl,
   label,
   icon,
-  showCategoryBadge,
+  dragHandleProps,
+  forceCollapsed,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(group?.name || "");
@@ -104,7 +106,11 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
     return true;
   });
 
-  const isExpanded = isSpecialSection ? localExpanded : group?.expanded ?? true;
+  const isExpanded = forceCollapsed
+    ? false
+    : isSpecialSection
+      ? localExpanded
+      : group?.expanded ?? true;
 
   const handleToggle = useCallback(() => {
     if (isSpecialSection) {
@@ -137,7 +143,8 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
     [group?.name, handleRenameSubmit],
   );
 
-  if (projects.length === 0) {
+  // Only hide special sections when empty; named groups always show so they can be reordered
+  if (projects.length === 0 && isSpecialSection) {
     return null;
   }
 
@@ -146,7 +153,11 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
 
   return (
     <div className="ProjectGroup">
-      <div className="ProjectGroup__header" onClick={handleToggle}>
+      <div
+        className={`ProjectGroup__header${dragHandleProps ? " ProjectGroup__header--draggable" : ""}`}
+        onClick={handleToggle}
+        {...(dragHandleProps || {})}
+      >
         <div className="ProjectGroup__header__left">
           <span
             className={`ProjectGroup__chevron ${isExpanded ? "expanded" : ""}`}
@@ -300,7 +311,6 @@ export const ProjectGroup: React.FC<ProjectGroupProps> = ({
               onToggleFavorite={onToggleFavorite}
               onCreateCategory={onCreateCategory}
               availableGroups={availableGroups}
-              showCategoryBadge={showCategoryBadge}
             />
           ))}
         </div>

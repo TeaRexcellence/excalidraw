@@ -22,7 +22,6 @@ interface ProjectCardProps {
   onToggleFavorite: (projectId: string) => void;
   onCreateCategory: (name: string) => void;
   availableGroups: Array<{ id: string; name: string }>;
-  showCategoryBadge?: boolean;
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -43,7 +42,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   onCreateCategory,
   availableGroups,
   groups,
-  showCategoryBadge,
 }) => {
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
@@ -239,13 +237,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           <div className="ProjectCard__title">
             <span title={project.title}>{project.title}</span>
           </div>
-          {showCategoryBadge && project.groupId && (
-            <div className="ProjectCard__badges">
-              <span className="ProjectCard__badge">
-                {groups.find((g) => g.id === project.groupId)?.name}
-              </span>
-            </div>
-          )}
         </div>
       </div>
 

@@ -1,6 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
+
 import { CaptureUpdateAction, getCommonBounds } from "@excalidraw/element";
 
 import { useAtom, useAtomValue } from "../../../../excalidraw-app/app-jotai";
@@ -216,6 +235,72 @@ type ModalType =
   | "reset"
   | null;
 
+// ─── Drag-and-drop helpers for group reordering ─────────────────
+
+const SortableGroupItem: React.FC<{
+  group: ProjectGroupType;
+  groupProjects: Project[];
+  isBeingDragged: boolean;
+  groupSharedProps: any;
+}> = ({ group, groupProjects, isBeingDragged, groupSharedProps }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: group.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <ProjectGroup
+        group={group}
+        projects={groupProjects}
+        dragHandleProps={listeners}
+        forceCollapsed={isBeingDragged}
+        {...groupSharedProps}
+      />
+    </div>
+  );
+};
+
+const DragOverlayGroupHeader: React.FC<{
+  group: ProjectGroupType;
+  projectCount: number;
+}> = ({ group, projectCount }) => (
+  <div className="ProjectGroup ProjectGroup--drag-overlay">
+    <div className="ProjectGroup__header">
+      <div className="ProjectGroup__header__left">
+        <span className="ProjectGroup__chevron">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </span>
+        <span className="ProjectGroup__name">{group.name}</span>
+        <span className="ProjectGroup__count">{projectCount}</span>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── Main Component ─────────────────────────────────────────────
+
 export const ProjectManager: React.FC = () => {
   const app = useApp();
   const [index, setIndex] = useState<ProjectsIndex>(DEFAULT_PROJECTS_INDEX);
@@ -254,6 +339,55 @@ export const ProjectManager: React.FC = () => {
   const [projectsPath, setProjectsPath] = useState<string>("");
   const [resetConfirmText, setResetConfirmText] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+
+  // Drag-and-drop state for group reordering
+  const [activeDragGroupId, setActiveDragGroupId] = useState<string | null>(
+    null,
+  );
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 8 },
+  });
+  const keyboardSensor = useSensor(KeyboardSensor);
+  const dndSensors = useSensors(pointerSensor, keyboardSensor);
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveDragGroupId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveDragGroupId(null);
+
+      if (!over || active.id === over.id) {
+        return;
+      }
+
+      const sortedGroups = [...index.groups].sort((a, b) => a.order - b.order);
+      const oldIdx = sortedGroups.findIndex((g) => g.id === active.id);
+      const newIdx = sortedGroups.findIndex((g) => g.id === over.id);
+
+      if (oldIdx === -1 || newIdx === -1) {
+        return;
+      }
+
+      const reordered = arrayMove(sortedGroups, oldIdx, newIdx);
+      const updatedGroups = reordered.map((g, i) => ({ ...g, order: i }));
+
+      const newIndex: ProjectsIndex = {
+        ...index,
+        groups: updatedGroups,
+      };
+
+      setIndex(newIndex);
+      await api.saveIndex(newIndex);
+    },
+    [index],
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDragGroupId(null);
+  }, []);
 
   // Listen for external save trigger (from main menu)
   // useAtom so we can reset to 0 after processing (prevents stale re-fires on remount)
@@ -1864,7 +1998,6 @@ export const ProjectManager: React.FC = () => {
                     onToggleFavorite={handleToggleFavorite}
                     onCreateCategory={handleCreateCategory}
                     availableGroups={availableGroups}
-                    showCategoryBadge
                   />
                 ))}
                 {favoriteProjects.length === 0 && (
@@ -1950,9 +2083,14 @@ export const ProjectManager: React.FC = () => {
           }
 
           // "All" view — cascading sections: Favorites → Named groups → Uncategorized
+          const sortedGroups = [...index.groups].sort(
+            (a, b) => a.order - b.order,
+          );
+          const sortedGroupIds = sortedGroups.map((g) => g.id);
+
           return (
             <>
-              {/* Favorites section */}
+              {/* Favorites section — not sortable */}
               {favoriteProjects.length > 0 && (
                 <ProjectGroup
                   group={null}
@@ -1960,35 +2098,71 @@ export const ProjectManager: React.FC = () => {
                   label="Favorites"
                   icon="star"
                   projects={favoriteProjects}
-                  showCategoryBadge
                   {...groupSharedProps}
                 />
               )}
 
-              {/* Named groups */}
-              {index.groups
-                .sort((a, b) => a.order - b.order)
-                .map((group) => {
-                  const groupProjects = index.projects.filter(
-                    (p) => p.groupId === group.id,
-                  );
-                  return (
-                    <ProjectGroup
-                      key={group.id}
-                      group={group}
-                      projects={groupProjects}
-                      {...groupSharedProps}
-                    />
-                  );
-                })}
-
-              {/* Ungrouped projects */}
+              {/* Uncategorized — not sortable, pinned after favorites */}
               <ProjectGroup
                 group={null}
                 sectionId="uncategorized"
                 projects={ungroupedProjects}
                 {...groupSharedProps}
               />
+
+              {/* Named groups — sortable via drag and drop */}
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+                autoScroll={{
+                  enabled: true,
+                  threshold: { x: 0, y: 0.15 },
+                  acceleration: 10,
+                }}
+              >
+                <SortableContext
+                  items={sortedGroupIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {sortedGroups.map((group) => {
+                    const groupProjects = index.projects.filter(
+                      (p) => p.groupId === group.id,
+                    );
+                    return (
+                      <SortableGroupItem
+                        key={group.id}
+                        group={group}
+                        groupProjects={groupProjects}
+                        isBeingDragged={activeDragGroupId === group.id}
+                        groupSharedProps={groupSharedProps}
+                      />
+                    );
+                  })}
+                </SortableContext>
+
+                <DragOverlay dropAnimation={null}>
+                  {activeDragGroupId
+                    ? (() => {
+                        const dragGroup = index.groups.find(
+                          (g) => g.id === activeDragGroupId,
+                        );
+                        return dragGroup ? (
+                          <DragOverlayGroupHeader
+                            group={dragGroup}
+                            projectCount={
+                              index.projects.filter(
+                                (p) => p.groupId === activeDragGroupId,
+                              ).length
+                            }
+                          />
+                        ) : null;
+                      })()
+                    : null}
+                </DragOverlay>
+              </DndContext>
             </>
           );
         })()}
