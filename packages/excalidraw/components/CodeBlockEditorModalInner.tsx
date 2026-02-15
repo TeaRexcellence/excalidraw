@@ -368,10 +368,6 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
     }
   }, []);
 
-  // Detect docked sidebar offset
-  const sidebarEl = document.querySelector(".sidebar.sidebar--docked");
-  const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
-
   // Close if element was deleted while editor is open
   useEffect(() => {
     if (!element) {
@@ -386,11 +382,6 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
   return (
     <div
       className="CodeBlockEditorModal-backdrop"
-      style={
-        sidebarWidth > 0
-          ? { width: `calc(100% - ${sidebarWidth}px)` }
-          : undefined
-      }
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) {
           handleDone();

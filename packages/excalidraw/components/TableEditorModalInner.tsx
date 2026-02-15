@@ -217,10 +217,6 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
   // Detect dark mode
   const isDark = document.querySelector(".excalidraw.theme--dark") !== null;
 
-  // Detect docked sidebar to offset the modal
-  const sidebarEl = document.querySelector(".sidebar.sidebar--docked");
-  const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
-
   if (!element) {
     onClose();
     return null;
@@ -229,11 +225,6 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
   return (
     <div
       className="TableEditorModal-backdrop"
-      style={
-        sidebarWidth > 0
-          ? { width: `calc(100% - ${sidebarWidth}px)` }
-          : undefined
-      }
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) {
           handleDone();

@@ -40,6 +40,16 @@
       border-right: 2px solid var(--sidebar-border-color);
       border-left: 0;
     }
+
+    &--portaled {
+      position: relative;
+      top: auto;
+      bottom: auto;
+      right: auto;
+      height: 100%;
+      z-index: auto;
+      pointer-events: auto;
+    }
   }
 
   .sidebar__resize-handle {

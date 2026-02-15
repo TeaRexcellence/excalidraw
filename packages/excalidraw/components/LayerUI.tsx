@@ -748,13 +748,6 @@ const LayerUI = ({
         <>
           <div
             className="layer-ui__wrapper"
-            style={
-              appState.openSidebar &&
-              isSidebarDocked &&
-              editorInterface.canFitSidebar
-                ? { width: `calc(100% - ${sidebarWidth}px)` }
-                : {}
-            }
           >
             {renderWelcomeScreen && <tunnels.WelcomeScreenCenterTunnel.Out />}
             {renderFixedSideContainer()}

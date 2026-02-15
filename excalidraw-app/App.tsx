@@ -895,11 +895,12 @@ const ExcalidrawWrapper = () => {
 
   return (
     <div
-      style={{ height: "100%" }}
+      style={{ height: "100%", display: "flex" }}
       className={clsx("excalidraw-app", {
         "is-collaborating": isCollaborating,
       })}
     >
+      <div style={{ flex: 1, minWidth: 0, height: "100%", position: "relative" }}>
       <Excalidraw
         excalidrawAPI={excalidrawRefCallback}
         onChange={onChange}
@@ -997,6 +998,14 @@ const ExcalidrawWrapper = () => {
           />
         )}
       </Excalidraw>
+      </div>
+      <div
+        id="sidebar-portal-root"
+        className={clsx("excalidraw", {
+          "theme--dark": editorTheme === THEME.DARK,
+        })}
+        style={{ height: "100%", flexShrink: 0, width: "auto", position: "static", overflow: "visible" }}
+      />
     </div>
   );
 };

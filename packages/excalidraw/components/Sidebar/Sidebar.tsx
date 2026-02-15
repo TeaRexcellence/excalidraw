@@ -8,6 +8,7 @@ import React, {
   useImperativeHandle,
   useCallback,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
   CLASSES,
@@ -212,12 +213,19 @@ export const SidebarInner = forwardRef(
       };
     }, [isResizing, sidebarWidth, setSidebarWidth]);
 
-    return (
+    const portalTarget = document.getElementById("sidebar-portal-root");
+    const isPortaled = !!portalTarget;
+
+    const sidebarJSX = (
       <Island
         {...rest}
         className={clsx(
           CLASSES.SIDEBAR,
-          { "sidebar--docked": docked, "sidebar--resizing": isResizing },
+          {
+            "sidebar--docked": docked,
+            "sidebar--resizing": isResizing,
+            "sidebar--portaled": isPortaled,
+          },
           className,
         )}
         ref={islandRef}
@@ -229,6 +237,12 @@ export const SidebarInner = forwardRef(
         </SidebarPropsContext.Provider>
       </Island>
     );
+
+    if (isPortaled) {
+      return createPortal(sidebarJSX, portalTarget);
+    }
+
+    return sidebarJSX;
   },
 );
 SidebarInner.displayName = "SidebarInner";
