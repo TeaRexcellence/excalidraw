@@ -1073,14 +1073,28 @@ export const ProjectManager: React.FC = () => {
         setIndex(newIndex);
         await api.saveIndex(newIndex);
 
-        // If we deleted the current project, reset the canvas
+        // If we deleted the current project, reset to a blank unsaved canvas
         if (isCurrentProject) {
+          app.imageCache.clear();
+          const defaults = getDefaultAppState();
           app.syncActionResult({
             elements: [],
             appState: {
-              name: "",
+              ...defaults,
+              theme: app.state.theme,
+              penMode: app.state.penMode,
+              penDetected: app.state.penDetected,
+              exportBackground: app.state.exportBackground,
+              exportEmbedScene: app.state.exportEmbedScene,
+              gridSize: app.state.gridSize,
+              gridStep: app.state.gridStep,
+              gridModeEnabled: app.state.gridModeEnabled,
+              gridType: app.state.gridType,
+              gridOpacity: app.state.gridOpacity,
               viewBackgroundColor: app.state.viewBackgroundColor,
+              name: "",
             },
+            replaceFiles: true,
             captureUpdate: CaptureUpdateAction.IMMEDIATELY,
           });
         }

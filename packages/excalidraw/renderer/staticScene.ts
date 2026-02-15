@@ -45,7 +45,7 @@ import type { StaticCanvasAppState, Zoom } from "../types";
 const GridLineColor = {
   [THEME.LIGHT]: {
     bold: "#dddddd",
-    regular: "#e5e5e5",
+    regular: "#d4d4d4",
   },
   [THEME.DARK]: {
     bold: applyDarkModeFilter("#dddddd"),
@@ -101,7 +101,7 @@ const strokeGrid = (
 
         const radius = isBold
           ? Math.min(2.5 / zoom.value, 4)
-          : Math.min(1 / zoom.value, 2);
+          : Math.min(1.4 / zoom.value, 3);
 
         context.beginPath();
         context.fillStyle = isBold

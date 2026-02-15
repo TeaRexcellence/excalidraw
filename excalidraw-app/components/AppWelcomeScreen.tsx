@@ -9,9 +9,12 @@ import { useI18n } from "@excalidraw/excalidraw/i18n";
 import { WelcomeScreen } from "@excalidraw/excalidraw/index";
 import React from "react";
 
+import { ProjectManagerData } from "../data/ProjectManagerData";
+
 export const AppWelcomeScreen: React.FC<{}> = React.memo(() => {
   const { t } = useI18n();
   const actionManager = useExcalidrawActionManager();
+  const hasCurrentProject = ProjectManagerData.hasCurrentProject();
 
   return (
     <WelcomeScreen>
@@ -46,16 +49,18 @@ export const AppWelcomeScreen: React.FC<{}> = React.memo(() => {
           >
             {t("buttons.load")}
           </WelcomeScreen.Center.MenuItem>
-          <WelcomeScreen.Center.MenuItem
-            onSelect={() =>
-              actionManager.executeAction(actionSaveToActiveFile)
-            }
-            shortcut={getShortcutFromShortcutName("saveToActiveFile")}
-            icon={ProjectsIcon}
-            title="Save the current canvas as a project"
-          >
-            Save Project
-          </WelcomeScreen.Center.MenuItem>
+          {!hasCurrentProject && (
+            <WelcomeScreen.Center.MenuItem
+              onSelect={() =>
+                actionManager.executeAction(actionSaveToActiveFile)
+              }
+              shortcut={getShortcutFromShortcutName("saveToActiveFile")}
+              icon={ProjectsIcon}
+              title="Save the current canvas as a project"
+            >
+              Save Project
+            </WelcomeScreen.Center.MenuItem>
+          )}
           <WelcomeScreen.Center.MenuItemHelp />
         </WelcomeScreen.Center.Menu>
       </WelcomeScreen.Center>
