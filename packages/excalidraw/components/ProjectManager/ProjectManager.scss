@@ -705,6 +705,14 @@
     animation: pm-pulse-saved 1.5s ease-out;
   }
 
+  // ── Drag overlay (follows cursor during reorder) ────
+  &--drag-overlay {
+    opacity: 0.92;
+    box-shadow: var(--pm-shadow-lg);
+    border: 2px solid var(--color-primary);
+    cursor: grabbing;
+  }
+
   // ── Favorite Button ────────────────────────
   &__favoriteBtn {
     position: absolute;

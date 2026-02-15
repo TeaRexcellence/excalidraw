@@ -6,6 +6,8 @@ export interface Project {
   updatedAt: number;
   hasCustomPreview?: boolean; // true if user set a custom cover image
   isFavorite?: boolean; // true if project is marked as favorite
+  order?: number; // position within its groupId section
+  favoriteOrder?: number; // position within Favorites section
 }
 
 export interface ProjectGroup {

@@ -13,6 +13,7 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
+  rectSortingStrategy,
   useSortable,
   arrayMove,
 } from "@dnd-kit/sortable";
@@ -57,6 +58,76 @@ import type {
 } from "./types";
 
 import "./ProjectManager.scss";
+
+// ─── Project order normalization ─────────────────────────────────
+
+function normalizeProjectOrders(projects: Project[]): {
+  projects: Project[];
+  changed: boolean;
+} {
+  let changed = false;
+
+  // Group projects by their groupId
+  const byGroup = new Map<string | null, Project[]>();
+  for (const p of projects) {
+    const key = p.groupId;
+    if (!byGroup.has(key)) {
+      byGroup.set(key, []);
+    }
+    byGroup.get(key)!.push(p);
+  }
+
+  // Assign sequential order within each group if any are missing
+  const orderMap = new Map<string, number>();
+  for (const [, groupProjects] of byGroup) {
+    const needsOrders = groupProjects.some((p) => p.order === undefined);
+    if (needsOrders) {
+      changed = true;
+      groupProjects.forEach((p, i) => orderMap.set(p.id, i));
+    }
+  }
+
+  // Assign favoriteOrder for favorites if any are missing
+  const favorites = projects.filter((p) => p.isFavorite);
+  const needsFavOrders = favorites.some((p) => p.favoriteOrder === undefined);
+  if (needsFavOrders && favorites.length > 0) {
+    changed = true;
+    favorites.forEach((p, i) => {
+      const existing = orderMap.get(p.id);
+      // Store favoriteOrder separately — we'll handle in the map below
+      if (existing === undefined) {
+        orderMap.set(p.id, p.order ?? 0);
+      }
+    });
+  }
+
+  if (!changed) {
+    return { projects, changed: false };
+  }
+
+  const favOrder = new Map<string, number>();
+  if (needsFavOrders) {
+    favorites.forEach((p, i) => favOrder.set(p.id, i));
+  }
+
+  const normalized = projects.map((p) => ({
+    ...p,
+    order: orderMap.has(p.id) ? orderMap.get(p.id)! : p.order,
+    favoriteOrder: favOrder.has(p.id) ? favOrder.get(p.id)! : p.favoriteOrder,
+  }));
+
+  return { projects: normalized, changed: true };
+}
+
+// Sort projects by order (or favoriteOrder for favorites context)
+function sortProjects(
+  projects: Project[],
+  orderKey: "order" | "favoriteOrder" = "order",
+): Project[] {
+  return [...projects].sort(
+    (a, b) => (a[orderKey] ?? 0) - (b[orderKey] ?? 0),
+  );
+}
 
 const MIN_CARD_SIZE = 100;
 const MAX_CARD_SIZE = 300;
@@ -235,6 +306,206 @@ type ModalType =
   | "reset"
   | null;
 
+// ─── Drag-and-drop wrapper for card reordering in tab views ─────
+
+const SortableCardWrapper: React.FC<{
+  id: string;
+  children: React.ReactNode;
+}> = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+    zIndex: isDragging ? 1 : ("auto" as any),
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+};
+
+// ─── Sortable grid for tab views (favorites / uncategorized / category) ──
+
+const TabSortableGrid: React.FC<{
+  projects: Project[];
+  orderKey: "order" | "favoriteOrder";
+  currentProjectId: string | null;
+  justSavedId: string | null;
+  cardSize: number;
+  groups: ProjectGroupType[];
+  availableGroups: Array<{ id: string; name: string }>;
+  getPreviewUrl: (projectId: string) => string | null;
+  onSelectProject: (projectId: string) => void;
+  onOpenInNewTab: (projectId: string) => void;
+  onOpenFileLocation: (projectId: string) => void;
+  onRenameProject: (projectId: string) => void;
+  onDeleteProject: (projectId: string) => void;
+  onMoveToGroup: (projectId: string, groupId: string | null) => void;
+  onSetCustomPreview: (projectId: string, file: File) => void;
+  onRemoveCustomPreview: (projectId: string) => void;
+  onToggleFavorite: (projectId: string) => void;
+  onCreateCategory: (name: string) => void;
+  onReorderProjects: (
+    orderedIds: string[],
+    orderKey: "order" | "favoriteOrder",
+  ) => void;
+  emptyMessage: string;
+}> = ({
+  projects,
+  orderKey,
+  currentProjectId,
+  justSavedId,
+  cardSize,
+  groups,
+  availableGroups,
+  getPreviewUrl,
+  onSelectProject,
+  onOpenInNewTab,
+  onOpenFileLocation,
+  onRenameProject,
+  onDeleteProject,
+  onMoveToGroup,
+  onSetCustomPreview,
+  onRemoveCustomPreview,
+  onToggleFavorite,
+  onCreateCategory,
+  onReorderProjects,
+  emptyMessage,
+}) => {
+  const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+  );
+
+  const projectIds = projects.map((p) => p.id);
+
+  const handleDragStart = React.useCallback((event: DragStartEvent) => {
+    setActiveDragId(event.active.id as string);
+  }, []);
+
+  const handleDragEnd = React.useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveDragId(null);
+      if (!over || active.id === over.id) {
+        return;
+      }
+      const oldIdx = projects.findIndex((p) => p.id === active.id);
+      const newIdx = projects.findIndex((p) => p.id === over.id);
+      if (oldIdx === -1 || newIdx === -1) {
+        return;
+      }
+      const reordered = arrayMove(projects, oldIdx, newIdx);
+      onReorderProjects(
+        reordered.map((p) => p.id),
+        orderKey,
+      );
+    },
+    [projects, onReorderProjects, orderKey],
+  );
+
+  const handleDragCancel = React.useCallback(() => {
+    setActiveDragId(null);
+  }, []);
+
+  const dragProject = activeDragId
+    ? projects.find((p) => p.id === activeDragId)
+    : null;
+
+  if (projects.length === 0) {
+    return (
+      <div className="ProjectManager__empty">
+        <p>{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <SortableContext items={projectIds} strategy={rectSortingStrategy}>
+        <div className="ProjectGroup__grid">
+          {projects.map((project) => (
+            <SortableCardWrapper key={project.id} id={project.id}>
+              <ProjectCard
+                project={project}
+                isActive={project.id === currentProjectId}
+                justSaved={project.id === justSavedId}
+                previewUrl={getPreviewUrl(project.id)}
+                size={cardSize}
+                groups={groups}
+                onSelect={onSelectProject}
+                onOpenInNewTab={onOpenInNewTab}
+                onOpenFileLocation={onOpenFileLocation}
+                onRename={onRenameProject}
+                onDelete={onDeleteProject}
+                onMoveToGroup={onMoveToGroup}
+                onSetCustomPreview={onSetCustomPreview}
+                onRemoveCustomPreview={onRemoveCustomPreview}
+                onToggleFavorite={onToggleFavorite}
+                onCreateCategory={onCreateCategory}
+                availableGroups={availableGroups}
+              />
+            </SortableCardWrapper>
+          ))}
+        </div>
+      </SortableContext>
+
+      <DragOverlay dropAnimation={null}>
+        {dragProject ? (
+          <div
+            className="ProjectCard ProjectCard--drag-overlay"
+            style={{ width: cardSize, height: cardSize + 30 }}
+          >
+            <div
+              className="ProjectCard__preview"
+              style={{ width: cardSize, height: cardSize }}
+            >
+              {(() => {
+                const url = getPreviewUrl(dragProject.id);
+                return url ? (
+                  <img
+                    src={url}
+                    alt={dragProject.title}
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="ProjectCard__placeholder">
+                    <span>(EMPTY)</span>
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="ProjectCard__info">
+              <div className="ProjectCard__title">
+                <span>{dragProject.title}</span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+};
+
 // ─── Drag-and-drop helpers for group reordering ─────────────────
 
 const SortableGroupItem: React.FC<{
@@ -389,6 +660,25 @@ export const ProjectManager: React.FC = () => {
     setActiveDragGroupId(null);
   }, []);
 
+  // ─── Project card reordering ─────────────────────────────────
+
+  const handleReorderProjects = useCallback(
+    async (
+      orderedIds: string[],
+      orderKey: "order" | "favoriteOrder",
+    ) => {
+      const orderMap = new Map(orderedIds.map((id, i) => [id, i]));
+      const newProjects = index.projects.map((p) =>
+        orderMap.has(p.id) ? { ...p, [orderKey]: orderMap.get(p.id)! } : p,
+      );
+      const newIndex: ProjectsIndex = { ...index, projects: newProjects };
+      setIndex(newIndex);
+      indexRef.current = newIndex;
+      await api.saveIndex(newIndex);
+    },
+    [index],
+  );
+
   // Listen for external save trigger (from main menu)
   // useAtom so we can reset to 0 after processing (prevents stale re-fires on remount)
   const [saveTrigger, setSaveTrigger] = useAtom(triggerSaveProjectAtom);
@@ -407,8 +697,18 @@ export const ProjectManager: React.FC = () => {
   // Load projects on mount
   useEffect(() => {
     api.getIndex().then((data) => {
-      setIndex(data);
+      // Normalize order fields on first load if any are missing
+      const { projects: normalized, changed } = normalizeProjectOrders(
+        data.projects,
+      );
+      const loadedIndex = changed
+        ? { ...data, projects: normalized }
+        : data;
+      setIndex(loadedIndex);
       setIsLoading(false);
+      if (changed) {
+        api.saveIndex(loadedIndex);
+      }
     });
   }, []);
 
@@ -1302,17 +1602,39 @@ export const ProjectManager: React.FC = () => {
         return;
       }
 
+      // Move projects to uncategorized and assign proper order values
+      const currentUncategorized = index.projects.filter(
+        (p) => p.groupId === null,
+      );
+      const maxUncatOrder = Math.max(
+        0,
+        ...currentUncategorized.map((p) => p.order ?? 0),
+      );
+      let nextOrder = maxUncatOrder + 1;
+
+      const newProjects = index.projects.map((p) => {
+        if (p.groupId === groupId) {
+          return { ...p, groupId: null, order: nextOrder++ };
+        }
+        return p;
+      });
+
       const newIndex: ProjectsIndex = {
         ...index,
         groups: index.groups.filter((g) => g.id !== groupId),
-        projects: index.projects.map((p) =>
-          p.groupId === groupId ? { ...p, groupId: null } : p,
-        ),
+        projects: newProjects,
       };
+
+      // If viewing the deleted category, reset to "all"
+      if (activeFilter === groupId) {
+        setActiveFilter("all");
+      }
+
       setIndex(newIndex);
+      indexRef.current = newIndex;
       await api.saveIndex(newIndex);
     },
-    [index],
+    [index, activeFilter],
   );
 
   // Set custom preview for a project
@@ -1641,8 +1963,13 @@ export const ProjectManager: React.FC = () => {
   }, [app, resetConfirmText]);
 
   // Group projects
-  const favoriteProjects = index.projects.filter((p) => p.isFavorite);
-  const ungroupedProjects = index.projects.filter((p) => p.groupId === null);
+  const favoriteProjects = sortProjects(
+    index.projects.filter((p) => p.isFavorite),
+    "favoriteOrder",
+  );
+  const ungroupedProjects = sortProjects(
+    index.projects.filter((p) => p.groupId === null),
+  );
   const availableGroups = index.groups.map((g) => ({ id: g.id, name: g.name }));
   const groupCounts: Record<string, number> = {};
   for (const g of index.groups) {
@@ -1972,113 +2299,93 @@ export const ProjectManager: React.FC = () => {
               setActiveFilter(categoryId),
             availableGroups,
             getPreviewUrl,
+            onReorderProjects: handleReorderProjects,
           };
 
           if (activeFilter === "favorites") {
-            // Show only favorites in a flat grid
+            // Show only favorites in a flat grid with drag-to-reorder
             return (
-              <div className="ProjectGroup__grid">
-                {favoriteProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    isActive={project.id === index.currentProjectId}
-                    justSaved={project.id === justSavedId}
-                    previewUrl={getPreviewUrl(project.id)}
-                    size={cardSize}
-                    groups={index.groups}
-                    onSelect={handleSelectProject}
-                    onOpenInNewTab={handleOpenInNewTab}
-                    onOpenFileLocation={handleOpenFileLocation}
-                    onRename={handleRenameProject}
-                    onDelete={handleDeleteProject}
-                    onMoveToGroup={handleMoveToGroup}
-                    onSetCustomPreview={handleSetCustomPreview}
-                    onRemoveCustomPreview={handleRemoveCustomPreview}
-                    onToggleFavorite={handleToggleFavorite}
-                    onCreateCategory={handleCreateCategory}
-                    availableGroups={availableGroups}
-                  />
-                ))}
-                {favoriteProjects.length === 0 && (
-                  <div className="ProjectManager__empty">
-                    <p>No favorite projects yet</p>
-                  </div>
-                )}
-              </div>
+              <TabSortableGrid
+                projects={favoriteProjects}
+                orderKey="favoriteOrder"
+                currentProjectId={index.currentProjectId}
+                justSavedId={justSavedId}
+                cardSize={cardSize}
+                groups={index.groups}
+                availableGroups={availableGroups}
+                getPreviewUrl={getPreviewUrl}
+                onSelectProject={handleSelectProject}
+                onOpenInNewTab={handleOpenInNewTab}
+                onOpenFileLocation={handleOpenFileLocation}
+                onRenameProject={handleRenameProject}
+                onDeleteProject={handleDeleteProject}
+                onMoveToGroup={handleMoveToGroup}
+                onSetCustomPreview={handleSetCustomPreview}
+                onRemoveCustomPreview={handleRemoveCustomPreview}
+                onToggleFavorite={handleToggleFavorite}
+                onCreateCategory={handleCreateCategory}
+                onReorderProjects={handleReorderProjects}
+                emptyMessage="No favorite projects yet"
+              />
             );
           }
 
           if (activeFilter === "uncategorized") {
-            // Show only uncategorized projects in a flat grid
+            // Show only uncategorized projects in a flat grid with drag-to-reorder
             return (
-              <div className="ProjectGroup__grid">
-                {ungroupedProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    isActive={project.id === index.currentProjectId}
-                    justSaved={project.id === justSavedId}
-                    previewUrl={getPreviewUrl(project.id)}
-                    size={cardSize}
-                    groups={index.groups}
-                    onSelect={handleSelectProject}
-                    onOpenInNewTab={handleOpenInNewTab}
-                    onOpenFileLocation={handleOpenFileLocation}
-                    onRename={handleRenameProject}
-                    onDelete={handleDeleteProject}
-                    onMoveToGroup={handleMoveToGroup}
-                    onSetCustomPreview={handleSetCustomPreview}
-                    onRemoveCustomPreview={handleRemoveCustomPreview}
-                    onToggleFavorite={handleToggleFavorite}
-                    onCreateCategory={handleCreateCategory}
-                    availableGroups={availableGroups}
-                  />
-                ))}
-                {ungroupedProjects.length === 0 && (
-                  <div className="ProjectManager__empty">
-                    <p>No uncategorized projects</p>
-                  </div>
-                )}
-              </div>
+              <TabSortableGrid
+                projects={ungroupedProjects}
+                orderKey="order"
+                currentProjectId={index.currentProjectId}
+                justSavedId={justSavedId}
+                cardSize={cardSize}
+                groups={index.groups}
+                availableGroups={availableGroups}
+                getPreviewUrl={getPreviewUrl}
+                onSelectProject={handleSelectProject}
+                onOpenInNewTab={handleOpenInNewTab}
+                onOpenFileLocation={handleOpenFileLocation}
+                onRenameProject={handleRenameProject}
+                onDeleteProject={handleDeleteProject}
+                onMoveToGroup={handleMoveToGroup}
+                onSetCustomPreview={handleSetCustomPreview}
+                onRemoveCustomPreview={handleRemoveCustomPreview}
+                onToggleFavorite={handleToggleFavorite}
+                onCreateCategory={handleCreateCategory}
+                onReorderProjects={handleReorderProjects}
+                emptyMessage="No uncategorized projects"
+              />
             );
           }
 
           if (activeFilter !== "all") {
-            // Filter by specific category
-            const filtered = index.projects.filter(
-              (p) => p.groupId === activeFilter,
+            // Filter by specific category with drag-to-reorder
+            const filtered = sortProjects(
+              index.projects.filter((p) => p.groupId === activeFilter),
             );
             return (
-              <div className="ProjectGroup__grid">
-                {filtered.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    isActive={project.id === index.currentProjectId}
-                    justSaved={project.id === justSavedId}
-                    previewUrl={getPreviewUrl(project.id)}
-                    size={cardSize}
-                    groups={index.groups}
-                    onSelect={handleSelectProject}
-                    onOpenInNewTab={handleOpenInNewTab}
-                    onOpenFileLocation={handleOpenFileLocation}
-                    onRename={handleRenameProject}
-                    onDelete={handleDeleteProject}
-                    onMoveToGroup={handleMoveToGroup}
-                    onSetCustomPreview={handleSetCustomPreview}
-                    onRemoveCustomPreview={handleRemoveCustomPreview}
-                    onToggleFavorite={handleToggleFavorite}
-                    onCreateCategory={handleCreateCategory}
-                    availableGroups={availableGroups}
-                  />
-                ))}
-                {filtered.length === 0 && (
-                  <div className="ProjectManager__empty">
-                    <p>No projects in this category</p>
-                  </div>
-                )}
-              </div>
+              <TabSortableGrid
+                projects={filtered}
+                orderKey="order"
+                currentProjectId={index.currentProjectId}
+                justSavedId={justSavedId}
+                cardSize={cardSize}
+                groups={index.groups}
+                availableGroups={availableGroups}
+                getPreviewUrl={getPreviewUrl}
+                onSelectProject={handleSelectProject}
+                onOpenInNewTab={handleOpenInNewTab}
+                onOpenFileLocation={handleOpenFileLocation}
+                onRenameProject={handleRenameProject}
+                onDeleteProject={handleDeleteProject}
+                onMoveToGroup={handleMoveToGroup}
+                onSetCustomPreview={handleSetCustomPreview}
+                onRemoveCustomPreview={handleRemoveCustomPreview}
+                onToggleFavorite={handleToggleFavorite}
+                onCreateCategory={handleCreateCategory}
+                onReorderProjects={handleReorderProjects}
+                emptyMessage="No projects in this category"
+              />
             );
           }
 
@@ -2128,8 +2435,8 @@ export const ProjectManager: React.FC = () => {
                   strategy={verticalListSortingStrategy}
                 >
                   {sortedGroups.map((group) => {
-                    const groupProjects = index.projects.filter(
-                      (p) => p.groupId === group.id,
+                    const groupProjects = sortProjects(
+                      index.projects.filter((p) => p.groupId === group.id),
                     );
                     return (
                       <SortableGroupItem
