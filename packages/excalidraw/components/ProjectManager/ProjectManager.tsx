@@ -15,6 +15,7 @@ import { DotsIcon, ExportIcon, LoadIcon, TrashIcon } from "../icons";
 import DropdownMenu from "../dropdownMenu/DropdownMenu";
 import {
   triggerSaveProjectAtom,
+  triggerNewProjectAtom,
   triggerRefreshProjectsAtom,
   previewCacheAtom,
   ProjectManagerData,
@@ -254,6 +255,9 @@ export const ProjectManager: React.FC = () => {
   // Listen for external save trigger (from main menu)
   const saveTrigger = useAtomValue(triggerSaveProjectAtom);
 
+  // Listen for external "new project" trigger (from main menu)
+  const newProjectTrigger = useAtomValue(triggerNewProjectAtom);
+
   // Listen for external refresh trigger (from VideoEmbedDialog after creating project)
   const refreshTrigger = useAtomValue(triggerRefreshProjectsAtom);
 
@@ -295,8 +299,10 @@ export const ProjectManager: React.FC = () => {
   // Track pending save trigger (if triggered before loading completes)
   const pendingSaveTriggerRef = useRef(0);
   // Track the last saveTrigger value we actually processed, so dependency
-  // changes (like saveCurrentProject getting a new ref) don't re-fire the badge
-  const lastProcessedSaveTriggerRef = useRef(0);
+  // changes (like saveCurrentProject getting a new ref) don't re-fire the badge.
+  // Initialize to current atom value so stale triggers don't re-fire on
+  // remount (Radix tabs unmount inactive content).
+  const lastProcessedSaveTriggerRef = useRef(saveTrigger);
   const [justSavedId, setJustSavedId] = useState<string | null>(null);
 
   // Sanitize name for folder path (must match server-side sanitization in vite.config.mts)
@@ -994,6 +1000,23 @@ export const ProjectManager: React.FC = () => {
       }
     }
   }, [isLoading, index.currentProjectId, app.state.name, saveCurrentProject]);
+
+  // Handle external "new project" trigger (from main menu → same flow as sidebar button)
+  // Initialize to current atom value so stale triggers don't re-fire on remount.
+  const lastProcessedNewProjectTriggerRef = useRef(newProjectTrigger);
+  useEffect(() => {
+    if (newProjectTrigger === 0) {
+      return;
+    }
+    if (newProjectTrigger === lastProcessedNewProjectTriggerRef.current) {
+      return;
+    }
+    if (isLoading) {
+      return;
+    }
+    lastProcessedNewProjectTriggerRef.current = newProjectTrigger;
+    handleNewProjectClick();
+  }, [newProjectTrigger, isLoading, handleNewProjectClick]);
 
   // Delete project
   const handleDeleteProject = useCallback(

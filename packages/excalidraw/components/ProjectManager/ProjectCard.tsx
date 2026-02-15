@@ -230,7 +230,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               previewUrl ? "ProjectCard__placeholder--hidden" : ""
             }`}
           >
-            <span>No preview</span>
+            <span>NO PREVIEW YET</span>
           </div>
           <div className="ProjectCard__gradient" />
         </div>

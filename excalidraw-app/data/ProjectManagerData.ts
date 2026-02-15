@@ -27,6 +27,9 @@ export type { Project, ProjectGroup, ProjectsIndex };
 // Atom to trigger save modal from outside ProjectManager component
 export const triggerSaveProjectAtom = atom(0);
 
+// Atom to trigger "new project" flow from outside ProjectManager component
+export const triggerNewProjectAtom = atom(0);
+
 // Atom to trigger project list refresh from outside ProjectManager component
 export const triggerRefreshProjectsAtom = atom(0);
 
