@@ -53,6 +53,10 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
   // so we can detect which columns/rows the user actually resized.
   const initEditorWidths = useRef<number[]>([]);
   const initEditorHeights = useRef<number[]>([]);
+  // Track actual resized dimensions from manual resize callbacks
+  // (more reliable than hot.getRowHeight/getColWidth which can be stale)
+  const manualResizedCols = useRef<Record<number, number>>({});
+  const manualResizedRows = useRef<Record<number, number>>({});
 
   const element = app.scene.getElement(elementId) as
     | ExcalidrawTableElement
@@ -180,40 +184,38 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     // Map editor sizes → canvas sizes using fixed scale factors.
     // Unchanged columns/rows keep their exact canvas values (no drift).
     // Changed columns/rows use: canvasSize = editorSize / SCALE.
+    // We use manually tracked resize data (from afterColumnResize/afterRowResize
+    // callbacks) since hot.getRowHeight()/getColWidth() can return stale values.
     const newColumnWidths: number[] = [];
     for (let c = 0; c < usedCols; c++) {
-      const editorW = hot.getColWidth(c) || DEFAULT_COL_WIDTH;
-      const initW = initEditorWidths.current[c] ?? DEFAULT_COL_WIDTH;
-      if (Math.abs(editorW - initW) < 2) {
+      if (c in manualResizedCols.current) {
+        // User explicitly resized this column — use the captured size
+        newColumnWidths.push(
+          Math.max(1, Math.round(manualResizedCols.current[c] / CANVAS_TO_EDITOR_COL)),
+        );
+      } else {
         // Not resized — keep exact canvas width (prevents drift)
         newColumnWidths.push(
           c < element.columnWidths.length
             ? element.columnWidths[c]
             : CANVAS_COL_WIDTH,
         );
-      } else {
-        // Resized — direct scale mapping
-        newColumnWidths.push(
-          Math.max(1, Math.round(editorW / CANVAS_TO_EDITOR_COL)),
-        );
       }
     }
 
     const newRowHeights: number[] = [];
     for (let r = 0; r < usedRows; r++) {
-      const editorH = hot.getRowHeight(r) || DEFAULT_ROW_HEIGHT;
-      const initH = initEditorHeights.current[r] ?? DEFAULT_ROW_HEIGHT;
-      if (Math.abs(editorH - initH) < 2) {
+      if (r in manualResizedRows.current) {
+        // User explicitly resized this row — use the captured size
+        newRowHeights.push(
+          Math.max(1, Math.round(manualResizedRows.current[r] / CANVAS_TO_EDITOR_ROW)),
+        );
+      } else {
         // Not resized — keep exact canvas height
         newRowHeights.push(
           r < element.rowHeights.length
             ? element.rowHeights[r]
             : CANVAS_ROW_HEIGHT,
-        );
-      } else {
-        // Resized — direct scale mapping
-        newRowHeights.push(
-          Math.max(1, Math.round(editorH / CANVAS_TO_EDITOR_ROW)),
         );
       }
     }
@@ -580,8 +582,14 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
             width="100%"
             height="100%"
             licenseKey="non-commercial-and-evaluation"
-            afterColumnResize={() => setResizeTick((n) => n + 1)}
-            afterRowResize={() => setResizeTick((n) => n + 1)}
+            afterColumnResize={(newSize: number, col: number) => {
+              manualResizedCols.current[col] = newSize;
+              setResizeTick((n) => n + 1);
+            }}
+            afterRowResize={(newSize: number, row: number) => {
+              manualResizedRows.current[row] = newSize;
+              setResizeTick((n) => n + 1);
+            }}
             afterRender={() => {
               if (headerMeasured.current) {
                 return;
