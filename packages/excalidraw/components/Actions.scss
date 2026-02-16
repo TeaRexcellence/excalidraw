@@ -270,6 +270,16 @@
         direction: rtl;
         width: 4px;
         height: 100%;
+
+        &::-webkit-slider-thumb {
+          width: 10px;
+          height: 10px;
+        }
+
+        &::-moz-range-thumb {
+          width: 10px;
+          height: 10px;
+        }
       }
     }
   }

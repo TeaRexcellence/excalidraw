@@ -175,6 +175,14 @@ const GridTypeDropdown = ({
   actionManager: ActionManager;
 }) => {
   const [hiddenDropdown, setHiddenDropdown] = React.useState(false);
+  const sliderRef = React.useRef<HTMLInputElement>(null);
+
+  const gridOpacity = appState.gridOpacity;
+  React.useEffect(() => {
+    if (sliderRef.current) {
+      sliderRef.current.style.background = `linear-gradient(to top, var(--color-slider-track) 0%, var(--color-slider-track) ${gridOpacity}%, var(--button-bg, var(--color-surface-mid)) ${gridOpacity}%, var(--button-bg, var(--color-surface-mid)) 100%)`;
+    }
+  }, [gridOpacity]);
 
   const currentType =
     GRID_TYPES.find((g) => g.type === appState.gridType) || GRID_TYPES[0];
@@ -216,7 +224,15 @@ const GridTypeDropdown = ({
               aria-label={t(gridType.label)}
               data-testid={`toolbar-grid-${gridType.type}`}
               onClick={() => {
-                setAppState({ gridType: gridType.type });
+                if (appState.gridModeEnabled) {
+                  setAppState({ gridType: gridType.type });
+                } else {
+                  setAppState({
+                    gridType: gridType.type,
+                    gridModeEnabled: true,
+                    objectsSnapModeEnabled: false,
+                  });
+                }
                 setHiddenDropdown(true);
               }}
             />
@@ -226,6 +242,7 @@ const GridTypeDropdown = ({
             title={t("labels.gridOpacity")}
           >
             <input
+              ref={sliderRef}
               type="range"
               min="10"
               max="100"
