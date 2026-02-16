@@ -168,6 +168,11 @@ export class ProjectManagerData {
             scrollX: appState.scrollX,
             scrollY: appState.scrollY,
             name: appState.name,
+            gridModeEnabled: appState.gridModeEnabled,
+            gridType: appState.gridType,
+            gridOpacity: appState.gridOpacity,
+            gridMinorOpacity: appState.gridMinorOpacity,
+            objectsSnapModeEnabled: appState.objectsSnapModeEnabled,
           },
           files,
         };
