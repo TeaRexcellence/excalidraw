@@ -1653,78 +1653,17 @@ export const ArrowheadCrowfootOneOrManyIcon = React.memo(
     ),
 );
 
-export const FontSizeSmallIcon = createIcon(
-  <>
-    <g clipPath="url(#a)">
-      <path
-        d="M14.167 6.667a3.333 3.333 0 0 0-3.334-3.334H9.167a3.333 3.333 0 0 0 0 6.667h1.666a3.333 3.333 0 0 1 0 6.667H9.167a3.333 3.333 0 0 1-3.334-3.334"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </g>
-    <defs>
-      <clipPath id="a">
-        <path fill="#fff" d="M0 0h20v20H0z" />
-      </clipPath>
-    </defs>
-  </>,
-  modifiedTablerIconProps,
+const fontSizeTextIcon = (label: string) => (
+  <span style={{ fontWeight: 100, fontSize: "1rem", fontFamily: "Segoe UI", lineHeight: 1, letterSpacing: "0.03em" }}>{label}</span>
 );
 
-export const FontSizeMediumIcon = createIcon(
-  <>
-    <g clipPath="url(#a)">
-      <path
-        d="M5 16.667V3.333L10 15l5-11.667v13.334"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </g>
-    <defs>
-      <clipPath id="a">
-        <path fill="#fff" d="M0 0h20v20H0z" />
-      </clipPath>
-    </defs>
-  </>,
-  modifiedTablerIconProps,
-);
-
-export const FontSizeLargeIcon = createIcon(
-  <>
-    <g clipPath="url(#a)">
-      <path
-        d="M5.833 3.333v13.334h8.334"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </g>
-    <defs>
-      <clipPath id="a">
-        <path fill="#fff" d="M0 0h20v20H0z" />
-      </clipPath>
-    </defs>
-  </>,
-  modifiedTablerIconProps,
-);
-
-export const FontSizeExtraLargeIcon = createIcon(
-  <>
-    <path
-      d="m1.667 3.333 6.666 13.334M8.333 3.333 1.667 16.667M11.667 3.333v13.334h6.666"
-      stroke="currentColor"
-      strokeWidth="1.25"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </>,
-  modifiedTablerIconProps,
-);
+export const FontSizeExtraExtraSmallIcon = fontSizeTextIcon("XXS");
+export const FontSizeExtraSmallIcon = fontSizeTextIcon("XS");
+export const FontSizeSmallIcon = fontSizeTextIcon("S");
+export const FontSizeMediumIcon = fontSizeTextIcon("M");
+export const FontSizeLargeIcon = fontSizeTextIcon("L");
+export const FontSizeExtraLargeIcon = fontSizeTextIcon("XL");
+export const FontSizeExtraExtraLargeIcon = fontSizeTextIcon("XXL");
 
 export const fontSizeIcon = createIcon(
   <g strokeWidth={1.25}>

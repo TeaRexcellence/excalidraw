@@ -109,10 +109,13 @@ import {
   StrokeWidthBaseIcon,
   StrokeWidthBoldIcon,
   StrokeWidthExtraBoldIcon,
+  FontSizeExtraExtraSmallIcon,
+  FontSizeExtraSmallIcon,
   FontSizeSmallIcon,
   FontSizeMediumIcon,
   FontSizeLargeIcon,
   FontSizeExtraLargeIcon,
+  FontSizeExtraExtraLargeIcon,
   EdgeSharpIcon,
   EdgeRoundIcon,
   TextAlignLeftIcon,
@@ -780,28 +783,46 @@ export const actionChangeFontSize = register<ExcalidrawTextElement["fontSize"]>(
               group="font-size"
               options={[
                 {
+                  value: FONT_SIZES.xxs,
+                  text: "XXS",
+                  icon: FontSizeExtraExtraSmallIcon,
+                  testId: "fontSize-xxs",
+                },
+                {
+                  value: FONT_SIZES.xs,
+                  text: "XS",
+                  icon: FontSizeExtraSmallIcon,
+                  testId: "fontSize-xs",
+                },
+                {
                   value: FONT_SIZES.sm,
-                  text: t("labels.small"),
+                  text: "S",
                   icon: FontSizeSmallIcon,
                   testId: "fontSize-small",
                 },
                 {
                   value: FONT_SIZES.md,
-                  text: t("labels.medium"),
+                  text: "M",
                   icon: FontSizeMediumIcon,
                   testId: "fontSize-medium",
                 },
                 {
                   value: FONT_SIZES.lg,
-                  text: t("labels.large"),
+                  text: "L",
                   icon: FontSizeLargeIcon,
                   testId: "fontSize-large",
                 },
                 {
                   value: FONT_SIZES.xl,
-                  text: t("labels.veryLarge"),
+                  text: "XL",
                   icon: FontSizeExtraLargeIcon,
-                  testId: "fontSize-veryLarge",
+                  testId: "fontSize-xl",
+                },
+                {
+                  value: FONT_SIZES.xxl,
+                  text: "XXL",
+                  icon: FontSizeExtraExtraLargeIcon,
+                  testId: "fontSize-xxl",
                 },
               ]}
               value={getFormValue(

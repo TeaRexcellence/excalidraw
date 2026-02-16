@@ -109,10 +109,13 @@ export const CLASSES = {
 };
 
 export const FONT_SIZES = {
-  sm: 16,
-  md: 20,
-  lg: 28,
-  xl: 36,
+  xxs: 4,
+  xs: 6,
+  sm: 8,
+  md: 10,
+  lg: 14,
+  xl: 18,
+  xxl: 24,
 } as const;
 
 export const CJK_HAND_DRAWN_FALLBACK_FONT = "Xiaolai";
@@ -209,7 +212,7 @@ export const FRAME_STYLE = {
 };
 
 export const MIN_FONT_SIZE = 1;
-export const DEFAULT_FONT_SIZE = 20;
+export const DEFAULT_FONT_SIZE = 10;
 export const DEFAULT_FONT_FAMILY: FontFamilyValues = FONT_FAMILY.Helvetica;
 export const DEFAULT_TEXT_ALIGN = "left";
 export const DEFAULT_VERTICAL_ALIGN = "top";
