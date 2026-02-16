@@ -21,6 +21,7 @@ export {
   actionChangeArrowProperties,
   actionChangeTableCodeBlockFontSize,
   actionChangeTableCodeBlockFontFamily,
+  actionChangeCodeBlockBackgroundOpacity,
   actionChangeTableBackgroundColor,
   actionChangeTableGridColor,
   actionChangeTableHeaderColor,

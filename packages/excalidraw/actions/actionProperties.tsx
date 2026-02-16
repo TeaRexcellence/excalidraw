@@ -2211,6 +2211,86 @@ export const actionChangeTableCodeBlockFontFamily = register<
   },
 });
 
+// ── Code Block background opacity ───────────────────────────────────
+
+export const actionChangeCodeBlockBackgroundOpacity = register<
+  Record<string, any>
+>({
+  name: "changeCodeBlockBackgroundOpacity",
+  label: "labels.background",
+  trackEvent: false,
+  perform: (elements, appState, value) => {
+    if (!value || value.backgroundOpacity === undefined) {
+      return false;
+    }
+    return {
+      elements: changeProperty(
+        elements,
+        appState,
+        (el) =>
+          isCodeBlockElement(el)
+            ? newElementWith(el, {
+                backgroundOpacity: value.backgroundOpacity,
+              } as any)
+            : el,
+        true,
+      ),
+      appState: { ...appState },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData, app }) => {
+    const { stylesPanelMode } = getStylesPanelInfo(app);
+
+    const selectedElements = app.scene.getSelectedElements(app.state);
+    const codeBlock = selectedElements.find(isCodeBlockElement) as
+      | ExcalidrawCodeBlockElement
+      | undefined;
+
+    const bgOpacity = codeBlock?.backgroundOpacity ?? 0;
+
+    const rangeRef = useRef<HTMLInputElement>(null);
+    const bubbleRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (rangeRef.current && bubbleRef.current) {
+        const inputWidth = rangeRef.current.offsetWidth;
+        const thumbWidth = 15;
+        const pos =
+          (bgOpacity / 100) * (inputWidth - thumbWidth) + thumbWidth / 2;
+        bubbleRef.current.style.left = `${pos}px`;
+        rangeRef.current.style.background = `linear-gradient(to right, var(--color-slider-track) 0%, var(--color-slider-track) ${bgOpacity}%, var(--button-bg) ${bgOpacity}%, var(--button-bg) 100%)`;
+      }
+    }, [bgOpacity]);
+
+    return (
+      <>
+        <label className="control-label">
+          {t("labels.backgroundOpacity")}
+          <div className="range-wrapper">
+            <input
+              ref={rangeRef}
+              type="range"
+              min="0"
+              max="100"
+              step="10"
+              value={bgOpacity}
+              onChange={(e) =>
+                updateData({ backgroundOpacity: +e.target.value })
+              }
+              className="range-input"
+            />
+            <div className="value-bubble" ref={bubbleRef}>
+              {bgOpacity !== 0 ? bgOpacity : null}
+            </div>
+            <div className="zero-label">0</div>
+          </div>
+        </label>
+      </>
+    );
+  },
+});
+
 // ── Table color controls ────────────────────────────────────────────
 
 export const actionChangeTableBackgroundColor = register<Record<string, any>>({

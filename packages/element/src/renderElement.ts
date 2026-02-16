@@ -153,6 +153,7 @@ export interface ExcalidrawElementWithCanvas {
   containingFrameOpacity: number;
   boundTextCanvas: HTMLCanvasElement;
   elementVersion: number;
+  canvasBackgroundColor: string;
 }
 
 const cappedElementCanvasSize = (
@@ -345,6 +346,7 @@ const generateElementCanvas = (
     angle: element.angle,
     imageCrop: isImageElement(element) ? element.crop : null,
     elementVersion: element.version,
+    canvasBackgroundColor: renderConfig.canvasBackgroundColor,
   };
 };
 
@@ -678,6 +680,8 @@ const generateElementWithCanvas = (
     prevElementWithCanvas.imageCrop !== imageCrop ||
     prevElementWithCanvas.containingFrameOpacity !== containingFrameOpacity ||
     prevElementWithCanvas.elementVersion !== element.version ||
+    prevElementWithCanvas.canvasBackgroundColor !==
+      renderConfig.canvasBackgroundColor ||
     // since we rotate the canvas when copying from cached canvas, we don't
     // regenerate the cached canvas. But we need to in case of labels which are
     // cached alongside the arrow, and we want the labels to remain unrotated

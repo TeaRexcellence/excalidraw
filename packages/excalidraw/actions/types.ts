@@ -155,6 +155,7 @@ export type ActionName =
   | "navigateToProject"
   | "changeTableCodeBlockFontSize"
   | "changeTableCodeBlockFontFamily"
+  | "changeCodeBlockBackgroundOpacity"
   | "changeTableBackgroundColor"
   | "changeTableGridColor"
   | "changeTableHeaderColor";

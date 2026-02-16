@@ -30,7 +30,7 @@ import "prismjs/components/prism-perl";
 import "prismjs/components/prism-r";
 import "prismjs/components/prism-dart";
 
-import { THEME, getFontFamilyString } from "@excalidraw/common";
+import { THEME, getFontFamilyString, applyDarkModeFilter } from "@excalidraw/common";
 
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
 
@@ -45,6 +45,18 @@ const BASE_SCROLLBAR_WIDTH = 3;
 const BASE_HEADER_HEIGHT = 22;
 const BASE_CORNER_RADIUS = 6;
 const DEFAULT_CODE_FONT_FAMILY = 'Consolas, "SF Mono", Monaco, "Fira Code", monospace';
+
+/** Blend a hex color 'amount' (0–1) toward white. */
+const lightenHex = (hex: string, amount: number): string => {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  const lr = Math.round(r + (255 - r) * amount);
+  const lg = Math.round(g + (255 - g) * amount);
+  const lb = Math.round(b + (255 - b) * amount);
+  return `rgb(${lr}, ${lg}, ${lb})`;
+};
 
 // ── Theme-aware colors ───────────────────────────────────────────────
 
@@ -296,7 +308,22 @@ export const drawCodeBlockOnCanvas = (
 
   context.save();
 
-  // Rounded border — no fill, transparent background
+  // Background fill (controlled by backgroundOpacity)
+  const bgOpacity = (element.backgroundOpacity ?? 0) / 100;
+  if (bgOpacity > 0) {
+    const baseColor = isDark
+      ? applyDarkModeFilter(renderConfig.canvasBackgroundColor)
+      : renderConfig.canvasBackgroundColor;
+    const bgColor = lightenHex(baseColor, 0.01);
+    drawRoundedRect(context, 0, 0, width, height, CORNER_RADIUS);
+    const prevAlpha = context.globalAlpha;
+    context.globalAlpha = prevAlpha * bgOpacity;
+    context.fillStyle = bgColor;
+    context.fill();
+    context.globalAlpha = prevAlpha;
+  }
+
+  // Rounded border
   drawRoundedRect(context, 0, 0, width, height, CORNER_RADIUS);
   context.strokeStyle = borderColor;
   context.lineWidth = 1;

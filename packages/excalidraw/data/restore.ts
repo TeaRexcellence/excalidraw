@@ -549,6 +549,7 @@ export const restoreElement = (
         fontFamily: (element as any).fontFamily ?? 3,
         cropX: (element as any).cropX ?? 0,
         cropY: (element as any).cropY ?? 0,
+        backgroundOpacity: (element as any).backgroundOpacity ?? 0,
       });
     case "document":
       return restoreElementWithProperties(element, {

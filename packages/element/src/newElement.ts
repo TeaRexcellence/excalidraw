@@ -670,6 +670,7 @@ export const newCodeBlockElement = (
     fontFamily: FONT_FAMILY.Cascadia,
     cropX: 0,
     cropY: 0,
+    backgroundOpacity: 0,
   };
 };
 

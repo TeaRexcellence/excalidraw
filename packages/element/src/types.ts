@@ -271,6 +271,8 @@ export type ExcalidrawCodeBlockElement = _ExcalidrawElementBase &
     cropX: number;
     /** Vertical crop offset into content (px) */
     cropY: number;
+    /** Background opacity 0–100 (default 0 = fully transparent) */
+    backgroundOpacity: number;
   }>;
 
 export type ExcalidrawDocumentElement = _ExcalidrawElementBase &

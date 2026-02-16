@@ -342,6 +342,11 @@ export const SelectedShapeActions = ({
           {renderAction("changeTableHeaderColor")}
         </>
       )}
+      {targetElements.some((el) => isCodeBlockElement(el)) && (
+        <>
+          {renderAction("changeCodeBlockBackgroundOpacity")}
+        </>
+      )}
     </div>
   );
 };
@@ -945,6 +950,13 @@ export const CompactShapeActions = ({
           </div>
           <div className="compact-action-item">
             {renderAction("changeTableHeaderColor")}
+          </div>
+        </>
+      )}
+      {targetElements.some((el) => isCodeBlockElement(el)) && (
+        <>
+          <div className="compact-action-item">
+            {renderAction("changeCodeBlockBackgroundOpacity")}
           </div>
         </>
       )}
