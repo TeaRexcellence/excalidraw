@@ -64,12 +64,12 @@
     z-index: 10;
 
     &:hover {
-      background: #c0c0c0;
+      background: #dddcf0;
     }
 
-    .excalidraw.theme--dark & {
-      &:hover {
-        background: #3c3b49;
+    @at-root {
+      .excalidraw.theme--dark .sidebar__resize-handle:hover {
+        background: #3a3948;
       }
     }
 
