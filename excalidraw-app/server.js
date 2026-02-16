@@ -266,8 +266,14 @@ async function handleAPI(req, res, urlPath) {
     if (!fs.existsSync(projectDir))
       fs.mkdirSync(projectDir, { recursive: true });
     const buffer = await readBody(req);
-    fs.writeFileSync(path.join(projectDir, "preview.png"), buffer);
-    return json(res, { url: `/projects/${projectId}/preview.png` });
+    // Support variant param for dark/light previews; fall back to preview.png for custom previews
+    const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
+    const variant = parsedUrl.searchParams.get("variant");
+    const filename = variant === "dark" || variant === "light"
+      ? `preview_${variant}.png`
+      : "preview.png";
+    fs.writeFileSync(path.join(projectDir, filename), buffer);
+    return json(res, { url: `/projects/${projectId}/${filename}` });
   }
 
   // ── Projects: delete ──
@@ -298,7 +304,8 @@ async function handleAPI(req, res, urlPath) {
           ? `open "${projectDir}"`
           : `xdg-open "${projectDir}"`;
     exec(cmd, (err) => {
-      if (err) return json(res, { error: "Failed to open folder" }, 500);
+      // On Windows, explorer returns exit code 1 even on success — ignore it
+      if (err && process.platform !== "win32") return json(res, { error: "Failed to open folder" }, 500);
       json(res, { opened: true });
     });
     return true;
@@ -619,7 +626,8 @@ async function handleAPI(req, res, urlPath) {
             ? `open "${folderPath}"`
             : `xdg-open "${folderPath}"`;
       exec(cmd, (err) => {
-        if (err) return json(res, { error: "Failed to open folder" }, 500);
+        // On Windows, explorer returns exit code 1 even on success — ignore it
+        if (err && process.platform !== "win32") return json(res, { error: "Failed to open folder" }, 500);
         json(res, { opened: true });
       });
     } catch {

@@ -215,9 +215,16 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 );
               }}
               onError={(e) => {
+                const img = e.currentTarget;
+                // If a variant file 404'd, try legacy preview.png (pre-migration projects)
+                const legacyUrl = `/projects/${project.id}/preview.png?t=${project.updatedAt}`;
+                if (img.src.includes("preview_") && !img.src.includes(legacyUrl)) {
+                  img.src = legacyUrl;
+                  return;
+                }
                 // Hide broken image, show placeholder instead
-                e.currentTarget.style.display = "none";
-                e.currentTarget.nextElementSibling?.classList.remove(
+                img.style.display = "none";
+                img.nextElementSibling?.classList.remove(
                   "ProjectCard__placeholder--hidden",
                 );
               }}

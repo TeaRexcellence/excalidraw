@@ -745,10 +745,10 @@
     justify-content: center;
     border: none;
     border-radius: var(--pm-radius-sm);
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(255, 255, 255, 0.65);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(0, 0, 0, 0.35);
     font-size: 11px;
     cursor: pointer;
     z-index: 5;
@@ -756,7 +756,7 @@
     transition: all var(--pm-transition);
 
     &:hover {
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(255, 255, 255, 0.85);
       color: var(--pm-star);
       transform: scale(1.1);
     }
@@ -770,6 +770,20 @@
       color: var(--pm-star);
 
       &:hover {
+        color: #8b87ff;
+      }
+    }
+
+    .excalidraw.theme--dark & {
+      background: rgba(0, 0, 0, 0.45);
+      color: rgba(255, 255, 255, 0.55);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.65);
+        color: var(--pm-star);
+      }
+
+      &.ProjectCard__favoriteBtn--active:hover {
         color: #bbb8ff;
       }
     }
@@ -821,8 +835,12 @@
     left: 0;
     right: 0;
     height: 40%;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.15), transparent);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.06), transparent);
     pointer-events: none;
+
+    .excalidraw.theme--dark & {
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.15), transparent);
+    }
   }
 
   &__placeholder {

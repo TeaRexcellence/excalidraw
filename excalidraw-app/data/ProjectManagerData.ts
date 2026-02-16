@@ -34,8 +34,8 @@ export const triggerNewProjectAtom = atom(0);
 export const triggerRefreshProjectsAtom = atom(0);
 
 // Atom for preview cache — persists across component mounts/unmounts
-// Maps projectId → preview URL (data URL for instant display, or disk URL with cache-buster)
-export const previewCacheAtom = atom<Record<string, string>>({});
+// Maps projectId → { dark, light } preview URLs (data URL for instant display, or disk URL with cache-buster)
+export const previewCacheAtom = atom<Record<string, { dark: string; light: string }>>({});
 
 // Reactive atom so components (e.g. welcome screen) can hide/show based on project state
 export const hasCurrentProjectAtom = atom(false);
@@ -87,21 +87,29 @@ const api = {
   },
 
   async saveScene(projectId: string, sceneData: any): Promise<void> {
-    const res = await fetch(`/api/projects/${projectId}/scene`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(sceneData),
-      keepalive: true,
-    });
-    if (!res.ok) {
-      throw new Error(
-        `Save failed: HTTP ${res.status} for project ${projectId}`,
-      );
+    try {
+      const res = await fetch(`/api/projects/${projectId}/scene`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sceneData),
+        keepalive: true,
+      });
+      if (!res.ok) {
+        throw new Error(
+          `Save failed: HTTP ${res.status} for project ${projectId}`,
+        );
+      }
+    } catch (err) {
+      // Network errors (server restarting, tab switching during save) are transient — warn instead of throw
+      console.warn(`[ProjectManagerData] Save failed for ${projectId}:`, err);
     }
   },
 
-  async savePreview(projectId: string, blob: Blob): Promise<string> {
-    const res = await fetch(`/api/projects/${projectId}/preview`, {
+  async savePreview(projectId: string, blob: Blob, variant?: "dark" | "light"): Promise<string> {
+    const url = variant
+      ? `/api/projects/${projectId}/preview?variant=${variant}`
+      : `/api/projects/${projectId}/preview`;
+    const res = await fetch(url, {
       method: "POST",
       body: blob,
     });

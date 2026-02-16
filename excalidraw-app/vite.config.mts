@@ -247,7 +247,12 @@ function projectFilePlugin(): Plugin {
             fs.mkdirSync(projectDir, { recursive: true });
           }
 
-          const previewPath = path.join(projectDir, "preview.png");
+          // Support variant param for dark/light previews; fall back to preview.png for custom previews
+          const variantParam = new URL(req.url!, `http://${req.headers.host}`).searchParams.get("variant");
+          const previewFilename = variantParam === "dark" || variantParam === "light"
+            ? `preview_${variantParam}.png`
+            : "preview.png";
+          const previewPath = path.join(projectDir, previewFilename);
           const chunks: Buffer[] = [];
 
           req.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -255,7 +260,7 @@ function projectFilePlugin(): Plugin {
             const buffer = Buffer.concat(chunks);
             fs.writeFileSync(previewPath, buffer);
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ url: `/projects/${projectId}/preview.png` }));
+            res.end(JSON.stringify({ url: `/projects/${projectId}/${previewFilename}` }));
           });
           return;
         }
@@ -306,7 +311,8 @@ function projectFilePlugin(): Plugin {
           }
 
           exec(command, (err: Error | null) => {
-            if (err) {
+            // On Windows, explorer returns exit code 1 even on success — ignore it
+            if (err && platform !== "win32") {
               console.error("Failed to open folder:", err);
               res.statusCode = 500;
               res.setHeader("Content-Type", "application/json");
@@ -442,7 +448,8 @@ function projectFilePlugin(): Plugin {
                 command = `xdg-open "${folderPath}"`;
               }
               exec(command, (err: Error | null) => {
-                if (err) {
+                // On Windows, explorer returns exit code 1 even on success — ignore it
+                if (err && platform !== "win32") {
                   res.statusCode = 500;
                   res.setHeader("Content-Type", "application/json");
                   res.end(JSON.stringify({ error: "Failed to open folder" }));

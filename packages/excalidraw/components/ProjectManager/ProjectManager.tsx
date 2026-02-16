@@ -199,9 +199,12 @@ const api = {
     }
   },
 
-  async savePreview(projectId: string, blob: Blob): Promise<string | null> {
+  async savePreview(projectId: string, blob: Blob, variant?: "dark" | "light"): Promise<string | null> {
     try {
-      const res = await fetch(`/api/projects/${projectId}/preview`, {
+      const url = variant
+        ? `/api/projects/${projectId}/preview?variant=${variant}`
+        : `/api/projects/${projectId}/preview`;
+      const res = await fetch(url, {
         method: "POST",
         body: blob,
       });
@@ -986,27 +989,40 @@ export const ProjectManager: React.FC = () => {
   }, []);
 
   // Get preview URL for a project — uses stable ID-based path
+  // Returns the dark or light variant based on current theme
+  // Custom previews always use preview.png (no variant suffix)
   const getPreviewUrl = useCallback(
     (projectId: string): string | null => {
-      if (previewCache[projectId]) {
-        return previewCache[projectId];
-      }
       const project = index.projects.find((p) => p.id === projectId);
       if (!project) {
         return null;
       }
-      // Stable URL: /projects/{id}/preview.png — never changes on rename
-      return `/projects/${projectId}/preview.png?t=${project.updatedAt}`;
+
+      // Custom previews are theme-independent — use original preview.png
+      if (project.hasCustomPreview) {
+        return `/projects/${projectId}/preview.png?t=${project.updatedAt}`;
+      }
+
+      // Check cache for the right theme variant
+      const variant = app.state.theme === "dark" ? "dark" : "light";
+      const cached = previewCache[projectId];
+      if (cached?.[variant]) {
+        return cached[variant];
+      }
+
+      // Fallback to variant file on disk; ProjectCard's onError handler
+      // will try legacy preview.png if this 404s (pre-migration projects)
+      return `/projects/${projectId}/preview_${variant}.png?t=${project.updatedAt}`;
     },
-    [previewCache, index.projects],
+    [previewCache, index.projects, app.state.theme],
   );
 
   // Generate preview using the same export function as "Export Image"
   // This ensures previews look identical to exports (including video thumbnails)
-  // Returns both a data URL (for instant display) and a blob (for disk persistence)
+  // Generates BOTH dark and light variants for instant theme switching
   const generatePreview = useCallback(async (): Promise<{
-    blob: Blob;
-    dataUrl: string;
+    dark: { blob: Blob; dataUrl: string };
+    light: { blob: Blob; dataUrl: string };
   } | null> => {
     try {
       const elements = app.scene.getNonDeletedElements();
@@ -1014,59 +1030,55 @@ export const ProjectManager: React.FC = () => {
         return null;
       }
 
-      // Use the same exportToCanvas function as the export dialog
-      // Match preview theme to current UI theme
-      const isDark = app.state.theme === "dark";
-
       // Proportional padding: 10% of the larger content dimension, min 30px
       const [minX, minY, maxX, maxY] = getCommonBounds(elements);
       const contentW = maxX - minX;
       const contentH = maxY - minY;
       const padding = Math.max(30, Math.round(Math.max(contentW, contentH) * 0.5));
 
-      const canvas = await exportToCanvas(
-        elements,
-        {
-          ...app.state,
-          exportWithDarkMode: isDark,
-          exportScale: 1, // Use 1x scale for preview (smaller file size)
-        },
-        app.files,
-        {
-          exportBackground: true,
-          exportPadding: padding,
-          viewBackgroundColor: app.state.viewBackgroundColor,
-        },
-        // Custom canvas creator to limit preview size
-        (width, height) => {
-          const maxSize = 600;
-          const scale = Math.min(maxSize / width, maxSize / height, 1);
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(width * scale);
-          canvas.height = Math.round(height * scale);
-          return { canvas, scale };
-        },
-      );
-
-      // Get data URL immediately for optimistic display
-      const dataUrl = canvas.toDataURL("image/png");
-
-      // Convert to blob for disk persistence
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob(
-          (b) => {
-            resolve(b);
+      // Helper to render one variant
+      const renderVariant = async (isDark: boolean) => {
+        const canvas = await exportToCanvas(
+          elements,
+          {
+            ...app.state,
+            exportWithDarkMode: isDark,
+            exportScale: 1,
           },
-          "image/png",
-          0.85,
+          app.files,
+          {
+            exportBackground: true,
+            exportPadding: padding,
+            viewBackgroundColor: app.state.viewBackgroundColor,
+          },
+          (width, height) => {
+            const maxSize = 600;
+            const scale = Math.min(maxSize / width, maxSize / height, 1);
+            const c = document.createElement("canvas");
+            c.width = Math.round(width * scale);
+            c.height = Math.round(height * scale);
+            return { canvas: c, scale };
+          },
         );
-      });
 
-      if (!blob) {
+        const dataUrl = canvas.toDataURL("image/png");
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), "image/png", 0.85);
+        });
+
+        return blob ? { blob, dataUrl } : null;
+      };
+
+      // Generate variants sequentially — exportToCanvas uses shared
+      // rendering state and isn't safe to call concurrently
+      const darkResult = await renderVariant(true);
+      const lightResult = await renderVariant(false);
+
+      if (!darkResult || !lightResult) {
         return null;
       }
 
-      return { blob, dataUrl };
+      return { dark: darkResult, light: lightResult };
     } catch (err) {
       console.error("[Preview] Failed to generate preview:", err);
       return null;
@@ -1115,19 +1127,24 @@ export const ProjectManager: React.FC = () => {
 
         const previewResult = await generatePreview();
         if (previewResult) {
-          // Optimistic: show data URL immediately
+          // Optimistic: show both data URLs immediately
           setPreviewCache((prev) => ({
             ...prev,
-            [projectId]: previewResult.dataUrl,
+            [projectId]: { dark: previewResult.dark.dataUrl, light: previewResult.light.dataUrl },
           }));
-          // Background: save to disk and update with persistent URL
-          api.savePreview(projectId, previewResult.blob).then((previewUrl) => {
-            if (previewUrl) {
-              setPreviewCache((prev) => ({
-                ...prev,
-                [projectId]: `${previewUrl}?t=${Date.now()}`,
-              }));
-            }
+          // Background: save both to disk in parallel
+          Promise.all([
+            api.savePreview(projectId, previewResult.dark.blob, "dark"),
+            api.savePreview(projectId, previewResult.light.blob, "light"),
+          ]).then(([darkUrl, lightUrl]) => {
+            const t = Date.now();
+            setPreviewCache((prev) => ({
+              ...prev,
+              [projectId]: {
+                dark: darkUrl ? `${darkUrl}?t=${t}` : prev[projectId]?.dark ?? "",
+                light: lightUrl ? `${lightUrl}?t=${t}` : prev[projectId]?.light ?? "",
+              },
+            }));
           });
         }
       }
@@ -1149,19 +1166,24 @@ export const ProjectManager: React.FC = () => {
 
       const previewResult = await generatePreview();
       if (previewResult) {
-        // Optimistic: show data URL immediately
+        // Optimistic: show both data URLs immediately
         setPreviewCache((prev) => ({
           ...prev,
-          [projectId]: previewResult.dataUrl,
+          [projectId]: { dark: previewResult.dark.dataUrl, light: previewResult.light.dataUrl },
         }));
-        // Background: save to disk and update with persistent URL
-        api.savePreview(projectId, previewResult.blob).then((previewUrl) => {
-          if (previewUrl) {
-            setPreviewCache((prev) => ({
-              ...prev,
-              [projectId]: `${previewUrl}?t=${Date.now()}`,
-            }));
-          }
+        // Background: save both to disk in parallel
+        Promise.all([
+          api.savePreview(projectId, previewResult.dark.blob, "dark"),
+          api.savePreview(projectId, previewResult.light.blob, "light"),
+        ]).then(([darkUrl, lightUrl]) => {
+          const t = Date.now();
+          setPreviewCache((prev) => ({
+            ...prev,
+            [projectId]: {
+              dark: darkUrl ? `${darkUrl}?t=${t}` : prev[projectId]?.dark ?? "",
+              light: lightUrl ? `${lightUrl}?t=${t}` : prev[projectId]?.light ?? "",
+            },
+          }));
         });
       }
     };
@@ -1189,20 +1211,26 @@ export const ProjectManager: React.FC = () => {
     const timer = window.setTimeout(async () => {
       const previewResult = await generatePreview();
       if (previewResult && index.currentProjectId) {
+        const pid = index.currentProjectId!;
+        // Optimistic: show both data URLs immediately
         setPreviewCache((prev) => ({
           ...prev,
-          [index.currentProjectId!]: previewResult.dataUrl,
+          [pid]: { dark: previewResult.dark.dataUrl, light: previewResult.light.dataUrl },
         }));
-        api
-          .savePreview(index.currentProjectId, previewResult.blob)
-          .then((previewUrl) => {
-            if (previewUrl && index.currentProjectId) {
-              setPreviewCache((prev) => ({
-                ...prev,
-                [index.currentProjectId!]: `${previewUrl}?t=${Date.now()}`,
-              }));
-            }
-          });
+        // Background: save both to disk in parallel
+        Promise.all([
+          api.savePreview(pid, previewResult.dark.blob, "dark"),
+          api.savePreview(pid, previewResult.light.blob, "light"),
+        ]).then(([darkUrl, lightUrl]) => {
+          const t = Date.now();
+          setPreviewCache((prev) => ({
+            ...prev,
+            [pid]: {
+              dark: darkUrl ? `${darkUrl}?t=${t}` : prev[pid]?.dark ?? "",
+              light: lightUrl ? `${lightUrl}?t=${t}` : prev[pid]?.light ?? "",
+            },
+          }));
+        });
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -1888,11 +1916,12 @@ export const ProjectManager: React.FC = () => {
         setIndex(newIndex);
         await api.saveIndex(newIndex);
 
-        // Update preview cache to show the new image
-        setPreviewCache((prev) => ({
-          ...prev,
-          [projectId]: `${previewUrl}?t=${Date.now()}`,
-        }));
+        // Clear variant cache — custom previews use preview.png directly via getPreviewUrl
+        setPreviewCache((prev) => {
+          const next = { ...prev };
+          delete next[projectId];
+          return next;
+        });
       } catch (err) {
         console.error("Failed to set custom preview:", err);
       }
@@ -1919,22 +1948,27 @@ export const ProjectManager: React.FC = () => {
       setIndex(newIndex);
       await api.saveIndex(newIndex);
 
-      // Regenerate preview from canvas
+      // Regenerate preview from canvas (both variants)
       const previewResult = await generatePreview();
       if (previewResult) {
-        // Optimistic: show data URL immediately
+        // Optimistic: show both data URLs immediately
         setPreviewCache((prev) => ({
           ...prev,
-          [projectId]: previewResult.dataUrl,
+          [projectId]: { dark: previewResult.dark.dataUrl, light: previewResult.light.dataUrl },
         }));
-        // Background: save to disk and update with persistent URL
-        api.savePreview(projectId, previewResult.blob).then((previewUrl) => {
-          if (previewUrl) {
-            setPreviewCache((prev) => ({
-              ...prev,
-              [projectId]: `${previewUrl}?t=${Date.now()}`,
-            }));
-          }
+        // Background: save both to disk in parallel
+        Promise.all([
+          api.savePreview(projectId, previewResult.dark.blob, "dark"),
+          api.savePreview(projectId, previewResult.light.blob, "light"),
+        ]).then(([darkUrl, lightUrl]) => {
+          const t = Date.now();
+          setPreviewCache((prev) => ({
+            ...prev,
+            [projectId]: {
+              dark: darkUrl ? `${darkUrl}?t=${t}` : prev[projectId]?.dark ?? "",
+              light: lightUrl ? `${lightUrl}?t=${t}` : prev[projectId]?.light ?? "",
+            },
+          }));
         });
       }
     },

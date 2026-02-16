@@ -872,10 +872,8 @@ const ExcalidrawWrapper = () => {
     [setShareDialogState],
   );
 
-  // Regenerate project preview when theme changes
-  useEffect(() => {
-    ProjectManagerData.regenerateCurrentPreview();
-  }, [editorTheme]);
+  // No need to regenerate previews on theme change — both dark and light
+  // variants are generated together and swapped instantly via getPreviewUrl
 
   // browsers generally prevent infinite self-embedding, there are
   // cases where it still happens, and while we disallow self-embedding
