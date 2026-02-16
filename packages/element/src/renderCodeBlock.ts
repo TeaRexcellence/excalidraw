@@ -258,8 +258,16 @@ export const drawCodeBlockOnCanvas = (
   context: CanvasRenderingContext2D,
   renderConfig: StaticCanvasRenderConfig,
 ) => {
-  const { width, height, code, language, showLineNumbers, scrollOffsetY } =
-    element;
+  const {
+    width,
+    height,
+    code,
+    language,
+    showLineNumbers,
+    scrollOffsetY,
+    cropX,
+    cropY,
+  } = element;
   const isDark = renderConfig.theme === THEME.DARK;
 
   // Scale all dimensions proportionally from fontSize
@@ -294,16 +302,25 @@ export const drawCodeBlockOnCanvas = (
   // Clip to element bounds
   context.clip();
 
+  // Apply crop offset — shift all content by the crop amount
+  const cx = cropX || 0;
+  const cy = cropY || 0;
+  if (cx !== 0 || cy !== 0) {
+    context.translate(-cx, -cy);
+  }
+
   // ── Header bar (subtle, transparent) ─────────────────────────────
+  // Use full content width for fills so cropped areas still have background
+  const contentRenderWidth = width + cx * 2; // generous width for fills
   context.fillStyle = headerBg;
-  context.fillRect(0, 0, width, HEADER_HEIGHT);
+  context.fillRect(0, 0, contentRenderWidth, HEADER_HEIGHT);
 
   // Header bottom border
   context.strokeStyle = borderColor;
   context.lineWidth = 0.5;
   context.beginPath();
   context.moveTo(0, HEADER_HEIGHT - 0.5);
-  context.lineTo(width, HEADER_HEIGHT - 0.5);
+  context.lineTo(contentRenderWidth, HEADER_HEIGHT - 0.5);
   context.stroke();
 
   // Language label with dot
@@ -349,13 +366,17 @@ export const drawCodeBlockOnCanvas = (
   context.save();
   context.translate(0, codeAreaTop - scrollOffsetY);
 
+  // Visible range in content-space (accounts for crop offset)
+  const visibleTop = cy + scrollOffsetY;
+  const visibleBottom = visibleTop + height;
+
   // Draw line number gutter
   if (showLineNumbers) {
     context.strokeStyle = gutterBorder;
     context.lineWidth = 0.5;
     context.beginPath();
-    context.moveTo(GUTTER_WIDTH - 0.5, scrollOffsetY);
-    context.lineTo(GUTTER_WIDTH - 0.5, scrollOffsetY + height);
+    context.moveTo(GUTTER_WIDTH - 0.5, visibleTop);
+    context.lineTo(GUTTER_WIDTH - 0.5, visibleBottom);
     context.stroke();
 
     context.fillStyle = lineNumberColor;
@@ -364,8 +385,8 @@ export const drawCodeBlockOnCanvas = (
     for (let i = 0; i < lines.length; i++) {
       const lineY = PADDING + i * LINE_HEIGHT;
       if (
-        lineY + LINE_HEIGHT >= scrollOffsetY &&
-        lineY <= scrollOffsetY + height
+        lineY + LINE_HEIGHT >= visibleTop &&
+        lineY <= visibleBottom
       ) {
         context.fillText(String(i + 1), GUTTER_WIDTH - 8 * s, lineY);
       }
@@ -382,7 +403,7 @@ export const drawCodeBlockOnCanvas = (
   for (let i = 0; i < lines.length; i++) {
     const lineY = PADDING + i * LINE_HEIGHT;
 
-    if (lineY + LINE_HEIGHT < scrollOffsetY || lineY > scrollOffsetY + height) {
+    if (lineY + LINE_HEIGHT < visibleTop || lineY > visibleBottom) {
       continue;
     }
 
@@ -415,11 +436,14 @@ export const drawCodeBlockOnCanvas = (
     const scrollbarY =
       codeAreaTop + PADDING + (scrollOffsetY / totalContentHeight) * viewHeight;
 
+    // Position scrollbar at viewport right edge (account for crop offset)
+    const sbRightEdge = cx + width - SCROLLBAR_WIDTH - 2;
+    const sbTop = cy + scrollbarY;
     context.fillStyle = scrollbarColor;
     drawRoundedRect(
       context,
-      width - SCROLLBAR_WIDTH - 2,
-      scrollbarY,
+      sbRightEdge,
+      sbTop,
       SCROLLBAR_WIDTH,
       scrollbarHeight,
       SCROLLBAR_WIDTH / 2,

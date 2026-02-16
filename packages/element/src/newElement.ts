@@ -593,6 +593,8 @@ export const newTableElement = (
     rowHeights,
     headerRow: opts.headerRow ?? true,
     scrollOffsetY: 0,
+    cropX: 0,
+    cropY: 0,
   };
 };
 
@@ -615,6 +617,8 @@ export const newCodeBlockElement = (
     showLineNumbers: opts.showLineNumbers ?? true,
     scrollOffsetY: 0,
     fontSize: 13,
+    cropX: 0,
+    cropY: 0,
   };
 };
 

@@ -527,6 +527,8 @@ export const restoreElement = (
           Array((element as any).rows || 3).fill(36),
         headerRow: (element as any).headerRow ?? true,
         scrollOffsetY: (element as any).scrollOffsetY ?? 0,
+        cropX: (element as any).cropX ?? 0,
+        cropY: (element as any).cropY ?? 0,
       });
     case "codeblock":
       return restoreElementWithProperties(element, {
@@ -535,6 +537,8 @@ export const restoreElement = (
         showLineNumbers: (element as any).showLineNumbers ?? true,
         scrollOffsetY: (element as any).scrollOffsetY ?? 0,
         fontSize: (element as any).fontSize ?? 13,
+        cropX: (element as any).cropX ?? 0,
+        cropY: (element as any).cropY ?? 0,
       });
     case "document":
       return restoreElementWithProperties(element, {

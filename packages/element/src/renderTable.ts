@@ -43,25 +43,31 @@ export const drawTableOnCanvas = (
     rowHeights,
     headerRow,
     scrollOffsetY,
+    cropX,
+    cropY,
   } = element;
   const totalWidth = columnWidths.reduce((s, w) => s + w, 0);
   const totalHeight = rowHeights.reduce((s, h) => s + h, 0);
   const isDark = renderConfig.theme === THEME.DARK;
 
-  // The element's rendered height (may be smaller than totalHeight for scrollable tables)
+  const cx = cropX || 0;
+  const cy = cropY || 0;
+
+  // The element's rendered viewport (may be smaller than content when cropped/scrollable)
+  const viewWidth = element.width;
   const viewHeight = element.height;
   const contentHeight = totalHeight;
   const scrollOffset = scrollOffsetY || 0;
-  const isScrollable = contentHeight > viewHeight + 1; // +1 for float tolerance
+  const isScrollable = contentHeight - cy > viewHeight + 1; // +1 for float tolerance
 
-  // Clip to element bounds
+  // Clip to element viewport bounds
   context.beginPath();
-  context.rect(0, 0, totalWidth, viewHeight);
+  context.rect(0, 0, viewWidth, viewHeight);
   context.clip();
 
-  // Apply scroll translation
+  // Apply crop offset and scroll translation
   context.save();
-  context.translate(0, -scrollOffset);
+  context.translate(-cx, -cy - scrollOffset);
 
   // 1. Draw background fill if backgroundColor is set
   if (element.backgroundColor && element.backgroundColor !== "transparent") {
@@ -124,12 +130,13 @@ export const drawTableOnCanvas = (
     context.font = font;
 
     // Skip rows entirely above the visible area for performance
-    if (y + cellH < scrollOffset) {
+    // The visible region in content-space is [cy + scrollOffset, cy + scrollOffset + viewHeight]
+    if (y + cellH < cy + scrollOffset) {
       y += cellH;
       continue;
     }
     // Stop drawing rows entirely below the visible area
-    if (y > scrollOffset + viewHeight) {
+    if (y > cy + scrollOffset + viewHeight) {
       break;
     }
 
@@ -181,17 +188,18 @@ export const drawTableOnCanvas = (
 
   // 6. Draw scrollbar indicator (outside of scroll translation, inside clip)
   if (isScrollable) {
-    const maxScroll = contentHeight - viewHeight;
+    const scrollableHeight = contentHeight - cy;
+    const maxScroll = scrollableHeight - viewHeight;
     const scrollRatio = scrollOffset / maxScroll;
     const thumbHeight = Math.max(
       SCROLLBAR_MIN_HEIGHT,
-      (viewHeight / contentHeight) * viewHeight,
+      (viewHeight / scrollableHeight) * viewHeight,
     );
     const thumbY = scrollRatio * (viewHeight - thumbHeight);
 
     context.fillStyle = isDark ? SCROLLBAR_COLOR_DARK : SCROLLBAR_COLOR_LIGHT;
     const radius = SCROLLBAR_WIDTH / 2;
-    const sbX = totalWidth - SCROLLBAR_WIDTH - 2;
+    const sbX = viewWidth - SCROLLBAR_WIDTH - 2;
 
     // Rounded rect for scrollbar thumb
     context.beginPath();

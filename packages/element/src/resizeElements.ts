@@ -82,6 +82,8 @@ import type {
   ElementsMap,
   ExcalidrawElbowArrowElement,
   ExcalidrawArrowElement,
+  ExcalidrawTableElement,
+  ExcalidrawCodeBlockElement,
 } from "./types";
 import type { ElementUpdate } from "./mutateElement";
 
@@ -119,32 +121,48 @@ export const transformElements = (
       const origElement = originalElements.get(elementId);
 
       if (latestElement && origElement) {
-        const { nextWidth, nextHeight } =
-          getNextSingleWidthAndHeightFromPointer(
-            latestElement,
-            origElement,
-            transformHandleType,
+        // Edge handles on table/codeblock = CROP (not resize)
+        if (
+          (isTableElement(latestElement) ||
+            isCodeBlockElement(latestElement)) &&
+          transformHandleType.length === 1
+        ) {
+          cropTableOrCodeBlock(
+            latestElement as ExcalidrawTableElement | ExcalidrawCodeBlockElement,
+            origElement as ExcalidrawTableElement | ExcalidrawCodeBlockElement,
+            scene,
+            transformHandleType as TransformHandleDirection,
             pointerX,
             pointerY,
+          );
+        } else {
+          const { nextWidth, nextHeight } =
+            getNextSingleWidthAndHeightFromPointer(
+              latestElement,
+              origElement,
+              transformHandleType,
+              pointerX,
+              pointerY,
+              {
+                shouldMaintainAspectRatio,
+                shouldResizeFromCenter,
+              },
+            );
+
+          resizeSingleElement(
+            nextWidth,
+            nextHeight,
+            latestElement,
+            origElement,
+            originalElements,
+            scene,
+            transformHandleType,
             {
               shouldMaintainAspectRatio,
               shouldResizeFromCenter,
             },
           );
-
-        resizeSingleElement(
-          nextWidth,
-          nextHeight,
-          latestElement,
-          origElement,
-          originalElements,
-          scene,
-          transformHandleType,
-          {
-            shouldMaintainAspectRatio,
-            shouldResizeFromCenter,
-          },
-        );
+        }
       }
     }
     if (isTextElement(element)) {
@@ -920,16 +938,35 @@ export const resizeSingleElement = (
       );
       (updates as any).columnWidths = newColWidths;
       (updates as any).rowHeights = newRowHeights;
-      // Keep element width/height in sync with actual cell dimensions
-      (updates as any).width = newColWidths.reduce(
+      const newContentWidth = newColWidths.reduce(
         (s: number, w: number) => s + w,
         0,
       );
-      (updates as any).height = newRowHeights.reduce(
+      const newContentHeight = newRowHeights.reduce(
         (s: number, h: number) => s + h,
         0,
       );
-      // Reset scroll offset on resize (content dimensions changed)
+      // Scale crop proportionally if active
+      const newCropX = origElement.cropX * scaleX;
+      const newCropY = origElement.cropY * scaleY;
+      (updates as any).cropX = Math.max(0, Math.min(newCropX, newContentWidth - 40));
+      (updates as any).cropY = Math.max(0, Math.min(newCropY, newContentHeight - 24));
+      // Width/height = viewport (may be smaller than content when cropped)
+      const cropActive =
+        newCropX > 0 ||
+        newCropY > 0 ||
+        origElement.width < origElement.columnWidths.reduce((s: number, w: number) => s + w, 0) ||
+        origElement.height < origElement.rowHeights.reduce((s: number, h: number) => s + h, 0);
+      if (cropActive) {
+        // Scale viewport proportionally, keep within content bounds
+        const viewW = origElement.width * scaleX;
+        const viewH = origElement.height * scaleY;
+        (updates as any).width = Math.min(viewW, newContentWidth - (updates as any).cropX);
+        (updates as any).height = Math.min(viewH, newContentHeight - (updates as any).cropY);
+      } else {
+        (updates as any).width = newContentWidth;
+        (updates as any).height = newContentHeight;
+      }
       (updates as any).scrollOffsetY = 0;
     }
 
@@ -943,7 +980,7 @@ export const resizeSingleElement = (
         CODE_MAX_FONT,
         Math.max(CODE_MIN_FONT, origFontSize * scaleX),
       );
-      // Derive height from content at new font size (matches renderCodeBlock.ts constants)
+      // Derive content height from content at new font size (matches renderCodeBlock.ts constants)
       const BASE_FONT_SIZE = 13;
       const s = newFontSize / BASE_FONT_SIZE;
       const lineHeight = 20 * s; // BASE_LINE_HEIGHT
@@ -953,8 +990,21 @@ export const resizeSingleElement = (
       const contentHeight = headerHeight + padding + lineCount * lineHeight + padding;
 
       (updates as any).fontSize = newFontSize;
-      (updates as any).width = Math.abs(nextWidth);
-      (updates as any).height = contentHeight;
+
+      const hasCrop = origElement.cropX > 0 || origElement.cropY > 0;
+      if (hasCrop) {
+        // Scale crop offsets and viewport proportionally with font scale
+        (updates as any).cropX = Math.max(0, origElement.cropX * scaleX);
+        (updates as any).cropY = Math.max(0, origElement.cropY * scaleX);
+        (updates as any).width = origElement.width * scaleX;
+        (updates as any).height = origElement.height * scaleX;
+      } else {
+        // No crop — width follows pointer, height derived from content
+        (updates as any).cropX = 0;
+        (updates as any).cropY = 0;
+        (updates as any).width = Math.abs(nextWidth);
+        (updates as any).height = contentHeight;
+      }
       (updates as any).scrollOffsetY = 0;
     }
 
@@ -977,6 +1027,160 @@ export const resizeSingleElement = (
 
     updateBoundElements(latestElement, scene);
   }
+};
+
+/** Compute the full content height for a code block from its properties */
+const getCodeBlockContentHeight = (
+  element: ExcalidrawCodeBlockElement,
+): number => {
+  const BASE_FONT_SIZE = 13;
+  const fontSize = element.fontSize || BASE_FONT_SIZE;
+  const s = fontSize / BASE_FONT_SIZE;
+  const lineHeight = 20 * s;
+  const padding = 10 * s;
+  const headerHeight = 22 * s;
+  const lineCount = (element.code || "").split("\n").length;
+  return headerHeight + padding + lineCount * lineHeight + padding;
+};
+
+/** Compute the full content width for a code block.
+ *  Code blocks have no fixed content width (text doesn't wrap), so we return
+ *  the total known extent: cropX + viewport width. This means the east handle
+ *  can freely expand the viewport and the west handle can crop into existing content.
+ */
+const getCodeBlockContentWidth = (
+  element: ExcalidrawCodeBlockElement,
+): number => {
+  return element.width + element.cropX;
+};
+
+/**
+ * Crop a table or code block element using edge (n/s/e/w) handles.
+ * Instead of scaling content, this changes the visible viewport
+ * (overflow:hidden style cropping).
+ */
+const cropTableOrCodeBlock = (
+  latestElement: ExcalidrawTableElement | ExcalidrawCodeBlockElement,
+  origElement: ExcalidrawTableElement | ExcalidrawCodeBlockElement,
+  scene: Scene,
+  handleDirection: TransformHandleDirection,
+  pointerX: number,
+  pointerY: number,
+): void => {
+  // Compute content dimensions
+  // Tables have fixed content dimensions (sum of cell sizes).
+  // Code blocks have fixed height (from code lines) but unbounded width (text doesn't wrap).
+  const isTable = isTableElement(origElement);
+  let contentWidth: number;
+  let contentHeight: number;
+  if (isTable) {
+    contentWidth = origElement.columnWidths.reduce(
+      (s: number, w: number) => s + w,
+      0,
+    );
+    contentHeight = origElement.rowHeights.reduce(
+      (s: number, h: number) => s + h,
+      0,
+    );
+  } else {
+    contentWidth = Infinity; // code block width is unbounded (no text wrapping)
+    contentHeight = getCodeBlockContentHeight(
+      origElement as ExcalidrawCodeBlockElement,
+    );
+  }
+
+  // Get original element bounds (unrotated)
+  const [x1, y1, x2, y2] = getResizedElementAbsoluteCoords(
+    origElement,
+    origElement.width,
+    origElement.height,
+    true,
+  );
+  const startTopLeft = pointFrom(x1, y1);
+  const startBottomRight = pointFrom(x2, y2);
+  const startCenter = pointCenter(startTopLeft, startBottomRight);
+
+  // Un-rotate the pointer to work in element-aligned space
+  const rotatedPointer = pointRotateRads(
+    pointFrom(pointerX, pointerY),
+    startCenter,
+    -origElement.angle as Radians,
+  );
+
+  const MIN_VIEWPORT = 40; // minimum crop viewport dimension
+
+  let newCropX = origElement.cropX;
+  let newCropY = origElement.cropY;
+  let newWidth = origElement.width;
+  let newHeight = origElement.height;
+  let newX = origElement.x;
+  let newY = origElement.y;
+
+  if (handleDirection === "e") {
+    // Drag right edge: change width, cropX stays
+    const delta = rotatedPointer[0] - startBottomRight[0];
+    newWidth = Math.max(MIN_VIEWPORT, origElement.width + delta);
+    // Tables: can't exceed content bounds
+    if (isTable) {
+      newWidth = Math.min(newWidth, contentWidth - origElement.cropX);
+    }
+  } else if (handleDirection === "w") {
+    // Drag left edge: change width AND cropX, element x shifts
+    const delta = rotatedPointer[0] - startTopLeft[0];
+    const widthChange = -delta;
+    newWidth = Math.max(MIN_VIEWPORT, origElement.width + widthChange);
+    newCropX = origElement.cropX - widthChange;
+    // Clamp cropX — can't go negative
+    if (newCropX < 0) {
+      newWidth = newWidth + newCropX;
+      newCropX = 0;
+    }
+    newWidth = Math.max(MIN_VIEWPORT, newWidth);
+    // Tables: can't crop past content bounds
+    if (isTable) {
+      if (newCropX > contentWidth - MIN_VIEWPORT) {
+        newCropX = contentWidth - MIN_VIEWPORT;
+      }
+      newWidth = Math.min(newWidth, contentWidth - newCropX);
+    }
+    const cropDeltaX = newCropX - origElement.cropX;
+    newX = origElement.x + cropDeltaX * Math.cos(origElement.angle);
+    newY = origElement.y + cropDeltaX * Math.sin(origElement.angle);
+  } else if (handleDirection === "s") {
+    // Drag bottom edge: change height, cropY stays
+    const delta = rotatedPointer[1] - startBottomRight[1];
+    newHeight = Math.max(MIN_VIEWPORT, origElement.height + delta);
+    // Can't exceed content height bounds
+    newHeight = Math.min(newHeight, contentHeight - origElement.cropY);
+  } else if (handleDirection === "n") {
+    // Drag top edge: change height AND cropY, element y shifts
+    const delta = rotatedPointer[1] - startTopLeft[1];
+    const heightChange = -delta;
+    newHeight = Math.max(MIN_VIEWPORT, origElement.height + heightChange);
+    newCropY = origElement.cropY - heightChange;
+    if (newCropY < 0) {
+      newHeight = newHeight + newCropY;
+      newCropY = 0;
+    }
+    if (newCropY > contentHeight - MIN_VIEWPORT) {
+      newCropY = contentHeight - MIN_VIEWPORT;
+    }
+    newHeight = Math.min(newHeight, contentHeight - newCropY);
+    newHeight = Math.max(MIN_VIEWPORT, newHeight);
+    const cropDeltaY = newCropY - origElement.cropY;
+    newX = origElement.x - cropDeltaY * Math.sin(origElement.angle);
+    newY = origElement.y + cropDeltaY * Math.cos(origElement.angle);
+  }
+
+  scene.mutateElement(latestElement, {
+    x: newX,
+    y: newY,
+    width: newWidth,
+    height: newHeight,
+    cropX: newCropX,
+    cropY: newCropY,
+    scrollOffsetY: 0,
+  } as any);
 };
 
 const getNextSingleWidthAndHeightFromPointer = (

@@ -56,6 +56,7 @@ exports[`exportToSvg > with default arguments 1`] = `
   "gridOpacity": 100,
   "gridSize": 20,
   "gridStep": 5,
+  "gridType": "line",
   "hoveredElementIds": {},
   "isBindingEnabled": true,
   "isCropping": false,

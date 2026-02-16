@@ -202,6 +202,10 @@ export type ExcalidrawTableElement = _ExcalidrawElementBase &
     headerRow: boolean;
     /** Vertical scroll offset in pixels for canvas rendering */
     scrollOffsetY: number;
+    /** Horizontal crop offset into content (px) */
+    cropX: number;
+    /** Vertical crop offset into content (px) */
+    cropY: number;
   }>;
 
 export type CodeBlockLanguage =
@@ -243,6 +247,10 @@ export type ExcalidrawCodeBlockElement = _ExcalidrawElementBase &
     scrollOffsetY: number;
     /** Font size in px — scales proportionally on resize (default 13) */
     fontSize: number;
+    /** Horizontal crop offset into content (px) */
+    cropX: number;
+    /** Vertical crop offset into content (px) */
+    cropY: number;
   }>;
 
 export type ExcalidrawDocumentElement = _ExcalidrawElementBase &

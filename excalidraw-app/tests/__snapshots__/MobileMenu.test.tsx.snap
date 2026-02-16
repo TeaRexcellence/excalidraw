@@ -50,13 +50,20 @@ exports[`Test MobileMenu > should initialize with welcome screen and hide once u
   <div
     class="welcome-screen-center__heading welcome-screen-decor excalifont"
   >
-    All your data is saved locally in your browser.
+    Organize anything with a local project manager and custom tools.
+  </div>
+  <div
+    class="welcome-screen-decor excalifont"
+    style="font-size: 0.875rem; text-align: center; opacity: 0.7; margin-top: -0.5rem;"
+  >
+    Images, video, tables, code blocks, local linking, and interlinked projects.
   </div>
   <div
     class="welcome-screen-menu"
   >
     <button
       class="welcome-screen-menu-item "
+      title="Import a project .zip or .excalidraw json file"
       type="button"
     >
       <div
@@ -88,6 +95,54 @@ exports[`Test MobileMenu > should initialize with welcome screen and hide once u
         class="welcome-screen-menu-item__shortcut"
       >
         Ctrl+O
+      </div>
+    </button>
+    <button
+      class="welcome-screen-menu-item "
+      title="Save this canvas to the Project Manager"
+      type="button"
+    >
+      <div
+        class="welcome-screen-menu-item__icon"
+      >
+        <svg
+          aria-hidden="true"
+          class=""
+          fill="none"
+          focusable="false"
+          role="img"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+        >
+          <g
+            stroke-width="1.25"
+          >
+            <path
+              d="M0 0h24v24H0z"
+              fill="none"
+              stroke="none"
+            />
+            <path
+              d="M9 4h3l2 2h5a2 2 0 0 1 2 2v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"
+            />
+            <path
+              d="M17 17v2a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2h2"
+            />
+          </g>
+        </svg>
+      </div>
+      <div
+        class="welcome-screen-menu-item__text"
+      >
+        Save Project
+      </div>
+      <div
+        class="welcome-screen-menu-item__shortcut"
+      >
+        Ctrl+S
       </div>
     </button>
     <button
