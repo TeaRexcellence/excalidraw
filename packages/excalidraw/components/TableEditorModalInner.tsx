@@ -45,6 +45,12 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
 
   const [headerRow, setHeaderRow] = useState(element?.headerRow ?? true);
 
+  // Track whether the element was empty when the editor opened.
+  // If still empty on close, treat as cancel and delete the element.
+  const wasEmptyOnOpen = useRef(
+    !element?.cells?.some((row) => row.some((cell) => cell.trim() !== "")),
+  );
+
   // Build initial data from element — minRows/minCols will expand the grid
   const initialData = useCallback((): string[][] => {
     if (!element) {
@@ -99,6 +105,20 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
       }
     }
 
+    // If it was empty when opened and still empty → cancel (delete element)
+    if (maxRow === -1 && wasEmptyOnOpen.current) {
+      const freshElement = app.scene.getElement(elementId);
+      if (freshElement) {
+        app.scene.mutateElement(freshElement as any, { isDeleted: true });
+      }
+      app.syncActionResult({
+        appState: { ...app.state, openDialog: null },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+      onClose();
+      return;
+    }
+
     // Ensure at least 1x1
     const usedRows = Math.max(maxRow + 1, 1);
     const usedCols = Math.max(maxCol + 1, 1);
@@ -131,8 +151,14 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
       );
     }
 
-    const newWidth = newColumnWidths.reduce((s, w) => s + w, 0);
-    const newHeight = newRowHeights.reduce((s, h) => s + h, 0);
+    const contentWidth = newColumnWidths.reduce((s, w) => s + w, 0);
+    const contentHeight = newRowHeights.reduce((s, h) => s + h, 0);
+
+    // Cap viewport to reasonable defaults — content stays full-size and scrollable
+    const MAX_VIEWPORT_W = 400;
+    const MAX_VIEWPORT_H = 300;
+    const newWidth = Math.min(contentWidth, MAX_VIEWPORT_W);
+    const newHeight = Math.min(contentHeight, MAX_VIEWPORT_H);
 
     // Mutate element as one atomic change
     const freshElement = app.scene.getElement(elementId);
@@ -147,6 +173,8 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
         width: newWidth,
         height: newHeight,
         scrollOffsetY: 0,
+        cropX: 0,
+        cropY: 0,
       });
     }
 
@@ -193,7 +221,8 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     [],
   );
 
-  // Escape key to close (when not editing a cell)
+  // Escape key to close (when not editing a cell).
+  // Uses capture phase so it fires before Handsontable's own Escape handler.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -213,6 +242,23 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
   }, [handleDone]);
+
+  // Block keyboard events from reaching Excalidraw's native document listener.
+  // Uses bubble phase on the wrapper so Handsontable sees events first, then
+  // they get stopped here before reaching App's document-level handler.
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const stop = (e: Event) => e.stopPropagation();
+    wrapper.addEventListener("keydown", stop);
+    wrapper.addEventListener("keyup", stop);
+    return () => {
+      wrapper.removeEventListener("keydown", stop);
+      wrapper.removeEventListener("keyup", stop);
+    };
+  }, []);
 
   // Detect dark mode
   const isDark = document.querySelector(".excalidraw.theme--dark") !== null;

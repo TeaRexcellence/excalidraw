@@ -201,6 +201,10 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
     element?.language != null && element.language !== "plaintext",
   );
 
+  // Track whether the element was empty when the editor opened.
+  // If still empty on close, treat as cancel and delete the element.
+  const wasEmptyOnOpen = useRef(!element?.code?.trim());
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLPreElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
@@ -265,6 +269,20 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
 
   // Save changes back to element
   const handleDone = useCallback(() => {
+    // If it was empty when opened and still empty → cancel (delete element)
+    if (!code.trim() && wasEmptyOnOpen.current) {
+      const freshElement = app.scene.getElement(elementId);
+      if (freshElement) {
+        app.scene.mutateElement(freshElement as any, { isDeleted: true });
+      }
+      app.syncActionResult({
+        appState: { ...app.state, openDialog: null },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      });
+      onClose();
+      return;
+    }
+
     const freshElement = app.scene.getElement(elementId);
     if (freshElement) {
       app.scene.mutateElement(freshElement as ExcalidrawCodeBlockElement, {
@@ -345,14 +363,18 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
     [code],
   );
 
-  // Escape key → save & close
+  // Block ALL keyboard events from reaching Excalidraw's native document listener.
+  // Without this, Ctrl+Z etc. would trigger Excalidraw's undo instead of the editor's.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
         handleDone();
+        return;
       }
+      // Stop all other keys from propagating to Excalidraw
+      e.stopPropagation();
     };
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);

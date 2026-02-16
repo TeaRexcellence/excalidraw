@@ -10,7 +10,7 @@ const TABLE_GRID_COLOR_LIGHT = "#c4c4c4";
 const TABLE_GRID_COLOR_DARK = "#555";
 
 // Font scales with row height: ~44% of row height, clamped
-const MIN_FONT_SIZE = 12;
+const MIN_FONT_SIZE = 1;
 const MAX_FONT_SIZE = 72;
 const FONT_RATIO = 0.44;
 // Padding scales with font size

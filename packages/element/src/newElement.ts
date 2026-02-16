@@ -555,6 +555,11 @@ export const DEFAULT_TABLE_CELL_HEIGHT = 44;
 export const DEFAULT_TABLE_FONT_SIZE = 16;
 export const DEFAULT_TABLE_CELL_PADDING = 8;
 
+// Soft max viewport dimensions for initial element creation.
+// Content beyond these bounds is scrollable — user can resize/crop to reveal more.
+const DEFAULT_MAX_VIEWPORT_WIDTH = 400;
+const DEFAULT_MAX_VIEWPORT_HEIGHT = 300;
+
 export const newTableElement = (
   opts: {
     rows?: number;
@@ -576,8 +581,18 @@ export const newTableElement = (
   const cells =
     opts.cells || Array.from({ length: rows }, () => Array(columns).fill(""));
 
-  const width = columnWidths.reduce((sum: number, w: number) => sum + w, 0);
-  const height = rowHeights.reduce((sum: number, h: number) => sum + h, 0);
+  const contentWidth = columnWidths.reduce(
+    (sum: number, w: number) => sum + w,
+    0,
+  );
+  const contentHeight = rowHeights.reduce(
+    (sum: number, h: number) => sum + h,
+    0,
+  );
+
+  // Cap viewport to reasonable defaults — content remains full-size and scrollable
+  const width = Math.min(contentWidth, DEFAULT_MAX_VIEWPORT_WIDTH);
+  const height = Math.min(contentHeight, DEFAULT_MAX_VIEWPORT_HEIGHT);
 
   return {
     ..._newElementBase<ExcalidrawTableElement>("table", {
@@ -605,18 +620,33 @@ export const newCodeBlockElement = (
     showLineNumbers?: boolean;
   } & ElementConstructorOpts,
 ): NonDeleted<ExcalidrawCodeBlockElement> => {
+  const fontSize = 13;
+  const code = opts.code ?? "";
+
+  // Derive natural content height from code lines
+  const s = fontSize / 13; // BASE_FONT_SIZE
+  const lineHeight = 20 * s;
+  const padding = 10 * s;
+  const headerHeight = 22 * s;
+  const lineCount = code.split("\n").length;
+  const contentHeight = headerHeight + padding + lineCount * lineHeight + padding;
+
+  // Use content height if it fits, otherwise cap at viewport max
+  const width = opts.width || 400;
+  const height = opts.height || Math.min(contentHeight, DEFAULT_MAX_VIEWPORT_HEIGHT);
+
   return {
     ..._newElementBase<ExcalidrawCodeBlockElement>("codeblock", {
       ...opts,
-      width: opts.width || 400,
-      height: opts.height || 250,
+      width,
+      height,
     }),
     type: "codeblock",
-    code: opts.code ?? "",
+    code,
     language: opts.language ?? "plaintext",
     showLineNumbers: opts.showLineNumbers ?? true,
     scrollOffsetY: 0,
-    fontSize: 13,
+    fontSize,
     cropX: 0,
     cropY: 0,
   };

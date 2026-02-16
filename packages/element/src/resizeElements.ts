@@ -90,7 +90,7 @@ import type { ElementUpdate } from "./mutateElement";
 // Returns true when transform (resizing/rotation) happened
 export const transformElements = (
   originalElements: PointerDownState["originalElements"],
-  transformHandleType: MaybeTransformHandleType,
+  handleDirection: MaybeTransformHandleType,
   selectedElements: readonly NonDeletedExcalidrawElement[],
   scene: Scene,
   shouldRotateWithDiscreteAngle: boolean,
@@ -104,7 +104,7 @@ export const transformElements = (
   const elementsMap = scene.getNonDeletedElementsMap();
   if (selectedElements.length === 1) {
     const [element] = selectedElements;
-    if (transformHandleType === "rotation") {
+    if (handleDirection === "rotation") {
       if (!isElbowArrow(element)) {
         rotateSingleElement(
           element,
@@ -115,7 +115,7 @@ export const transformElements = (
         );
         updateBoundElements(element, scene);
       }
-    } else if (transformHandleType) {
+    } else if (handleDirection) {
       const elementId = selectedElements[0].id;
       const latestElement = elementsMap.get(elementId);
       const origElement = originalElements.get(elementId);
@@ -125,13 +125,13 @@ export const transformElements = (
         if (
           (isTableElement(latestElement) ||
             isCodeBlockElement(latestElement)) &&
-          transformHandleType.length === 1
+          handleDirection.length === 1
         ) {
           cropTableOrCodeBlock(
             latestElement as ExcalidrawTableElement | ExcalidrawCodeBlockElement,
             origElement as ExcalidrawTableElement | ExcalidrawCodeBlockElement,
             scene,
-            transformHandleType as TransformHandleDirection,
+            handleDirection as TransformHandleDirection,
             pointerX,
             pointerY,
           );
@@ -140,7 +140,7 @@ export const transformElements = (
             getNextSingleWidthAndHeightFromPointer(
               latestElement,
               origElement,
-              transformHandleType,
+              handleDirection,
               pointerX,
               pointerY,
               {
@@ -156,7 +156,7 @@ export const transformElements = (
             origElement,
             originalElements,
             scene,
-            transformHandleType,
+            handleDirection,
             {
               shouldMaintainAspectRatio,
               shouldResizeFromCenter,
@@ -170,7 +170,7 @@ export const transformElements = (
     }
     return true;
   } else if (selectedElements.length > 1) {
-    if (transformHandleType === "rotation") {
+    if (handleDirection === "rotation") {
       rotateMultipleElements(
         originalElements,
         selectedElements,
@@ -182,13 +182,13 @@ export const transformElements = (
         centerY,
       );
       return true;
-    } else if (transformHandleType) {
+    } else if (handleDirection) {
       const { nextWidth, nextHeight, flipByX, flipByY, originalBoundingBox } =
         getNextMultipleWidthAndHeightFromPointer(
           selectedElements,
           originalElements,
           elementsMap,
-          transformHandleType,
+          handleDirection,
           pointerX,
           pointerY,
           {
@@ -200,7 +200,7 @@ export const transformElements = (
       resizeMultipleElements(
         selectedElements,
         elementsMap,
-        transformHandleType,
+        handleDirection,
         scene,
         originalElements,
         {
@@ -331,7 +331,7 @@ export const resizeSingleTextElement = (
   origElement: NonDeleted<ExcalidrawTextElement>,
   element: NonDeleted<ExcalidrawTextElement>,
   scene: Scene,
-  transformHandleType: TransformHandleDirection,
+  handleDirection: TransformHandleDirection,
   shouldResizeFromCenter: boolean,
   nextWidth: number,
   nextHeight: number,
@@ -345,7 +345,7 @@ export const resizeSingleTextElement = (
     return;
   }
 
-  if (transformHandleType.includes("n") || transformHandleType.includes("s")) {
+  if (handleDirection.includes("n") || handleDirection.includes("s")) {
     const previousOrigin = pointFrom<GlobalPoint>(origElement.x, origElement.y);
 
     const newOrigin = getResizedOrigin(
@@ -355,7 +355,7 @@ export const resizeSingleTextElement = (
       metricsWidth,
       nextHeight,
       origElement.angle,
-      transformHandleType,
+      handleDirection,
       false,
       shouldResizeFromCenter,
     );
@@ -370,7 +370,7 @@ export const resizeSingleTextElement = (
     return;
   }
 
-  if (transformHandleType === "e" || transformHandleType === "w") {
+  if (handleDirection === "e" || handleDirection === "w") {
     const minWidth = getMinTextElementWidth(
       getFontString({
         fontSize: element.fontSize,
@@ -403,7 +403,7 @@ export const resizeSingleTextElement = (
       newWidth,
       newHeight,
       element.angle,
-      transformHandleType,
+      handleDirection,
       false,
       shouldResizeFromCenter,
     );
@@ -508,7 +508,7 @@ const rotateMultipleElements = (
 };
 
 export const getResizeOffsetXY = (
-  transformHandleType: MaybeTransformHandleType,
+  handleDirection: MaybeTransformHandleType,
   selectedElements: NonDeletedExcalidrawElement[],
   elementsMap: ElementsMap,
   x: number,
@@ -528,7 +528,7 @@ export const getResizeOffsetXY = (
     pointFrom(cx, cy),
     -angle as Radians,
   );
-  switch (transformHandleType) {
+  switch (handleDirection) {
     case "n":
       return pointRotateRads(
         pointFrom(x - (x1 + x2) / 2, y - y1),
@@ -567,15 +567,15 @@ export const getResizeOffsetXY = (
 };
 
 export const getResizeArrowDirection = (
-  transformHandleType: MaybeTransformHandleType,
+  handleDirection: MaybeTransformHandleType,
   element: NonDeleted<ExcalidrawLinearElement>,
 ): "origin" | "end" => {
   const [, [px, py]] = element.points;
   const isResizeEnd =
-    (transformHandleType === "nw" && (px < 0 || py < 0)) ||
-    (transformHandleType === "ne" && px >= 0) ||
-    (transformHandleType === "sw" && px <= 0) ||
-    (transformHandleType === "se" && (px > 0 || py > 0));
+    (handleDirection === "nw" && (px < 0 || py < 0)) ||
+    (handleDirection === "ne" && px >= 0) ||
+    (handleDirection === "sw" && px <= 0) ||
+    (handleDirection === "se" && (px > 0 || py > 0));
   return isResizeEnd ? "end" : "origin";
 };
 
@@ -924,17 +924,17 @@ export const resizeSingleElement = (
       }
     }
 
-    // Proportionally scale table column/row dimensions and sync element size
+    // Proportionally scale table column/row dimensions and sync element size.
+    // Corners = FREE resize: content, viewport, and crop all scale proportionally.
+    // Minimums are kept very low (1px) so content scales freely with the pointer.
     if (isTableElement(latestElement) && isTableElement(origElement)) {
       const scaleX = Math.abs(nextWidth) / origElement.width;
       const scaleY = Math.abs(nextHeight) / origElement.height;
-      const MIN_COL_WIDTH = 40;
-      const MIN_ROW_HEIGHT = 24;
       const newColWidths = origElement.columnWidths.map((w: number) =>
-        Math.max(MIN_COL_WIDTH, w * scaleX),
+        Math.max(1, w * scaleX),
       );
       const newRowHeights = origElement.rowHeights.map((h: number) =>
-        Math.max(MIN_ROW_HEIGHT, h * scaleY),
+        Math.max(1, h * scaleY),
       );
       (updates as any).columnWidths = newColWidths;
       (updates as any).rowHeights = newRowHeights;
@@ -946,34 +946,42 @@ export const resizeSingleElement = (
         (s: number, h: number) => s + h,
         0,
       );
-      // Scale crop proportionally if active
-      const newCropX = origElement.cropX * scaleX;
-      const newCropY = origElement.cropY * scaleY;
-      (updates as any).cropX = Math.max(0, Math.min(newCropX, newContentWidth - 40));
-      (updates as any).cropY = Math.max(0, Math.min(newCropY, newContentHeight - 24));
-      // Width/height = viewport (may be smaller than content when cropped)
-      const cropActive =
-        newCropX > 0 ||
-        newCropY > 0 ||
-        origElement.width < origElement.columnWidths.reduce((s: number, w: number) => s + w, 0) ||
-        origElement.height < origElement.rowHeights.reduce((s: number, h: number) => s + h, 0);
-      if (cropActive) {
-        // Scale viewport proportionally, keep within content bounds
-        const viewW = origElement.width * scaleX;
-        const viewH = origElement.height * scaleY;
-        (updates as any).width = Math.min(viewW, newContentWidth - (updates as any).cropX);
-        (updates as any).height = Math.min(viewH, newContentHeight - (updates as any).cropY);
-      } else {
-        (updates as any).width = newContentWidth;
-        (updates as any).height = newContentHeight;
+
+      // Scale viewport and crop proportionally — preserves crop state
+      let newCropX = origElement.cropX * scaleX;
+      let newCropY = origElement.cropY * scaleY;
+      let newWidth = origElement.width * scaleX;
+      let newHeight = origElement.height * scaleY;
+
+      // Safety clamp: ensure crop + viewport stays within content bounds
+      if (newCropX + newWidth > newContentWidth) {
+        newCropX = Math.max(0, newContentWidth - newWidth);
+        if (newWidth > newContentWidth) {
+          newWidth = newContentWidth;
+          newCropX = 0;
+        }
       }
+      if (newCropY + newHeight > newContentHeight) {
+        newCropY = Math.max(0, newContentHeight - newHeight);
+        if (newHeight > newContentHeight) {
+          newHeight = newContentHeight;
+          newCropY = 0;
+        }
+      }
+
+      (updates as any).cropX = newCropX;
+      (updates as any).cropY = newCropY;
+      (updates as any).width = newWidth;
+      (updates as any).height = newHeight;
       (updates as any).scrollOffsetY = 0;
     }
 
-    // Proportionally scale code block: fontSize from width ratio, derive height from content
+    // Proportionally scale code block: fontSize from width ratio, everything scales together.
+    // Corners = FREE resize: content, viewport, and crop all scale proportionally.
     if (isCodeBlockElement(latestElement) && isCodeBlockElement(origElement)) {
       const scaleX = Math.abs(nextWidth) / origElement.width;
-      const CODE_MIN_FONT = 8;
+      const scaleY = Math.abs(nextHeight) / origElement.height;
+      const CODE_MIN_FONT = 1;
       const CODE_MAX_FONT = 40;
       const origFontSize = origElement.fontSize || 13;
       const newFontSize = Math.min(
@@ -991,20 +999,26 @@ export const resizeSingleElement = (
 
       (updates as any).fontSize = newFontSize;
 
-      const hasCrop = origElement.cropX > 0 || origElement.cropY > 0;
-      if (hasCrop) {
-        // Scale crop offsets and viewport proportionally with font scale
-        (updates as any).cropX = Math.max(0, origElement.cropX * scaleX);
-        (updates as any).cropY = Math.max(0, origElement.cropY * scaleX);
-        (updates as any).width = origElement.width * scaleX;
-        (updates as any).height = origElement.height * scaleX;
-      } else {
-        // No crop — width follows pointer, height derived from content
-        (updates as any).cropX = 0;
-        (updates as any).cropY = 0;
-        (updates as any).width = Math.abs(nextWidth);
-        (updates as any).height = contentHeight;
+      // Scale viewport and crop proportionally — preserves crop state
+      let newCropX = origElement.cropX * scaleX;
+      let newCropY = origElement.cropY * scaleY;
+      let newWidth = origElement.width * scaleX;
+      let newHeight = origElement.height * scaleY;
+
+      // Safety clamp: ensure crop + viewport stays within content bounds
+      // (code blocks have unbounded width, so only clamp height)
+      if (newCropY + newHeight > contentHeight) {
+        newCropY = Math.max(0, contentHeight - newHeight);
+        if (newHeight > contentHeight) {
+          newHeight = contentHeight;
+          newCropY = 0;
+        }
       }
+
+      (updates as any).cropX = newCropX;
+      (updates as any).cropY = newCropY;
+      (updates as any).width = newWidth;
+      (updates as any).height = newHeight;
       (updates as any).scrollOffsetY = 0;
     }
 

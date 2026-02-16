@@ -4801,7 +4801,11 @@ class App extends React.Component<AppProps, AppState> {
         }
       }
 
-      if (this.state.openDialog?.name === "elementLinkSelector") {
+      if (
+        this.state.openDialog?.name === "elementLinkSelector" ||
+        this.state.openDialog?.name === "tableEditor" ||
+        this.state.openDialog?.name === "codeBlockEditor"
+      ) {
         return;
       }
 
@@ -7385,6 +7389,11 @@ class App extends React.Component<AppProps, AppState> {
       selectedElementsAreBeingDragged: false,
     });
 
+    // Check element-internal scrollbars (table/codeblock) before canvas scrollbars
+    if (this.handleElementScrollbarDrag(event)) {
+      return;
+    }
+
     if (this.handleDraggingScrollBar(event, pointerDownState)) {
       return;
     }
@@ -7986,6 +7995,159 @@ class App extends React.Component<AppProps, AppState> {
     window.addEventListener(EVENT.POINTER_MOVE, onPointerMove);
     window.addEventListener(EVENT.POINTER_UP, onPointerUp);
     return true;
+  }
+
+  // Returns whether the pointer down is over an element's internal scrollbar
+  // (table or code block). If so, sets up drag listeners to scroll the element.
+  private handleElementScrollbarDrag(
+    event: React.PointerEvent<HTMLElement>,
+  ): boolean {
+    if (event.button !== 0) {
+      return false;
+    }
+
+    const scenePointer = viewportCoordsToSceneCoords(event, this.state);
+    const elementsMap = this.scene.getNonDeletedElementsMap();
+    const elements = this.scene.getNonDeletedElements();
+
+    // Check each table/codeblock (reverse z-order — topmost first)
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (!isTableElement(el) && !isCodeBlockElement(el)) {
+        continue;
+      }
+      // Skip if this element is selected — transform handles should take priority
+      // (the user can still scroll with mouse wheel when selected)
+      if (this.state.selectedElementIds[el.id]) {
+        continue;
+      }
+      if (
+        !hitElementBoundingBox(
+          pointFrom<GlobalPoint>(scenePointer.x, scenePointer.y),
+          el,
+          elementsMap,
+        )
+      ) {
+        continue;
+      }
+
+      // Convert scene point to element-local coordinates (handles rotation)
+      const eCenterX = el.x + el.width / 2;
+      const eCenterY = el.y + el.height / 2;
+      const [unrotX, unrotY] = pointRotateRads(
+        pointFrom<GlobalPoint>(scenePointer.x, scenePointer.y),
+        pointFrom<GlobalPoint>(eCenterX, eCenterY),
+        -el.angle as Radians,
+      );
+      const localX = unrotX - el.x;
+      const localY = unrotY - el.y;
+
+      // Hit test: right ~15px strip = scrollbar track area
+      const SCROLLBAR_HIT_WIDTH = 15;
+      if (localX < el.width - SCROLLBAR_HIT_WIDTH || localX > el.width) {
+        continue;
+      }
+      if (localY < 0 || localY > el.height) {
+        continue;
+      }
+
+      // Compute scrollability and scroll parameters
+      const elCropY = (el as any).cropY || 0;
+      let maxScroll: number;
+      let trackStart: number;
+      let trackHeight: number;
+
+      if (isTableElement(el)) {
+        const contentHeight = el.rowHeights.reduce(
+          (s: number, h: number) => s + h,
+          0,
+        );
+        const scrollableHeight = contentHeight - elCropY;
+        if (scrollableHeight <= el.height + 1) {
+          continue; // not scrollable
+        }
+        maxScroll = scrollableHeight - el.height;
+        trackStart = 0;
+        trackHeight = el.height;
+      } else {
+        // Code block
+        const fontSize = (el as any).fontSize || 13;
+        const sc = fontSize / 13;
+        const lineHeight = 20 * sc;
+        const padding = 10 * sc;
+        const headerHeight = 22 * sc;
+        const lineCount = ((el as any).code || "").split("\n").length;
+        const totalContentHeight =
+          headerHeight + padding + lineCount * lineHeight + padding;
+        const viewHeight = el.height - headerHeight - padding;
+        if (totalContentHeight <= viewHeight) {
+          continue; // not scrollable
+        }
+        maxScroll = totalContentHeight - viewHeight;
+        trackStart = 0;
+        trackHeight = el.height;
+      }
+
+      // Scrollbar hit! Jump to the clicked position
+      const ratio = Math.max(
+        0,
+        Math.min(1, (localY - trackStart) / trackHeight),
+      );
+      const newOffset = Math.max(0, Math.min(maxScroll, ratio * maxScroll));
+      this.scene.mutateElement(el as any, { scrollOffsetY: newOffset });
+
+      // Set up drag listeners
+      const elementId = el.id;
+
+      const onPointerMove = withBatchedUpdatesThrottled(
+        (moveEvent: PointerEvent) => {
+          const element = this.scene.getElement(elementId);
+          if (!element) {
+            return;
+          }
+
+          // Convert move pointer to element-local Y
+          const sceneCoords = viewportCoordsToSceneCoords(
+            moveEvent,
+            this.state,
+          );
+          const ecx = element.x + element.width / 2;
+          const ecy = element.y + element.height / 2;
+          const [, uY] = pointRotateRads(
+            pointFrom<GlobalPoint>(sceneCoords.x, sceneCoords.y),
+            pointFrom<GlobalPoint>(ecx, ecy),
+            -element.angle as Radians,
+          );
+          const newLocalY = uY - element.y;
+
+          const newRatio = Math.max(
+            0,
+            Math.min(1, (newLocalY - trackStart) / trackHeight),
+          );
+          const newScroll = Math.max(
+            0,
+            Math.min(maxScroll, newRatio * maxScroll),
+          );
+          this.scene.mutateElement(element as any, {
+            scrollOffsetY: newScroll,
+          });
+        },
+      );
+
+      const onPointerUp = withBatchedUpdates(() => {
+        window.removeEventListener(EVENT.POINTER_MOVE, onPointerMove);
+        window.removeEventListener(EVENT.POINTER_UP, onPointerUp);
+        onPointerMove.flush();
+        setCursorForShape(this.interactiveCanvas, this.state);
+        this.setState({ cursorButton: "up" });
+      });
+
+      window.addEventListener(EVENT.POINTER_MOVE, onPointerMove);
+      window.addEventListener(EVENT.POINTER_UP, onPointerUp);
+      return true;
+    }
+
+    return false;
   }
 
   private clearSelectionIfNotUsingSelection = (): void => {
@@ -12400,8 +12562,10 @@ class App extends React.Component<AppProps, AppState> {
 
       const { deltaX, deltaY } = event;
 
-      // Scroll table element if cursor is over a scrollable table (no modifier keys)
-      if (!event.metaKey && !event.ctrlKey && !event.shiftKey && deltaY !== 0) {
+      // Scroll table/codeblock element if cursor is over a cropped or scrollable one.
+      // Uses bounding-box hit testing so it works whether the element is selected or not.
+      // Supports vertical scroll (no modifiers) and horizontal scroll (shift+wheel).
+      if (!event.metaKey && !event.ctrlKey && (deltaY !== 0 || deltaX !== 0)) {
         const { x: sceneX, y: sceneY } = viewportCoordsToSceneCoords(
           {
             clientX: this.lastViewportPosition.x,
@@ -12409,25 +12573,94 @@ class App extends React.Component<AppProps, AppState> {
           },
           this.state,
         );
-        const hitElement = this.getElementAtPosition(sceneX, sceneY);
-        if (hitElement && isTableElement(hitElement)) {
-          const totalContentHeight = hitElement.rowHeights.reduce(
-            (s: number, h: number) => s + h,
-            0,
-          );
-          if (totalContentHeight > hitElement.height + 1) {
-            const maxScroll = totalContentHeight - hitElement.height;
-            const currentOffset = hitElement.scrollOffsetY || 0;
-            const newOffset = Math.max(
+        const scenePoint = pointFrom<GlobalPoint>(sceneX, sceneY);
+        const elementsMap = this.scene.getNonDeletedElementsMap();
+        // Find the top-most table/codeblock under cursor using bounding box
+        const hitElement = this.scene
+          .getNonDeletedElements()
+          .filter(
+            (el) =>
+              (isTableElement(el) || isCodeBlockElement(el)) &&
+              hitElementBoundingBox(scenePoint, el, elementsMap),
+          )
+          .pop() ?? null; // last = highest z-index
+        if (
+          hitElement &&
+          (isTableElement(hitElement) || isCodeBlockElement(hitElement))
+        ) {
+          // Compute content dimensions and crop state
+          let contentWidth: number;
+          let contentHeight: number;
+          if (isTableElement(hitElement)) {
+            contentWidth = hitElement.columnWidths.reduce(
+              (s: number, w: number) => s + w,
               0,
-              Math.min(maxScroll, currentOffset + deltaY),
             );
-            if (newOffset !== currentOffset) {
-              this.scene.mutateElement(hitElement as any, {
-                scrollOffsetY: newOffset,
-              });
+            contentHeight = hitElement.rowHeights.reduce(
+              (s: number, h: number) => s + h,
+              0,
+            );
+          } else {
+            // Code block: content height from font/lines, width unbounded
+            const fontSize = (hitElement as any).fontSize || 13;
+            const sc = fontSize / 13;
+            const lineHeight = 20 * sc;
+            const padding = 10 * sc;
+            const headerHeight = 22 * sc;
+            const lineCount = ((hitElement as any).code || "").split(
+              "\n",
+            ).length;
+            contentHeight =
+              headerHeight + padding + lineCount * lineHeight + padding;
+            // For code blocks, content width is unbounded — no horizontal limit
+            contentWidth = Infinity;
+          }
+
+          const cx = (hitElement as any).cropX || 0;
+          const cy = (hitElement as any).cropY || 0;
+          const canScrollV = contentHeight - cy > hitElement.height + 1;
+          const canScrollH = cx > 0 || hitElement.width < contentWidth - 1;
+
+          if (canScrollV || canScrollH) {
+            const updates: Record<string, number> = {};
+            let handled = false;
+
+            // Vertical scroll: plain wheel (deltaY)
+            if (canScrollV && deltaY !== 0 && !event.shiftKey) {
+              const maxScroll = contentHeight - cy - hitElement.height;
+              const currentOffset = (hitElement as any).scrollOffsetY || 0;
+              const newOffset = Math.max(
+                0,
+                Math.min(maxScroll, currentOffset + deltaY),
+              );
+              if (newOffset !== currentOffset) {
+                updates.scrollOffsetY = newOffset;
+                handled = true;
+              }
             }
-            return;
+
+            // Horizontal scroll: shift+wheel or trackpad deltaX
+            if (canScrollH && (event.shiftKey ? deltaY || deltaX : deltaX)) {
+              const scrollDelta = event.shiftKey
+                ? deltaY || deltaX
+                : deltaX;
+              const maxCropX = isTableElement(hitElement)
+                ? contentWidth - hitElement.width
+                : cx + hitElement.width; // code blocks: allow scrolling right
+              const newCropX = Math.max(
+                0,
+                Math.min(maxCropX, cx + scrollDelta),
+              );
+              if (newCropX !== cx) {
+                updates.cropX = newCropX;
+                handled = true;
+              }
+            }
+
+            if (handled) {
+              this.scene.mutateElement(hitElement as any, updates);
+              return;
+            }
           }
         }
       }
