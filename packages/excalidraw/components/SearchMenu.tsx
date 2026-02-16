@@ -24,13 +24,14 @@ import {
 } from "@excalidraw/common";
 
 import { newTextElement } from "@excalidraw/element";
-import { isTextElement, isFrameLikeElement } from "@excalidraw/element";
+import { isTextElement, isFrameLikeElement, isTableElement, getCellBounds } from "@excalidraw/element";
 
 import { getDefaultFrameName } from "@excalidraw/element/frame";
 
 import type {
   ExcalidrawFrameLikeElement,
   ExcalidrawTextElement,
+  ExcalidrawTableElement,
 } from "@excalidraw/element/types";
 
 import { atom, useAtom } from "../editor-jotai";
@@ -48,6 +49,7 @@ import {
   searchIcon,
   frameToolIcon,
   TextIcon,
+  TableIcon,
 } from "./icons";
 
 import "./SearchMenu.scss";
@@ -60,7 +62,7 @@ export const searchItemInFocusAtom = atom<number | null>(null);
 const SEARCH_DEBOUNCE = 350;
 
 type SearchMatchItem = {
-  element: ExcalidrawTextElement | ExcalidrawFrameLikeElement;
+  element: ExcalidrawTextElement | ExcalidrawFrameLikeElement | ExcalidrawTableElement;
   searchQuery: SearchQuery;
   index: number;
   preview: {
@@ -198,65 +200,100 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
       if (match) {
         const zoomValue = app.state.zoom.value;
 
-        const matchAsElement = newTextElement({
-          text: match.searchQuery,
-          x: match.element.x + (match.matchedLines[0]?.offsetX ?? 0),
-          y: match.element.y + (match.matchedLines[0]?.offsetY ?? 0),
-          width: match.matchedLines[0]?.width,
-          height: match.matchedLines[0]?.height,
-          fontSize: isFrameLikeElement(match.element)
-            ? FRAME_STYLE.nameFontSize
-            : match.element.fontSize,
-          fontFamily: isFrameLikeElement(match.element)
-            ? FONT_FAMILY.Assistant
-            : match.element.fontFamily,
-        });
+        // For table elements, auto-scroll the table to reveal the matched cell,
+        // then scroll the canvas to the table itself
+        if (isTableElement(match.element)) {
+          const table = match.element;
+          const cellRow = Math.floor(match.index / table.columns);
+          const cellCol = match.index % table.columns;
 
-        const FONT_SIZE_LEGIBILITY_THRESHOLD = 14;
+          scrollTableToCell(app, table, cellRow, cellCol);
 
-        const fontSize = matchAsElement.fontSize;
-        const isTextTiny =
-          fontSize * zoomValue < FONT_SIZE_LEGIBILITY_THRESHOLD;
-
-        if (
-          !isElementCompletelyInViewport(
-            [matchAsElement],
-            app.canvas.width / window.devicePixelRatio,
-            app.canvas.height / window.devicePixelRatio,
-            {
-              offsetLeft: app.state.offsetLeft,
-              offsetTop: app.state.offsetTop,
-              scrollX: app.state.scrollX,
-              scrollY: app.state.scrollY,
-              zoom: app.state.zoom,
-            },
-            app.scene.getNonDeletedElementsMap(),
-            app.getEditorUIOffsets(),
-          ) ||
-          isTextTiny
-        ) {
-          let zoomOptions: Parameters<AppClassProperties["scrollToContent"]>[1];
-
-          if (isTextTiny) {
-            if (fontSize >= FONT_SIZE_LEGIBILITY_THRESHOLD) {
-              zoomOptions = { fitToContent: true };
-            } else {
-              zoomOptions = {
-                fitToViewport: true,
-                // calculate zoom level to make the fontSize ~equal to FONT_SIZE_THRESHOLD, rounded to nearest 10%
-                maxZoom: round(FONT_SIZE_LEGIBILITY_THRESHOLD / fontSize, 1),
-              };
-            }
-          } else {
-            zoomOptions = { fitToContent: true };
+          // Scroll canvas to the table element
+          if (
+            !isElementCompletelyInViewport(
+              [table],
+              app.canvas.width / window.devicePixelRatio,
+              app.canvas.height / window.devicePixelRatio,
+              {
+                offsetLeft: app.state.offsetLeft,
+                offsetTop: app.state.offsetTop,
+                scrollX: app.state.scrollX,
+                scrollY: app.state.scrollY,
+                zoom: app.state.zoom,
+              },
+              app.scene.getNonDeletedElementsMap(),
+              app.getEditorUIOffsets(),
+            )
+          ) {
+            app.scrollToContent(table, {
+              animate: true,
+              duration: 300,
+              fitToContent: true,
+              canvasOffsets: app.getEditorUIOffsets(),
+            });
           }
-
-          app.scrollToContent(matchAsElement, {
-            animate: true,
-            duration: 300,
-            ...zoomOptions,
-            canvasOffsets: app.getEditorUIOffsets(),
+        } else {
+          const matchAsElement = newTextElement({
+            text: match.searchQuery,
+            x: match.element.x + (match.matchedLines[0]?.offsetX ?? 0),
+            y: match.element.y + (match.matchedLines[0]?.offsetY ?? 0),
+            width: match.matchedLines[0]?.width,
+            height: match.matchedLines[0]?.height,
+            fontSize: isFrameLikeElement(match.element)
+              ? FRAME_STYLE.nameFontSize
+              : match.element.fontSize,
+            fontFamily: isFrameLikeElement(match.element)
+              ? FONT_FAMILY.Assistant
+              : match.element.fontFamily,
           });
+
+          const FONT_SIZE_LEGIBILITY_THRESHOLD = 14;
+
+          const fontSize = matchAsElement.fontSize;
+          const isTextTiny =
+            fontSize * zoomValue < FONT_SIZE_LEGIBILITY_THRESHOLD;
+
+          if (
+            !isElementCompletelyInViewport(
+              [matchAsElement],
+              app.canvas.width / window.devicePixelRatio,
+              app.canvas.height / window.devicePixelRatio,
+              {
+                offsetLeft: app.state.offsetLeft,
+                offsetTop: app.state.offsetTop,
+                scrollX: app.state.scrollX,
+                scrollY: app.state.scrollY,
+                zoom: app.state.zoom,
+              },
+              app.scene.getNonDeletedElementsMap(),
+              app.getEditorUIOffsets(),
+            ) ||
+            isTextTiny
+          ) {
+            let zoomOptions: Parameters<AppClassProperties["scrollToContent"]>[1];
+
+            if (isTextTiny) {
+              if (fontSize >= FONT_SIZE_LEGIBILITY_THRESHOLD) {
+                zoomOptions = { fitToContent: true };
+              } else {
+                zoomOptions = {
+                  fitToViewport: true,
+                  // calculate zoom level to make the fontSize ~equal to FONT_SIZE_THRESHOLD, rounded to nearest 10%
+                  maxZoom: round(FONT_SIZE_LEGIBILITY_THRESHOLD / fontSize, 1),
+                };
+              }
+            } else {
+              zoomOptions = { fitToContent: true };
+            }
+
+            app.scrollToContent(matchAsElement, {
+              animate: true,
+              duration: 300,
+              ...zoomOptions,
+              canvasOffsets: app.getEditorUIOffsets(),
+            });
+          }
         }
       }
     }
@@ -511,6 +548,13 @@ const MatchListBase = (props: MatchListProps) => {
     [props.matches],
   );
 
+  const tableMatches = useMemo(
+    () => props.matches.items.filter((match) => isTableElement(match.element)),
+    [props.matches],
+  );
+
+  const tableOffset = frameNameMatches.length + textMatches.length;
+
   return (
     <div>
       {frameNameMatches.length > 0 && (
@@ -529,7 +573,7 @@ const MatchListBase = (props: MatchListProps) => {
             />
           ))}
 
-          {textMatches.length > 0 && <div className="layer-ui__divider" />}
+          {(textMatches.length > 0 || tableMatches.length > 0) && <div className="layer-ui__divider" />}
         </div>
       )}
 
@@ -546,6 +590,26 @@ const MatchListBase = (props: MatchListProps) => {
               preview={searchMatch.preview}
               highlighted={index + frameNameMatches.length === props.focusIndex}
               onClick={() => props.onItemClick(index + frameNameMatches.length)}
+            />
+          ))}
+
+          {tableMatches.length > 0 && <div className="layer-ui__divider" />}
+        </div>
+      )}
+
+      {tableMatches.length > 0 && (
+        <div className="layer-ui__search-result-container">
+          <div className="layer-ui__search-result-title">
+            <div className="title-icon">{TableIcon}</div>
+            <div>{t("search.tables")}</div>
+          </div>
+          {tableMatches.map((searchMatch, index) => (
+            <ListItem
+              key={searchMatch.element.id + searchMatch.index}
+              searchQuery={props.searchQuery}
+              preview={searchMatch.preview}
+              highlighted={index + tableOffset === props.focusIndex}
+              onClick={() => props.onItemClick(index + tableOffset)}
             />
           ))}
         </div>
@@ -795,6 +859,87 @@ const getMatchInFrame = (
   ];
 };
 
+const getMatchInTable = (
+  table: ExcalidrawTableElement,
+  row: number,
+  col: number,
+): SearchMatch["matchedLines"] => {
+  const bounds = getCellBounds(table, row, col);
+
+  const cropX = table.cropX || 0;
+  const cropY = table.cropY || 0;
+  const scrollOffsetY = table.scrollOffsetY || 0;
+
+  // Cell position in viewport space
+  const visibleX = bounds.x - cropX;
+  const visibleY = bounds.y - cropY - scrollOffsetY;
+
+  // Check if any part of the cell is visible in the viewport
+  const showOnCanvas =
+    visibleX + bounds.width > 0 &&
+    visibleX < table.width &&
+    visibleY + bounds.height > 0 &&
+    visibleY < table.height;
+
+  return [
+    {
+      offsetX: bounds.x,
+      offsetY: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      showOnCanvas,
+    },
+  ];
+};
+
+const scrollTableToCell = (
+  app: AppClassProperties,
+  table: ExcalidrawTableElement,
+  row: number,
+  col: number,
+) => {
+  const bounds = getCellBounds(table, row, col);
+  const cropX = table.cropX || 0;
+  const cropY = table.cropY || 0;
+  const scrollOffsetY = table.scrollOffsetY || 0;
+
+  // Calculate frozen zone heights
+  const frozenRows = Math.min(table.frozenRows || 0, table.rows);
+  let frozenRowH = 0;
+  for (let r = 0; r < frozenRows; r++) {
+    frozenRowH += table.rowHeights[r];
+  }
+  const frozenRowClipH = Math.max(0, frozenRowH - cropY);
+
+  // Check if cell is in a frozen row — no scroll needed for those
+  const isFrozenRow = row < frozenRows;
+
+  if (!isFrozenRow) {
+    // Visible area for scrollable content starts below frozen rows
+    const visibleTop = cropY + scrollOffsetY + frozenRowClipH;
+    const visibleBottom = cropY + scrollOffsetY + table.height;
+
+    let newScrollOffset = scrollOffsetY;
+
+    if (bounds.y < visibleTop) {
+      // Cell is above visible area — scroll up
+      newScrollOffset = bounds.y - cropY - frozenRowClipH;
+    } else if (bounds.y + bounds.height > visibleBottom) {
+      // Cell is below visible area — scroll down
+      newScrollOffset = bounds.y + bounds.height - cropY - table.height;
+    }
+
+    // Clamp scroll offset
+    const totalHeight = table.rowHeights.reduce((s, h) => s + h, 0);
+    const maxScroll = Math.max(0, totalHeight - cropY - table.height);
+    newScrollOffset = Math.max(0, Math.min(maxScroll, newScrollOffset));
+
+    if (newScrollOffset !== scrollOffsetY) {
+      app.scene.mutateElement(table, { scrollOffsetY: newScrollOffset } as any);
+    }
+  }
+};
+
 const escapeSpecialCharacters = (string: string) => {
   return string.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
 };
@@ -873,12 +1018,47 @@ const handleSearch = debounce(
       }
     }
 
+    const tables = elements.filter((el) =>
+      isTableElement(el),
+    ) as ExcalidrawTableElement[];
+
+    tables.sort((a, b) => a.y - b.y);
+
+    const tableMatches: SearchMatchItem[] = [];
+
+    for (const table of tables) {
+      for (let r = 0; r < table.rows; r++) {
+        for (let c = 0; c < table.columns; c++) {
+          const cellText = table.cells[r]?.[c] || "";
+          if (!cellText) {
+            continue;
+          }
+
+          let match = null;
+          const cellRegex = new RegExp(escapeSpecialCharacters(searchQuery), "gi");
+
+          while ((match = cellRegex.exec(cellText)) !== null) {
+            const preview = getMatchPreview(cellText, match.index, searchQuery);
+            const matchedLines = getMatchInTable(table, r, c);
+
+            tableMatches.push({
+              element: table,
+              searchQuery,
+              preview,
+              index: r * table.columns + c,
+              matchedLines,
+            });
+          }
+        }
+      }
+    }
+
     const visibleIds = new Set(
       app.visibleElements.map((visibleElement) => visibleElement.id),
     );
 
-    // putting frame matches first
-    const matchItems: SearchMatchItem[] = [...frameMatches, ...textMatches];
+    // putting frame matches first, then text, then table
+    const matchItems: SearchMatchItem[] = [...frameMatches, ...textMatches, ...tableMatches];
 
     const focusIndex =
       matchItems.findIndex((matchItem) =>

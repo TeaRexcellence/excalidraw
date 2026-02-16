@@ -37,6 +37,7 @@ import {
   isImageElement,
   isLinearElement,
   isLineElement,
+  isTableElement,
   isTextElement,
   LinearElementEditor,
   headingForPoint,
@@ -1946,15 +1947,46 @@ const _renderInteractiveScene = ({
       context.translate(cx, cy);
       context.rotate(element.angle);
 
-      matchedLines.forEach((matchedLine) => {
-        (matchedLine.showOnCanvas || focus) &&
-          context.fillRect(
-            elementX1 + matchedLine.offsetX / zoomFactor - cx,
-            elementY1 + matchedLine.offsetY / zoomFactor - cy,
-            matchedLine.width / zoomFactor,
-            matchedLine.height / zoomFactor,
-          );
-      });
+      if (isTableElement(element)) {
+        // For tables, offsets are in content space — apply crop/scroll transform
+        // and clip to the table's viewport bounds
+        const tableEl = element as any;
+        const cropX = tableEl.cropX || 0;
+        const cropY = tableEl.cropY || 0;
+        const scrollOffsetY = tableEl.scrollOffsetY || 0;
+
+        context.save();
+        // Clip to table viewport
+        context.beginPath();
+        context.rect(
+          elementX1 - cx,
+          elementY1 - cy,
+          element.width,
+          element.height,
+        );
+        context.clip();
+
+        matchedLines.forEach((matchedLine) => {
+          (matchedLine.showOnCanvas || focus) &&
+            context.fillRect(
+              elementX1 + matchedLine.offsetX - cropX - cx,
+              elementY1 + matchedLine.offsetY - cropY - scrollOffsetY - cy,
+              matchedLine.width,
+              matchedLine.height,
+            );
+        });
+        context.restore();
+      } else {
+        matchedLines.forEach((matchedLine) => {
+          (matchedLine.showOnCanvas || focus) &&
+            context.fillRect(
+              elementX1 + matchedLine.offsetX / zoomFactor - cx,
+              elementY1 + matchedLine.offsetY / zoomFactor - cy,
+              matchedLine.width / zoomFactor,
+              matchedLine.height / zoomFactor,
+            );
+        });
+      }
 
       context.restore();
     }

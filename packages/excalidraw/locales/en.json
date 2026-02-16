@@ -207,7 +207,8 @@
     "multipleResults": "results",
     "placeholder": "Find text on canvas...",
     "frames": "Frames",
-    "texts": "Texts"
+    "texts": "Texts",
+    "tables": "Tables"
   },
   "buttons": {
     "clearReset": "Reset the canvas",
