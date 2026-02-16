@@ -141,6 +141,53 @@
     .handsontable {
       font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
       font-size: 14px;
+
+      // ── Replace all Handsontable blue accents with Excalidraw purple ──
+
+      // Selection area overlay (drag-select cells) — #005eff → purple
+      td.area::before,
+      td.area-1::before,
+      td.area-2::before,
+      td.area-3::before,
+      td.area-4::before,
+      td.area-5::before,
+      td.area-6::before,
+      td.area-7::before {
+        background: #6965db !important;
+      }
+
+      // Selection rectangle border — Handsontable sets inline bg via JS
+      .wtBorder {
+        background-color: #6965db !important;
+      }
+
+      // Current cell header highlight — #4b89ff → purple
+      tbody th.current,
+      thead th.current {
+        box-shadow: inset 0 0 0 2px #6965db !important;
+      }
+
+      // Active row/col header — #8eb0e7 → light purple
+      tbody th.ht__active_highlight,
+      thead th.ht__active_highlight {
+        background-color: #d7d5ff !important;
+      }
+
+      // Cell editor input focus — #5292f7 → purple
+      .handsontableInput {
+        box-shadow: 0 0 0 2px #6965db inset !important;
+      }
+
+      // Current row/col subtle highlight
+      td.currentRow,
+      td.currentCol {
+        background-color: rgba(105, 101, 219, 0.08);
+      }
+
+      // Fill handle (autofill drag square)
+      .wtBorder.fill {
+        background-color: #6965db !important;
+      }
     }
   }
 
@@ -327,9 +374,34 @@
         border-color: var(--color-border-outline-variant, #46464f) !important;
       }
 
-      // Selection highlight — visible on dark bg with readable text
-      .area {
-        background: rgba(168, 165, 255, 0.15);
+      // ── Replace all Handsontable blue accents with Excalidraw purple ──
+
+      // Selection area overlay — purple tint
+      td.area::before,
+      td.area-1::before,
+      td.area-2::before,
+      td.area-3::before,
+      td.area-4::before,
+      td.area-5::before,
+      td.area-6::before,
+      td.area-7::before {
+        background: #a8a5ff !important;
+      }
+
+      // Selection rectangle border — purple (NOT bg color — that hides it)
+      .wtBorder {
+        background-color: #a8a5ff !important;
+      }
+
+      // Fill handle
+      .wtBorder.fill {
+        background-color: #a8a5ff !important;
+      }
+
+      // Current cell header highlight — purple
+      tbody th.current,
+      thead th.current {
+        box-shadow: inset 0 0 0 2px #a8a5ff !important;
       }
 
       // Ensure selected cell text is always visible
@@ -344,36 +416,34 @@
         border-color: var(--color-primary, #a8a5ff);
       }
 
-      // Kill any remaining white backgrounds on Handsontable internals.
-      // The master table, borders container, and overlay wrappers can all
-      // leak white in edge cases (around row headers, between cells, etc.).
+      // Kill remaining white backgrounds on Handsontable internals
       .ht_master,
       .ht_master .wtHolder,
       .ht_master .wtHider,
       .ht_master .wtSpreader,
-      .htBorders,
-      .wtBorder {
+      .htBorders {
         background: var(--island-bg-color, #232329);
       }
 
-      // Ensure currentRow / currentCol highlights are visible, not white
+      // currentRow / currentCol highlights — purple tint
       td.currentRow,
       td.currentCol {
         background: rgba(168, 165, 255, 0.08);
         color: var(--color-on-surface, #e3e3e8);
       }
 
-      // Fix text-selection highlight (browser native) — prevent white-on-white
+      // Native text-selection highlight
       td::selection,
       th::selection {
         background: rgba(168, 165, 255, 0.4);
         color: var(--color-on-surface, #e3e3e8);
       }
 
-      // Cell editor
+      // Cell editor — purple focus
       .handsontableInput {
         background: var(--island-bg-color, #232329);
         color: var(--color-on-surface, #e3e3e8);
+        box-shadow: 0 0 0 2px #a8a5ff inset !important;
         border-color: var(--color-primary, #a8a5ff);
 
         &::selection {

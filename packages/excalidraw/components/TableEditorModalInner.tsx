@@ -70,6 +70,9 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     colHeaderH: 26,
   });
 
+  // Bumped on column/row resize to force handle position recalc
+  const [, setResizeTick] = useState(0);
+
   // Track whether the element was empty when the editor opened.
   // If still empty on close, treat as cancel and delete the element.
   const wasEmptyOnOpen = useRef(
@@ -577,34 +580,47 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
             width="100%"
             height="100%"
             licenseKey="non-commercial-and-evaluation"
+            afterColumnResize={() => setResizeTick((n) => n + 1)}
+            afterRowResize={() => setResizeTick((n) => n + 1)}
             afterRender={() => {
-              if (!headerMeasured.current) {
-                const hot = hotRef.current?.hotInstance;
-                if (!hot) {
-                  return;
+              if (headerMeasured.current) {
+                return;
+              }
+              const hot = hotRef.current?.hotInstance;
+              if (!hot) {
+                return;
+              }
+              // Measure column header height from master thead (stable,
+              // unaffected by frozen rows — unlike the corner element).
+              // Measure row header width from a tbody <th> (stable,
+              // unaffected by frozen columns).
+              const masterThead = hot.rootElement?.querySelector(
+                ".ht_master thead",
+              );
+              const rowHeaderCell = hot.rootElement?.querySelector(
+                ".ht_master tbody tr th",
+              );
+              if (
+                masterThead &&
+                (masterThead as HTMLElement).offsetHeight > 0 &&
+                rowHeaderCell &&
+                (rowHeaderCell as HTMLElement).offsetWidth > 0
+              ) {
+                headerMeasured.current = true;
+                setHeaderDims({
+                  rowHeaderW: (rowHeaderCell as HTMLElement).offsetWidth,
+                  colHeaderH: (masterThead as HTMLElement).offsetHeight,
+                });
+                // Capture initial editor dimensions for change detection
+                for (let c = 0; c < INITIAL_COLS; c++) {
+                  initEditorWidths.current.push(
+                    hot.getColWidth(c) || DEFAULT_COL_WIDTH,
+                  );
                 }
-                const corner = hot.rootElement?.querySelector(
-                  ".ht_clone_top_inline_start_corner",
-                );
-                if (corner && (corner as HTMLElement).offsetWidth > 0) {
-                  headerMeasured.current = true;
-                  setHeaderDims({
-                    rowHeaderW: (corner as HTMLElement).offsetWidth,
-                    colHeaderH: (corner as HTMLElement).offsetHeight,
-                  });
-                  // Capture initial editor dimensions for change detection
-                  if (initEditorWidths.current.length === 0) {
-                    for (let c = 0; c < INITIAL_COLS; c++) {
-                      initEditorWidths.current.push(
-                        hot.getColWidth(c) || DEFAULT_COL_WIDTH,
-                      );
-                    }
-                    for (let r = 0; r < INITIAL_ROWS; r++) {
-                      initEditorHeights.current.push(
-                        hot.getRowHeight(r) || DEFAULT_ROW_HEIGHT,
-                      );
-                    }
-                  }
+                for (let r = 0; r < INITIAL_ROWS; r++) {
+                  initEditorHeights.current.push(
+                    hot.getRowHeight(r) || DEFAULT_ROW_HEIGHT,
+                  );
                 }
               }
             }}
