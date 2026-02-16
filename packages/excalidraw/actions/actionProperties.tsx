@@ -3,6 +3,7 @@ import { pointFrom } from "@excalidraw/math";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  COLOR_PALETTE,
   DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE,
   DEFAULT_ELEMENT_BACKGROUND_PICKS,
   DEFAULT_ELEMENT_STROKE_COLOR_PALETTE,
@@ -2365,11 +2366,11 @@ export const actionChangeTableBackgroundColor = register<Record<string, any>>({
       }
     }, [bgOpacity]);
 
-    const { transparent: _t, ...bgPalette } =
+    const { transparent: _t, black: _b, ...bgPalette } =
       DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE;
 
     const bgTopPicks = [
-      DEFAULT_ELEMENT_STROKE_PICKS[0],
+      COLOR_PALETTE.white,
       DEFAULT_ELEMENT_BACKGROUND_PICKS[1],
       DEFAULT_ELEMENT_BACKGROUND_PICKS[2],
       DEFAULT_ELEMENT_BACKGROUND_PICKS[3],
@@ -2493,8 +2494,8 @@ export const actionChangeTableGridColor = register<Record<string, any>>({
       }
     }, [gridOpacity]);
 
-    // Palette without transparent (opacity slider handles transparency)
-    const { transparent: _t, ...gridPalette } =
+    // Palette without transparent or white (opacity slider handles transparency)
+    const { transparent: _t, white: _w, ...gridPalette } =
       DEFAULT_ELEMENT_STROKE_COLOR_PALETTE;
 
     return (
@@ -2614,13 +2615,12 @@ export const actionChangeTableHeaderColor = register<Record<string, any>>({
       }
     }, [headerOpacity]);
 
-    // Palette without transparent (opacity slider handles transparency)
-    const { transparent: _t, ...headerPalette } =
+    // Palette without transparent or black (not useful as header background)
+    const { transparent: _t, black: _b, ...headerPalette } =
       DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE;
 
-    // Top picks: replace transparent with black
     const headerTopPicks = [
-      DEFAULT_ELEMENT_STROKE_PICKS[0],
+      COLOR_PALETTE.white,
       DEFAULT_ELEMENT_BACKGROUND_PICKS[1],
       DEFAULT_ELEMENT_BACKGROUND_PICKS[2],
       DEFAULT_ELEMENT_BACKGROUND_PICKS[3],

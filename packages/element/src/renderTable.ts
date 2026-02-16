@@ -82,17 +82,39 @@ const drawCellRange = (
     ctx.globalAlpha = prevBgAlpha;
   }
 
-  // 2. Header row background — driven by frozen rows
+  // 2. Header background — driven by frozen rows AND frozen columns
+  const frozenCols = element.frozenColumns || 0;
+  const hc = element.headerColor || DEFAULT_HEADER_COLOR;
+  const headerAlpha = (element.headerOpacity ?? 100) / 100;
+
   if (frozenRows > 0 && rowStart === 0 && element.rows > 0) {
-    const hc = element.headerColor || DEFAULT_HEADER_COLOR;
     const prevAlpha = ctx.globalAlpha;
-    ctx.globalAlpha = prevAlpha * ((element.headerOpacity ?? 100) / 100);
+    ctx.globalAlpha = prevAlpha * headerAlpha;
     ctx.fillStyle = isDark ? applyDarkModeFilter(hc) : hc;
     let headerH = 0;
     for (let r = 0; r < Math.min(frozenRows, rowEnd); r++) {
       headerH += rowHeights[r];
     }
     ctx.fillRect(zoneX, 0, zoneW, headerH);
+    ctx.globalAlpha = prevAlpha;
+  }
+
+  // Header column background — driven by frozen columns
+  if (frozenCols > 0 && colStart === 0 && element.columns > 0) {
+    const prevAlpha = ctx.globalAlpha;
+    ctx.globalAlpha = prevAlpha * headerAlpha;
+    ctx.fillStyle = isDark ? applyDarkModeFilter(hc) : hc;
+    let headerW = 0;
+    for (let c = 0; c < Math.min(frozenCols, colEnd); c++) {
+      headerW += columnWidths[c];
+    }
+    // Skip the area already covered by frozen rows to avoid double-fill
+    const skipY = frozenRows > 0 && rowStart === 0
+      ? rowHeights.slice(0, Math.min(frozenRows, rowEnd)).reduce((a, b) => a + b, 0)
+      : 0;
+    if (zoneY + zoneH > skipY) {
+      ctx.fillRect(zoneX, Math.max(zoneY, skipY), headerW, zoneY + zoneH - Math.max(zoneY, skipY));
+    }
     ctx.globalAlpha = prevAlpha;
   }
 
@@ -136,10 +158,12 @@ const drawCellRange = (
   for (let r = rowStart; r < rowEnd; r++) {
     x = zoneX;
     const cellH = rowHeights[r];
-    const isHeader = frozenRows > 0 && r < frozenRows;
-    ctx.font = `${isHeader ? "bold " : ""}${tableFontSize}px ${fontFamilyStr}`;
+    const isHeaderRow = frozenRows > 0 && r < frozenRows;
 
     for (let c = colStart; c < colEnd; c++) {
+      const isHeaderCol = frozenCols > 0 && c < frozenCols;
+      const isBold = isHeaderRow || isHeaderCol;
+      ctx.font = `${isBold ? "bold " : ""}${tableFontSize}px ${fontFamilyStr}`;
       const text = cells[r]?.[c] || "";
       if (text) {
         const cellW = columnWidths[c];
