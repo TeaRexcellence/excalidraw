@@ -22,7 +22,21 @@
   --pm-warning-bg: rgba(250, 204, 21, 0.08);
   --pm-warning-border: rgba(250, 204, 21, 0.3);
   --pm-warning-solid: #eab308;
+  --pm-star: #6965db;
+  --pm-accent-contrast: #fff;
+  --pm-accent-subtle: rgba(105, 101, 219, 0.08);
+  --pm-accent-subtle-border: rgba(105, 101, 219, 0.25);
+  --pm-pulse-color: rgba(105, 101, 219, 0.45);
+}
+
+// ─── Dark Mode Variable Overrides ───────────────────────────────
+.excalidraw.theme--dark {
   --pm-star: #a8a5ff;
+  --pm-accent-contrast: #232329;
+  --pm-ring: 0 0 0 2px rgba(168, 165, 255, 0.25);
+  --pm-accent-subtle: rgba(168, 165, 255, 0.08);
+  --pm-accent-subtle-border: rgba(168, 165, 255, 0.25);
+  --pm-pulse-color: rgba(168, 165, 255, 0.45);
 }
 
 // ─── Project Manager Container ───────────────────────────────────
@@ -108,8 +122,8 @@
     }
 
     &:active:not(:disabled) {
-      background: #a8a5ff;
-      color: #232329;
+      background: var(--color-primary);
+      color: var(--pm-accent-contrast);
       transform: scale(0.92);
     }
 
@@ -273,8 +287,8 @@
     }
 
     &:active {
-      background: #a8a5ff;
-      color: #232329;
+      background: var(--color-primary);
+      color: var(--pm-accent-contrast);
       transform: scale(0.98);
     }
   }
@@ -459,10 +473,10 @@
 
 @keyframes pm-pulse-saved {
   0% {
-    box-shadow: 0 0 0 0 rgba(168, 165, 255, 0.45);
+    box-shadow: 0 0 0 0 var(--pm-pulse-color);
   }
   70% {
-    box-shadow: 0 0 0 8px rgba(168, 165, 255, 0);
+    box-shadow: 0 0 0 8px transparent;
   }
   100% {
     box-shadow: var(--pm-shadow-sm);
@@ -539,9 +553,9 @@
   }
 
   &--drop-target {
-    background: rgba(168, 165, 255, 0.08);
+    background: var(--pm-accent-subtle);
     border-radius: var(--pm-radius-sm);
-    box-shadow: inset 0 0 0 1px rgba(168, 165, 255, 0.25);
+    box-shadow: inset 0 0 0 1px var(--pm-accent-subtle-border);
   }
 
   &--dimmed {
@@ -770,7 +784,7 @@
       color: var(--pm-star);
 
       &:hover {
-        color: #8b87ff;
+        color: var(--color-primary-hover);
       }
     }
 
@@ -784,7 +798,7 @@
       }
 
       &.ProjectCard__favoriteBtn--active:hover {
-        color: #bbb8ff;
+        color: var(--color-primary-hover);
       }
     }
   }
@@ -796,8 +810,8 @@
     left: 50%;
     transform: translate(-50%, -50%);
     padding: 5px 12px;
-    background: #a8a5ff;
-    color: #000;
+    background: var(--color-primary);
+    color: var(--pm-accent-contrast);
     font-size: 0.6875rem;
     font-weight: 600;
     border-radius: var(--pm-radius-sm);
@@ -1022,23 +1036,23 @@
     }
 
     &:active {
-      background: #a8a5ff;
-      color: #232329;
+      background: var(--color-primary);
+      color: var(--pm-accent-contrast);
       transform: scale(0.96);
     }
 
     &--active {
-      background: #a8a5ff;
-      color: #fff;
+      background: var(--color-primary);
+      color: var(--pm-accent-contrast);
       font-weight: 600;
 
       .CategoryBar__pill__star {
-        color: #fff;
+        color: var(--pm-accent-contrast);
       }
 
       &:hover {
-        background: #a8a5ff;
-        color: #fff;
+        background: var(--color-primary);
+        color: var(--pm-accent-contrast);
         opacity: 0.88;
       }
     }
@@ -1151,16 +1165,6 @@
 .excalidraw.theme--dark .CategoryBar {
   &__scroll button {
     background: #232329;
-  }
-
-  .CategoryBar__pill--active,
-  .CategoryBar__pill--active:hover {
-    background: #a8a5ff;
-    color: #232329;
-
-    .CategoryBar__pill__star {
-      color: #232329;
-    }
   }
 
   &__fadeLeft {
