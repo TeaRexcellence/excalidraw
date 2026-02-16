@@ -345,8 +345,6 @@
   },
   "documentDialog": {
     "insertTitle": "Insert Document",
-    "displayAsCodeBlock": "Display as Code Block",
-    "displayAsThumbnail": "Display as Thumbnail Card",
     "selectFile": "Select a file...",
     "viewerTitle": "Document Viewer",
     "edit": "Edit",
