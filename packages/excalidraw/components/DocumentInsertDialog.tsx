@@ -134,7 +134,7 @@ export const DocumentInsertDialog: React.FC<DocumentInsertDialogProps> = ({
 
     const element = newCodeBlockElement({
       x: viewportCenterX - 200,
-      y: viewportCenterY - 125,
+      y: viewportCenterY - 225,
       code: file.fileContent,
       language,
       showLineNumbers: true,

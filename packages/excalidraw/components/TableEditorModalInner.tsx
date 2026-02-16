@@ -133,21 +133,23 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
       newCells.push(row);
     }
 
-    // Read column widths (only for used columns)
+    // Preserve the element's existing canvas-sized column widths / row heights.
+    // The Handsontable editor uses its own larger UI sizes (120/36) which must
+    // NOT be written back — only the cell data matters.
+    const CANVAS_COL_WIDTH = 40;
+    const CANVAS_ROW_HEIGHT = 14;
+
     const newColumnWidths: number[] = [];
     for (let c = 0; c < usedCols; c++) {
-      const w = hot.getColWidth(c);
       newColumnWidths.push(
-        typeof w === "number" && w > 0 ? w : DEFAULT_COL_WIDTH,
+        c < element.columnWidths.length ? element.columnWidths[c] : CANVAS_COL_WIDTH,
       );
     }
 
-    // Read row heights (only for used rows)
     const newRowHeights: number[] = [];
     for (let r = 0; r < usedRows; r++) {
-      const h = hot.getRowHeight(r);
       newRowHeights.push(
-        typeof h === "number" && h > 0 ? h : DEFAULT_ROW_HEIGHT,
+        r < element.rowHeights.length ? element.rowHeights[r] : CANVAS_ROW_HEIGHT,
       );
     }
 
@@ -156,7 +158,7 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
 
     // Cap viewport to reasonable defaults — content stays full-size and scrollable
     const MAX_VIEWPORT_W = 400;
-    const MAX_VIEWPORT_H = 300;
+    const MAX_VIEWPORT_H = 450;
     const newWidth = Math.min(contentWidth, MAX_VIEWPORT_W);
     const newHeight = Math.min(contentHeight, MAX_VIEWPORT_H);
 

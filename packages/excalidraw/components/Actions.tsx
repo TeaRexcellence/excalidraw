@@ -1135,8 +1135,8 @@ export const ShapesSwitcher = ({
       icon: TableIcon,
       label: t("toolBar.table"),
       action: () => {
-        const DEFAULT_CELL_WIDTH = 120;
-        const DEFAULT_CELL_HEIGHT = 36;
+        const DEFAULT_CELL_WIDTH = 40;
+        const DEFAULT_CELL_HEIGHT = 14;
         const cols = 3;
         const rows = 3;
         const colWidths = Array(cols).fill(DEFAULT_CELL_WIDTH);
@@ -1194,7 +1194,7 @@ export const ShapesSwitcher = ({
 
         const element = newCodeBlockElement({
           x: viewportCenterX - 200,
-          y: viewportCenterY - 125,
+          y: viewportCenterY - 225,
           code: "",
           language: "plaintext",
           showLineNumbers: true,

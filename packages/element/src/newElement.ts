@@ -550,15 +550,15 @@ export const newImageElement = (
   };
 };
 
-export const DEFAULT_TABLE_CELL_WIDTH = 150;
-export const DEFAULT_TABLE_CELL_HEIGHT = 44;
+export const DEFAULT_TABLE_CELL_WIDTH = 50;
+export const DEFAULT_TABLE_CELL_HEIGHT = 14;
 export const DEFAULT_TABLE_FONT_SIZE = 16;
 export const DEFAULT_TABLE_CELL_PADDING = 8;
 
 // Soft max viewport dimensions for initial element creation.
 // Content beyond these bounds is scrollable — user can resize/crop to reveal more.
 const DEFAULT_MAX_VIEWPORT_WIDTH = 400;
-const DEFAULT_MAX_VIEWPORT_HEIGHT = 300;
+const DEFAULT_MAX_VIEWPORT_HEIGHT = 315;
 
 export const newTableElement = (
   opts: {
@@ -590,9 +590,9 @@ export const newTableElement = (
     0,
   );
 
-  // Cap viewport to reasonable defaults — content remains full-size and scrollable
-  const width = Math.min(contentWidth, DEFAULT_MAX_VIEWPORT_WIDTH);
-  const height = Math.min(contentHeight, DEFAULT_MAX_VIEWPORT_HEIGHT);
+  // Use viewport defaults for a generous initial crop — content stays small inside
+  const width = opts.width || DEFAULT_MAX_VIEWPORT_WIDTH;
+  const height = opts.height || DEFAULT_MAX_VIEWPORT_HEIGHT;
 
   return {
     ..._newElementBase<ExcalidrawTableElement>("table", {
@@ -620,7 +620,7 @@ export const newCodeBlockElement = (
     showLineNumbers?: boolean;
   } & ElementConstructorOpts,
 ): NonDeleted<ExcalidrawCodeBlockElement> => {
-  const fontSize = 13;
+  const fontSize = 6;
   const code = opts.code ?? "";
 
   // Derive natural content height from code lines
@@ -631,9 +631,10 @@ export const newCodeBlockElement = (
   const lineCount = code.split("\n").length;
   const contentHeight = headerHeight + padding + lineCount * lineHeight + padding;
 
-  // Use content height if it fits, otherwise cap at viewport max
+  // Default to full viewport size for a document-shaped initial appearance;
+  // content scrolls inside. When inserting a file, use content height if it fits.
   const width = opts.width || 400;
-  const height = opts.height || Math.min(contentHeight, DEFAULT_MAX_VIEWPORT_HEIGHT);
+  const height = opts.height || Math.max(contentHeight, DEFAULT_MAX_VIEWPORT_HEIGHT);
 
   return {
     ..._newElementBase<ExcalidrawCodeBlockElement>("codeblock", {
