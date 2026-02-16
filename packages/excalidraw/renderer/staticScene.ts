@@ -65,8 +65,10 @@ const strokeGrid = (
   theme: StaticCanvasRenderConfig["theme"],
   width: number,
   height: number,
-  /** grid opacity 0-100 */
+  /** major grid opacity 0-100 */
   opacity: number = 100,
+  /** minor grid opacity 0-100 */
+  minorOpacity: number = 100,
   /** grid visual style */
   gridType: "line" | "dot" = "line",
 ) => {
@@ -76,7 +78,6 @@ const strokeGrid = (
   const actualGridSize = gridSize * zoom.value;
 
   context.save();
-  context.globalAlpha = opacity / 100;
 
   if (gridType === "dot") {
     // Dot grid: draw circles at each grid intersection
@@ -98,6 +99,8 @@ const strokeGrid = (
         if (!isBold && actualGridSize < 10) {
           continue;
         }
+
+        context.globalAlpha = (isBold ? opacity : minorOpacity) / 100;
 
         const radius = isBold
           ? Math.min(2.5 / zoom.value, 4)
@@ -135,6 +138,8 @@ const strokeGrid = (
       continue;
     }
 
+    context.globalAlpha = (isBold ? opacity : minorOpacity) / 100;
+
     const lineWidth = Math.min(1 / zoom.value, isBold ? 4 : 1);
     context.lineWidth = lineWidth;
     const lineDash = [lineWidth * 3, spaceWidth + (lineWidth + spaceWidth)];
@@ -155,6 +160,8 @@ const strokeGrid = (
     if (!isBold && actualGridSize < 10) {
       continue;
     }
+
+    context.globalAlpha = (isBold ? opacity : minorOpacity) / 100;
 
     const lineWidth = Math.min(1 / zoom.value, isBold ? 4 : 1);
     context.lineWidth = lineWidth;
@@ -316,6 +323,7 @@ const _renderStaticScene = ({
       normalizedWidth / appState.zoom.value,
       normalizedHeight / appState.zoom.value,
       appState.gridOpacity,
+      appState.gridMinorOpacity,
       appState.gridType,
     );
   }

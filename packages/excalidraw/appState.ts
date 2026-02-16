@@ -74,6 +74,7 @@ export const getDefaultAppState = (): Omit<
     gridModeEnabled: !isTestEnv(),
     gridType: "line" as const,
     gridOpacity: 100,
+    gridMinorOpacity: 100,
     isBindingEnabled: true,
     defaultSidebarDockedPreference: false,
     isLoading: false,
@@ -198,6 +199,7 @@ const APP_STATE_STORAGE_CONF = (<
   gridModeEnabled: { browser: true, export: true, server: true },
   gridType: { browser: true, export: true, server: true },
   gridOpacity: { browser: true, export: true, server: true },
+  gridMinorOpacity: { browser: true, export: true, server: true },
   height: { browser: false, export: false, server: false },
   isBindingEnabled: { browser: false, export: false, server: false },
   defaultSidebarDockedPreference: {

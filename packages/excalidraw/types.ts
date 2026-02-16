@@ -207,6 +207,7 @@ export type StaticCanvasAppState = Readonly<
     gridStep: AppState["gridStep"];
     gridType: AppState["gridType"];
     gridOpacity: AppState["gridOpacity"];
+    gridMinorOpacity: AppState["gridMinorOpacity"];
     frameRendering: AppState["frameRendering"];
     currentHoveredFontFamily: AppState["currentHoveredFontFamily"];
     hoveredElementIds: AppState["hoveredElementIds"];
@@ -426,8 +427,10 @@ export interface AppState {
   gridModeEnabled: boolean;
   /** grid visual style */
   gridType: "line" | "dot";
-  /** grid opacity 0-100 */
+  /** major grid opacity 0-100 */
   gridOpacity: number;
+  /** minor grid opacity 0-100 */
+  gridMinorOpacity: number;
   viewModeEnabled: boolean;
 
   /** top-most selected groups (i.e. does not include nested groups) */
@@ -619,6 +622,7 @@ export interface ExcalidrawProps {
   zenModeEnabled?: boolean;
   gridModeEnabled?: boolean;
   gridOpacity?: number;
+  gridMinorOpacity?: number;
   objectsSnapModeEnabled?: boolean;
   libraryReturnUrl?: string;
   theme?: Theme;

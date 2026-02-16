@@ -257,13 +257,19 @@
       padding: 0.25rem;
     }
 
+    .grid-opacity-sliders-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 0.3rem;
+    }
+
     .grid-opacity-vertical-slider {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: var(--lg-button-size);
       height: 4rem;
-      padding: 0.375rem 0;
+      padding: 0.375rem 0.25rem;
 
       .range-input {
         writing-mode: vertical-lr;

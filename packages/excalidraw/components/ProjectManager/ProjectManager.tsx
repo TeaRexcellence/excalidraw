@@ -1748,6 +1748,7 @@ export const ProjectManager: React.FC = () => {
               gridModeEnabled: app.state.gridModeEnabled,
               gridType: app.state.gridType,
               gridOpacity: app.state.gridOpacity,
+              gridMinorOpacity: app.state.gridMinorOpacity,
               viewBackgroundColor: app.state.viewBackgroundColor,
               name: "",
             },

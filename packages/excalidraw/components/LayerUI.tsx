@@ -175,14 +175,23 @@ const GridTypeDropdown = ({
   actionManager: ActionManager;
 }) => {
   const [hiddenDropdown, setHiddenDropdown] = React.useState(false);
-  const sliderRef = React.useRef<HTMLInputElement>(null);
+  const majorSliderRef = React.useRef<HTMLInputElement>(null);
+  const minorSliderRef = React.useRef<HTMLInputElement>(null);
 
   const gridOpacity = appState.gridOpacity;
+  const gridMinorOpacity = appState.gridMinorOpacity;
+
   React.useEffect(() => {
-    if (sliderRef.current) {
-      sliderRef.current.style.background = `linear-gradient(to top, var(--color-slider-track) 0%, var(--color-slider-track) ${gridOpacity}%, var(--button-bg, var(--color-surface-mid)) ${gridOpacity}%, var(--button-bg, var(--color-surface-mid)) 100%)`;
+    if (majorSliderRef.current) {
+      majorSliderRef.current.style.background = `linear-gradient(to top, var(--color-slider-track) 0%, var(--color-slider-track) ${gridOpacity}%, var(--button-bg, var(--color-surface-mid)) ${gridOpacity}%, var(--button-bg, var(--color-surface-mid)) 100%)`;
     }
   }, [gridOpacity]);
+
+  React.useEffect(() => {
+    if (minorSliderRef.current) {
+      minorSliderRef.current.style.background = `linear-gradient(to top, var(--color-slider-track) 0%, var(--color-slider-track) ${gridMinorOpacity}%, var(--button-bg, var(--color-surface-mid)) ${gridMinorOpacity}%, var(--button-bg, var(--color-surface-mid)) 100%)`;
+    }
+  }, [gridMinorOpacity]);
 
   const currentType =
     GRID_TYPES.find((g) => g.type === appState.gridType) || GRID_TYPES[0];
@@ -237,23 +246,43 @@ const GridTypeDropdown = ({
               }}
             />
           ))}
-          <div
-            className="grid-opacity-vertical-slider"
-            title={t("labels.gridOpacity")}
-          >
-            <input
-              ref={sliderRef}
-              type="range"
-              min="10"
-              max="100"
-              step="10"
-              value={appState.gridOpacity}
-              onChange={(e) => {
-                setAppState({ gridOpacity: +e.target.value });
-              }}
-              className="range-input"
-              data-testid="grid-opacity-slider"
-            />
+          <div className="grid-opacity-sliders-row">
+            <div
+              className="grid-opacity-vertical-slider"
+              title={t("labels.gridOpacity")}
+            >
+              <input
+                ref={majorSliderRef}
+                type="range"
+                min="10"
+                max="100"
+                step="10"
+                value={appState.gridOpacity}
+                onChange={(e) => {
+                  setAppState({ gridOpacity: +e.target.value });
+                }}
+                className="range-input"
+                data-testid="grid-opacity-slider"
+              />
+            </div>
+            <div
+              className="grid-opacity-vertical-slider"
+              title={t("labels.gridMinorOpacity")}
+            >
+              <input
+                ref={minorSliderRef}
+                type="range"
+                min="10"
+                max="100"
+                step="10"
+                value={appState.gridMinorOpacity}
+                onChange={(e) => {
+                  setAppState({ gridMinorOpacity: +e.target.value });
+                }}
+                className="range-input"
+                data-testid="grid-minor-opacity-slider"
+              />
+            </div>
           </div>
         </div>
       </div>
