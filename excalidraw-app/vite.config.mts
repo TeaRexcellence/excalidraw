@@ -555,7 +555,7 @@ function projectFilePlugin(): Plugin {
           return;
         }
 
-        // Import project from zip
+        // Import project from zip or JSON/excalidraw file
         if (req.method === "POST" && urlPath === "/api/projects/import") {
           const chunks: Buffer[] = [];
 
@@ -563,91 +563,129 @@ function projectFilePlugin(): Plugin {
           req.on("end", async () => {
             try {
               const buffer = Buffer.concat(chunks);
-
-              // Use dynamic import for extract-zip (ESM module)
-              const { default: extract } = await import("extract-zip");
-
-              // Create temp file for the zip
-              const tempDir = path.join(projectsDir, ".temp");
-              if (!fs.existsSync(tempDir)) {
-                fs.mkdirSync(tempDir, { recursive: true });
-              }
-
-              const tempZipPath = path.join(tempDir, `import-${Date.now()}.zip`);
-              fs.writeFileSync(tempZipPath, buffer);
-
-              // Extract to temp extraction folder
-              const extractDir = path.join(tempDir, `extract-${Date.now()}`);
-              fs.mkdirSync(extractDir, { recursive: true });
-
-              await extract(tempZipPath, { dir: extractDir });
-
-              // Find the project folder (should be the only folder in extractDir)
-              const extractedItems = fs.readdirSync(extractDir);
-              let projectFolder = extractDir;
-
-              // If there's a single folder, use that as the project folder
-              if (extractedItems.length === 1) {
-                const singleItem = path.join(extractDir, extractedItems[0]);
-                if (fs.statSync(singleItem).isDirectory()) {
-                  projectFolder = singleItem;
-                }
-              }
-
-              // Verify it has a scene.excalidraw file
-              const scenePath = path.join(projectFolder, "scene.excalidraw");
-              if (!fs.existsSync(scenePath)) {
-                // Clean up
-                fs.rmSync(tempDir, { recursive: true, force: true });
-                res.statusCode = 400;
-                res.end(JSON.stringify({ error: "Invalid project: missing scene.excalidraw" }));
-                return;
-              }
-
-              // Generate new project ID and determine name
               const { nanoid } = await import("nanoid");
-              const newProjectId = nanoid(10);
-              const folderName = path.basename(projectFolder);
-              let projectTitle = folderName;
 
-              // Check if project with same name exists, append number if so
-              const index = getIndex();
-              let counter = 1;
-              let finalTitle = projectTitle;
-              while (index.projects.some((p: any) => p.title === finalTitle)) {
-                finalTitle = `${projectTitle} (${counter})`;
-                counter++;
+              // Parse filename from query string for project title
+              const reqUrl = new URL(req.url!, `http://${req.headers.host}`);
+              const filenameParam = reqUrl.searchParams.get("filename") || "";
+
+              // Detect file type: ZIP files start with PK magic bytes (0x50 0x4B)
+              const isZip = buffer.length >= 2 && buffer[0] === 0x50 && buffer[1] === 0x4b;
+
+              if (isZip) {
+                // ── ZIP import ──
+                const { default: extract } = await import("extract-zip");
+
+                const tempDir = path.join(projectsDir, ".temp");
+                if (!fs.existsSync(tempDir)) {
+                  fs.mkdirSync(tempDir, { recursive: true });
+                }
+
+                const tempZipPath = path.join(tempDir, `import-${Date.now()}.zip`);
+                fs.writeFileSync(tempZipPath, buffer);
+
+                const extractDir = path.join(tempDir, `extract-${Date.now()}`);
+                fs.mkdirSync(extractDir, { recursive: true });
+
+                await extract(tempZipPath, { dir: extractDir });
+
+                const extractedItems = fs.readdirSync(extractDir);
+                let projectFolder = extractDir;
+
+                if (extractedItems.length === 1) {
+                  const singleItem = path.join(extractDir, extractedItems[0]);
+                  if (fs.statSync(singleItem).isDirectory()) {
+                    projectFolder = singleItem;
+                  }
+                }
+
+                const scenePath = path.join(projectFolder, "scene.excalidraw");
+                if (!fs.existsSync(scenePath)) {
+                  fs.rmSync(tempDir, { recursive: true, force: true });
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: "Invalid project: missing scene.excalidraw" }));
+                  return;
+                }
+
+                const newProjectId = nanoid(10);
+                const folderName = path.basename(projectFolder);
+                let projectTitle = folderName;
+
+                const index = getIndex();
+                let counter = 1;
+                let finalTitle = projectTitle;
+                while (index.projects.some((p: any) => p.title === finalTitle)) {
+                  finalTitle = `${projectTitle} (${counter})`;
+                  counter++;
+                }
+                projectTitle = finalTitle;
+
+                const safeTitle = sanitizeFolderName(projectTitle);
+                const targetDir = path.join(projectsDir, newProjectId, safeTitle);
+                fs.mkdirSync(targetDir, { recursive: true });
+
+                fs.cpSync(projectFolder, targetDir, { recursive: true });
+
+                index.projects.push({
+                  id: newProjectId,
+                  title: projectTitle,
+                  groupId: null,
+                  createdAt: Date.now(),
+                  updatedAt: Date.now(),
+                });
+                fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
+
+                fs.rmSync(tempDir, { recursive: true, force: true });
+
+                res.setHeader("Content-Type", "application/json");
+                res.end(JSON.stringify({ success: true, projectId: newProjectId, title: projectTitle }));
+              } else {
+                // ── JSON/Excalidraw file import ──
+                let jsonStr: string;
+                try {
+                  jsonStr = buffer.toString("utf-8");
+                  const data = JSON.parse(jsonStr);
+                  if (data.type !== "excalidraw") {
+                    res.statusCode = 400;
+                    res.end(JSON.stringify({ error: "Invalid file: not an Excalidraw file" }));
+                    return;
+                  }
+                } catch {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: "Invalid file: could not parse as JSON or ZIP" }));
+                  return;
+                }
+
+                const newProjectId = nanoid(10);
+
+                let projectTitle = filenameParam.replace(/\.(excalidraw|json)$/i, "") || "Imported Project";
+
+                const index = getIndex();
+                let counter = 1;
+                let finalTitle = projectTitle;
+                while (index.projects.some((p: any) => p.title === finalTitle)) {
+                  finalTitle = `${projectTitle} (${counter++})`;
+                }
+                projectTitle = finalTitle;
+
+                const targetDir = path.join(projectsDir, newProjectId, sanitizeFolderName(projectTitle));
+                fs.mkdirSync(targetDir, { recursive: true });
+                fs.writeFileSync(path.join(targetDir, "scene.excalidraw"), jsonStr);
+
+                index.projects.push({
+                  id: newProjectId,
+                  title: projectTitle,
+                  groupId: null,
+                  createdAt: Date.now(),
+                  updatedAt: Date.now(),
+                });
+                fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
+
+                res.setHeader("Content-Type", "application/json");
+                res.end(JSON.stringify({ success: true, projectId: newProjectId, title: projectTitle }));
               }
-              projectTitle = finalTitle;
-
-              // Create {id}/{title}/ structure
-              const safeTitle = sanitizeFolderName(projectTitle);
-              const targetDir = path.join(projectsDir, newProjectId, safeTitle);
-              fs.mkdirSync(targetDir, { recursive: true });
-
-              // Copy files to target (use copy instead of rename for cross-device compatibility)
-              fs.cpSync(projectFolder, targetDir, { recursive: true });
-
-              // Add to index
-              const newProject = {
-                id: newProjectId,
-                title: projectTitle,
-                groupId: null,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-              };
-
-              index.projects.push(newProject);
-              fs.writeFileSync(indexPath, JSON.stringify(index, null, 2));
-
-              // Clean up temp files
-              fs.rmSync(tempDir, { recursive: true, force: true });
-
-              res.setHeader("Content-Type", "application/json");
-              res.end(JSON.stringify({ success: true, projectId: newProjectId, title: projectTitle }));
             } catch (err) {
               console.error("Failed to import project:", err);
-              // Clean up temp on error
               const tempDir = path.join(projectsDir, ".temp");
               if (fs.existsSync(tempDir)) {
                 fs.rmSync(tempDir, { recursive: true, force: true });
@@ -850,16 +888,25 @@ function videoFilePlugin(): Plugin {
         // Handle video deletion
         if (req.method === "DELETE" && req.url?.startsWith("/api/videos/")) {
           const urlPath = decodeURIComponent(req.url.replace("/api/videos/", ""));
-          // Support both old format (videos/projectId/file) and new format (projects/category/project/videos/file)
-          let filePath: string;
+          let filePath: string | null;
           if (urlPath.startsWith("projects/")) {
-            filePath = path.join(publicDir, urlPath);
+            // New format: projects/{projectId}/videos/{filename}
+            const parts = urlPath.replace(/^projects\//, "").split("/");
+            const projectId = parts[0];
+            const rest = parts.slice(1).join("/");
+            const projectDir = getProjectPath(projectId);
+            filePath = projectDir ? path.join(projectDir, rest) : null;
           } else {
             // Legacy: old videos folder
             filePath = path.join(publicDir, "videos", urlPath);
           }
 
           // Prevent path traversal — ensure resolved path stays within publicDir
+          if (!filePath) {
+            res.statusCode = 404;
+            res.end(JSON.stringify({ error: "Project not found" }));
+            return;
+          }
           const resolved = path.resolve(filePath);
           if (!resolved.startsWith(path.resolve(publicDir))) {
             res.statusCode = 403;

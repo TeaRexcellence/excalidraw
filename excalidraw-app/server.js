@@ -260,9 +260,14 @@ async function handleAPI(req, res, urlPath) {
   const previewMatch = urlPath.match(/^\/api\/projects\/([^/]+)\/preview$/);
   if (req.method === "POST" && previewMatch) {
     const projectId = previewMatch[1];
-    const projectDir = getProjectPath(projectId);
-    if (!projectDir)
-      return json(res, { error: "Project not found" }, 404);
+    let projectDir = getProjectPath(projectId);
+    if (!projectDir) {
+      // ID folder doesn't exist yet — create {id}/{title}/ structure
+      const index = getIndex();
+      const project = index.projects.find((p) => p.id === projectId);
+      if (!project) return json(res, { error: "Project not found" }, 404);
+      projectDir = path.join(PROJECTS_DIR, projectId, sanitizeFolderName(project.title));
+    }
     if (!fs.existsSync(projectDir))
       fs.mkdirSync(projectDir, { recursive: true });
     const buffer = await readBody(req);
