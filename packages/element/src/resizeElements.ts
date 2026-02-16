@@ -939,9 +939,9 @@ export const resizeSingleElement = (
       (updates as any).columnWidths = newColWidths;
       (updates as any).rowHeights = newRowHeights;
 
-      // Scale fontSize proportionally with the resize (like code blocks do)
+      // Scale fontSize with row heights (scaleY) so text always fits cells
       const origFontSize = origElement.fontSize || 8;
-      const newFontSize = Math.max(1, origFontSize * scaleX);
+      const newFontSize = Math.max(1, origFontSize * scaleY);
       (updates as any).fontSize = newFontSize;
       const newContentWidth = newColWidths.reduce(
         (s: number, w: number) => s + w,

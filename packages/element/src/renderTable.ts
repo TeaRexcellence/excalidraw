@@ -16,10 +16,11 @@ const FONT_RATIO = 0.44;
 // Padding scales with font size
 const PADDING_RATIO = 0.5;
 
-const SCROLLBAR_WIDTH = 6;
+const BASE_SCROLLBAR_WIDTH = 3;
+const MIN_SCROLLBAR_WIDTH = 2;
 const SCROLLBAR_MIN_HEIGHT = 20;
-const SCROLLBAR_COLOR_LIGHT = "rgba(0,0,0,0.25)";
-const SCROLLBAR_COLOR_DARK = "rgba(255,255,255,0.3)";
+const SCROLLBAR_COLOR_LIGHT = "rgba(0,0,0,0.12)";
+const SCROLLBAR_COLOR_DARK = "rgba(255,255,255,0.15)";
 
 const getFontSize = (rowHeight: number): number => {
   return Math.max(
@@ -116,20 +117,31 @@ export const drawTableOnCanvas = (
   context.fillStyle = strokeColor;
   context.textBaseline = "middle";
 
+  // Compute a single uniform font size for the whole table.
+  // If element.fontSize is set, use it but clamp to the smallest row so text
+  // always fits. Otherwise derive from the smallest row height.
+  const minRowH = Math.min(...rowHeights);
+  const tableFontSize = element.fontSize
+    ? Math.min(element.fontSize, minRowH * 0.85)
+    : getFontSize(minRowH);
+  // Scale scrollbar with font size (base 8px = default), min 2px
+  const scrollbarWidth = Math.max(
+    MIN_SCROLLBAR_WIDTH,
+    BASE_SCROLLBAR_WIDTH * (tableFontSize / 8),
+  );
+  const fontFamilyStr = element.fontFamily
+    ? getFontFamilyString({ fontFamily: element.fontFamily })
+    : "Virgil, Segoe UI Emoji";
+
   y = 0;
   for (let r = 0; r < rows; r++) {
     x = 0;
     const cellH = rowHeights[r];
-    const fontSize = getFontSize(cellH);
+    const fontSize = tableFontSize;
     const cellPadding = Math.max(4, fontSize * PADDING_RATIO);
     const isHeader = headerRow && r === 0;
 
-    const fontFamilyStr = element.fontFamily
-      ? getFontFamilyString({ fontFamily: element.fontFamily })
-      : "Virgil, Segoe UI Emoji";
-    const font = `${
-      isHeader ? "bold " : ""
-    }${element.fontSize || fontSize}px ${fontFamilyStr}`;
+    const font = `${isHeader ? "bold " : ""}${fontSize}px ${fontFamilyStr}`;
     context.font = font;
 
     // Skip rows entirely above the visible area for performance
@@ -201,25 +213,25 @@ export const drawTableOnCanvas = (
     const thumbY = scrollRatio * (viewHeight - thumbHeight);
 
     context.fillStyle = isDark ? SCROLLBAR_COLOR_DARK : SCROLLBAR_COLOR_LIGHT;
-    const radius = SCROLLBAR_WIDTH / 2;
-    const sbX = viewWidth - SCROLLBAR_WIDTH - 2;
+    const radius = scrollbarWidth / 2;
+    const sbX = viewWidth - scrollbarWidth - 2;
 
     // Rounded rect for scrollbar thumb
     context.beginPath();
     context.moveTo(sbX + radius, thumbY);
-    context.lineTo(sbX + SCROLLBAR_WIDTH - radius, thumbY);
+    context.lineTo(sbX + scrollbarWidth - radius, thumbY);
     context.arcTo(
-      sbX + SCROLLBAR_WIDTH,
+      sbX + scrollbarWidth,
       thumbY,
-      sbX + SCROLLBAR_WIDTH,
+      sbX + scrollbarWidth,
       thumbY + radius,
       radius,
     );
-    context.lineTo(sbX + SCROLLBAR_WIDTH, thumbY + thumbHeight - radius);
+    context.lineTo(sbX + scrollbarWidth, thumbY + thumbHeight - radius);
     context.arcTo(
-      sbX + SCROLLBAR_WIDTH,
+      sbX + scrollbarWidth,
       thumbY + thumbHeight,
-      sbX + SCROLLBAR_WIDTH - radius,
+      sbX + scrollbarWidth - radius,
       thumbY + thumbHeight,
       radius,
     );
