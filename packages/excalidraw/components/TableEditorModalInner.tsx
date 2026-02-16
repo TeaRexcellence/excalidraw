@@ -133,24 +133,38 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
       newCells.push(row);
     }
 
-    // Preserve the element's existing canvas-sized column widths / row heights.
-    // The Handsontable editor uses its own larger UI sizes (120/36) which must
-    // NOT be written back — only the cell data matters.
+    // Map editor sizes back to canvas sizes.
+    // The editor displays each column at getColWidth() and rows at DEFAULT_ROW_HEIGHT.
+    // If the user resized a column/row in the editor, we detect the change ratio
+    // and apply it to the canvas size so the user's resizing is preserved.
     const CANVAS_COL_WIDTH = 40;
     const CANVAS_ROW_HEIGHT = 14;
 
     const newColumnWidths: number[] = [];
     for (let c = 0; c < usedCols; c++) {
-      newColumnWidths.push(
-        c < element.columnWidths.length ? element.columnWidths[c] : CANVAS_COL_WIDTH,
-      );
+      // What the editor initially showed for this column
+      const editorInitialWidth =
+        c < element.columnWidths.length
+          ? Math.max(element.columnWidths[c] || DEFAULT_COL_WIDTH, 50)
+          : DEFAULT_COL_WIDTH;
+      // What Handsontable has now (after user may have resized)
+      const editorCurrentWidth = hot.getColWidth(c) || editorInitialWidth;
+      // The canvas size for this column
+      const canvasWidth =
+        c < element.columnWidths.length ? element.columnWidths[c] : CANVAS_COL_WIDTH;
+      // Apply the ratio of editor change to the canvas size
+      const ratio = editorCurrentWidth / editorInitialWidth;
+      newColumnWidths.push(Math.max(1, canvasWidth * ratio));
     }
 
     const newRowHeights: number[] = [];
     for (let r = 0; r < usedRows; r++) {
-      newRowHeights.push(
-        r < element.rowHeights.length ? element.rowHeights[r] : CANVAS_ROW_HEIGHT,
-      );
+      const editorInitialHeight = DEFAULT_ROW_HEIGHT;
+      const editorCurrentHeight = hot.getRowHeight(r) || editorInitialHeight;
+      const canvasHeight =
+        r < element.rowHeights.length ? element.rowHeights[r] : CANVAS_ROW_HEIGHT;
+      const ratio = editorCurrentHeight / editorInitialHeight;
+      newRowHeights.push(Math.max(1, canvasHeight * ratio));
     }
 
     const contentWidth = newColumnWidths.reduce((s, w) => s + w, 0);

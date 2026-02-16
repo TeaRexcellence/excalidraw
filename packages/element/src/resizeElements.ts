@@ -938,6 +938,11 @@ export const resizeSingleElement = (
       );
       (updates as any).columnWidths = newColWidths;
       (updates as any).rowHeights = newRowHeights;
+
+      // Scale fontSize proportionally with the resize (like code blocks do)
+      const origFontSize = origElement.fontSize || 8;
+      const newFontSize = Math.max(1, origFontSize * scaleX);
+      (updates as any).fontSize = newFontSize;
       const newContentWidth = newColWidths.reduce(
         (s: number, w: number) => s + w,
         0,

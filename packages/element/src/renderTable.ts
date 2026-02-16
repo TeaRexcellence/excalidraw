@@ -1,4 +1,4 @@
-import { THEME, applyDarkModeFilter } from "@excalidraw/common";
+import { THEME, applyDarkModeFilter, getFontFamilyString } from "@excalidraw/common";
 
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
 
@@ -124,9 +124,12 @@ export const drawTableOnCanvas = (
     const cellPadding = Math.max(4, fontSize * PADDING_RATIO);
     const isHeader = headerRow && r === 0;
 
+    const fontFamilyStr = element.fontFamily
+      ? getFontFamilyString({ fontFamily: element.fontFamily })
+      : "Virgil, Segoe UI Emoji";
     const font = `${
       isHeader ? "bold " : ""
-    }${fontSize}px Virgil, Segoe UI Emoji`;
+    }${element.fontSize || fontSize}px ${fontFamilyStr}`;
     context.font = font;
 
     // Skip rows entirely above the visible area for performance

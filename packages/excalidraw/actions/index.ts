@@ -19,6 +19,8 @@ export {
   actionChangeTextAlign,
   actionChangeVerticalAlign,
   actionChangeArrowProperties,
+  actionChangeTableCodeBlockFontSize,
+  actionChangeTableCodeBlockFontFamily,
 } from "./actionProperties";
 
 export {

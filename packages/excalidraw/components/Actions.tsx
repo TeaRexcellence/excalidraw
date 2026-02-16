@@ -18,6 +18,8 @@ import {
   isLinearElement,
   isTextElement,
   isArrowElement,
+  isTableElement,
+  isCodeBlockElement,
   hasStrokeColor,
   toolIsArrow,
   newTableElement,
@@ -243,6 +245,15 @@ export const SelectedShapeActions = ({
           {(appState.activeTool.type === "text" ||
             suppportsHorizontalAlign(targetElements, elementsMap)) &&
             renderAction("changeTextAlign")}
+        </>
+      )}
+
+      {targetElements.some(
+        (el) => isTableElement(el) || isCodeBlockElement(el),
+      ) && (
+        <>
+          {renderAction("changeTableCodeBlockFontFamily")}
+          {renderAction("changeTableCodeBlockFontSize")}
         </>
       )}
 
@@ -876,6 +887,20 @@ export const CompactShapeActions = ({
             container={container}
             elementsMap={elementsMap}
           />
+        </>
+      )}
+
+      {/* Table / Code Block Font Properties */}
+      {targetElements.some(
+        (el) => isTableElement(el) || isCodeBlockElement(el),
+      ) && (
+        <>
+          <div className="compact-action-item">
+            {renderAction("changeTableCodeBlockFontFamily")}
+          </div>
+          <div className="compact-action-item">
+            {renderAction("changeTableCodeBlockFontSize")}
+          </div>
         </>
       )}
 

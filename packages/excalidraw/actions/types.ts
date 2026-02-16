@@ -152,7 +152,9 @@ export type ActionName =
   | "openDocumentLocation"
   | "viewDocumentContents"
   | "editProjectLink"
-  | "navigateToProject";
+  | "navigateToProject"
+  | "changeTableCodeBlockFontSize"
+  | "changeTableCodeBlockFontFamily";
 
 export type PanelComponentProps = {
   elements: readonly ExcalidrawElement[];

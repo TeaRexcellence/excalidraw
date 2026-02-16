@@ -30,7 +30,7 @@ import "prismjs/components/prism-perl";
 import "prismjs/components/prism-r";
 import "prismjs/components/prism-dart";
 
-import { THEME } from "@excalidraw/common";
+import { THEME, getFontFamilyString } from "@excalidraw/common";
 
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
 
@@ -44,7 +44,7 @@ const BASE_GUTTER_WIDTH = 36;
 const BASE_SCROLLBAR_WIDTH = 6;
 const BASE_HEADER_HEIGHT = 22;
 const BASE_CORNER_RADIUS = 6;
-const FONT_FAMILY = 'Consolas, "SF Mono", Monaco, "Fira Code", monospace';
+const DEFAULT_CODE_FONT_FAMILY = 'Consolas, "SF Mono", Monaco, "Fira Code", monospace';
 
 // ── Theme-aware colors ───────────────────────────────────────────────
 
@@ -278,7 +278,10 @@ export const drawCodeBlockOnCanvas = (
   const SCROLLBAR_WIDTH = BASE_SCROLLBAR_WIDTH * s;
   const HEADER_HEIGHT = BASE_HEADER_HEIGHT * s;
   const CORNER_RADIUS = BASE_CORNER_RADIUS * s;
-  const FONT = `${element.fontSize || BASE_FONT_SIZE}px ${FONT_FAMILY}`;
+  const fontFamilyStr = element.fontFamily
+    ? getFontFamilyString({ fontFamily: element.fontFamily })
+    : DEFAULT_CODE_FONT_FAMILY;
+  const FONT = `${element.fontSize || BASE_FONT_SIZE}px ${fontFamilyStr}`;
   const HEADER_FONT_SIZE = Math.round(10 * s);
 
   // Theme colors

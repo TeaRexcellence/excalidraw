@@ -50,6 +50,8 @@ import {
   isLineElement,
   isTextElement,
   isUsingAdaptiveRadius,
+  isTableElement,
+  isCodeBlockElement,
 } from "@excalidraw/element";
 
 import { hasStrokeColor } from "@excalidraw/element";
@@ -68,8 +70,10 @@ import type {
   Arrowhead,
   ElementsMap,
   ExcalidrawBindableElement,
+  ExcalidrawCodeBlockElement,
   ExcalidrawElement,
   ExcalidrawLinearElement,
+  ExcalidrawTableElement,
   ExcalidrawTextElement,
   FontFamilyValues,
   TextAlign,
@@ -2011,6 +2015,198 @@ export const actionChangeArrowType = register<keyof typeof ARROW_TYPE>({
           />
         </div>
       </fieldset>
+    );
+  },
+});
+
+// ── Table / Code Block font controls ────────────────────────────────
+
+const isTableOrCodeBlock = (element: ExcalidrawElement): boolean =>
+  isTableElement(element) || isCodeBlockElement(element);
+
+export const actionChangeTableCodeBlockFontSize = register<number>({
+  name: "changeTableCodeBlockFontSize",
+  label: "labels.fontSize",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    if (value == null) {
+      return false;
+    }
+    const updatedElements = changeProperty(
+      elements,
+      appState,
+      (element) => {
+        if (isTableElement(element)) {
+          const table = element as ExcalidrawTableElement;
+          const oldFontSize = table.fontSize || 8;
+          const scale = value / oldFontSize;
+          // Scale cell dimensions proportionally — preserves per-cell ratios
+          // Content grows so user can crop out to reveal it
+          const newRowHeights = table.rowHeights.map((h: number) =>
+            Math.max(1, h * scale),
+          );
+          const newColWidths = table.columnWidths.map((w: number) =>
+            Math.max(1, w * scale),
+          );
+          return newElementWith(element, {
+            fontSize: value,
+            rowHeights: newRowHeights,
+            columnWidths: newColWidths,
+          } as any);
+        }
+        if (isCodeBlockElement(element)) {
+          return newElementWith(element, { fontSize: value } as any);
+        }
+        return element;
+      },
+    );
+    return {
+      elements: updatedElements,
+      appState: { ...appState },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData, app }) => {
+    return (
+      <fieldset>
+        <legend>{t("labels.fontSize")}</legend>
+        <div className="buttonList">
+          <RadioSelection
+            group="table-codeblock-font-size"
+            options={[
+              {
+                value: FONT_SIZES.xxs,
+                text: "XXS",
+                icon: FontSizeExtraExtraSmallIcon,
+                testId: "tcb-fontSize-xxs",
+              },
+              {
+                value: FONT_SIZES.xs,
+                text: "XS",
+                icon: FontSizeExtraSmallIcon,
+                testId: "tcb-fontSize-xs",
+              },
+              {
+                value: FONT_SIZES.sm,
+                text: "S",
+                icon: FontSizeSmallIcon,
+                testId: "tcb-fontSize-sm",
+              },
+              {
+                value: FONT_SIZES.md,
+                text: "M",
+                icon: FontSizeMediumIcon,
+                testId: "tcb-fontSize-md",
+              },
+              {
+                value: FONT_SIZES.lg,
+                text: "L",
+                icon: FontSizeLargeIcon,
+                testId: "tcb-fontSize-lg",
+              },
+              {
+                value: FONT_SIZES.xl,
+                text: "XL",
+                icon: FontSizeExtraLargeIcon,
+                testId: "tcb-fontSize-xl",
+              },
+              {
+                value: FONT_SIZES.xxl,
+                text: "XXL",
+                icon: FontSizeExtraExtraLargeIcon,
+                testId: "tcb-fontSize-xxl",
+              },
+            ]}
+            value={getFormValue(
+              elements,
+              app,
+              (element) => {
+                if (isTableElement(element)) {
+                  return (element as ExcalidrawTableElement).fontSize;
+                }
+                if (isCodeBlockElement(element)) {
+                  return (element as ExcalidrawCodeBlockElement).fontSize;
+                }
+                return null;
+              },
+              isTableOrCodeBlock,
+              () => null,
+            )}
+            onChange={(value) => updateData(value)}
+          />
+        </div>
+      </fieldset>
+    );
+  },
+});
+
+export const actionChangeTableCodeBlockFontFamily = register<
+  number | { open: boolean }
+>({
+  name: "changeTableCodeBlockFontFamily",
+  label: "labels.fontFamily",
+  trackEvent: false,
+  perform: (elements, appState, value, app) => {
+    if (value == null) {
+      return false;
+    }
+    // Handle popup open/close
+    if (typeof value === "object" && "open" in value) {
+      return {
+        appState: {
+          ...appState,
+          openPopup: value.open ? "fontFamily" : null,
+        },
+        captureUpdate: CaptureUpdateAction.EVENTUALLY,
+      };
+    }
+    const updatedElements = changeProperty(
+      elements,
+      appState,
+      (element) => {
+        if (isTableOrCodeBlock(element)) {
+          return newElementWith(element, { fontFamily: value } as any);
+        }
+        return element;
+      },
+    );
+    return {
+      elements: updatedElements,
+      appState: { ...appState, openPopup: null },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  PanelComponent: ({ elements, appState, app, updateData }) => {
+    const selectedFontFamily = getFormValue(
+      elements,
+      app,
+      (element) => {
+        if (isTableElement(element)) {
+          return (element as ExcalidrawTableElement).fontFamily;
+        }
+        if (isCodeBlockElement(element)) {
+          return (element as ExcalidrawCodeBlockElement).fontFamily;
+        }
+        return null;
+      },
+      isTableOrCodeBlock,
+      () => FONT_FAMILY.Helvetica,
+    );
+
+    return (
+      <FontPicker
+        isOpened={appState.openPopup === "fontFamily"}
+        selectedFontFamily={selectedFontFamily}
+        hoveredFontFamily={null}
+        onSelect={(fontFamily) => {
+          updateData(fontFamily);
+        }}
+        onHover={() => {}}
+        onLeave={() => {}}
+        onPopupChange={(open) => {
+          updateData({ open });
+        }}
+      />
     );
   },
 });

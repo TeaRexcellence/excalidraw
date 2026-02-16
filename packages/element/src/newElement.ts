@@ -2,6 +2,7 @@ import {
   DEFAULT_ELEMENT_PROPS,
   DEFAULT_FONT_FAMILY,
   DEFAULT_FONT_SIZE,
+  FONT_FAMILY,
   DEFAULT_TEXT_ALIGN,
   DEFAULT_VERTICAL_ALIGN,
   VERTICAL_ALIGN,
@@ -552,7 +553,7 @@ export const newImageElement = (
 
 export const DEFAULT_TABLE_CELL_WIDTH = 50;
 export const DEFAULT_TABLE_CELL_HEIGHT = 14;
-export const DEFAULT_TABLE_FONT_SIZE = 16;
+export const DEFAULT_TABLE_FONT_SIZE = 8;
 export const DEFAULT_TABLE_CELL_PADDING = 8;
 
 // Soft max viewport dimensions for initial element creation.
@@ -568,6 +569,8 @@ export const newTableElement = (
     columnWidths?: number[];
     rowHeights?: number[];
     headerRow?: boolean;
+    fontSize?: number;
+    fontFamily?: number;
   } & ElementConstructorOpts,
 ): NonDeleted<ExcalidrawTableElement> => {
   const rows = Math.max(1, opts.rows || 3);
@@ -610,6 +613,8 @@ export const newTableElement = (
     scrollOffsetY: 0,
     cropX: 0,
     cropY: 0,
+    fontSize: opts.fontSize ?? DEFAULT_TABLE_FONT_SIZE,
+    fontFamily: opts.fontFamily ?? FONT_FAMILY.Helvetica,
   };
 };
 
@@ -648,6 +653,7 @@ export const newCodeBlockElement = (
     showLineNumbers: opts.showLineNumbers ?? true,
     scrollOffsetY: 0,
     fontSize,
+    fontFamily: FONT_FAMILY.Cascadia,
     cropX: 0,
     cropY: 0,
   };

@@ -206,6 +206,10 @@ export type ExcalidrawTableElement = _ExcalidrawElementBase &
     cropX: number;
     /** Vertical crop offset into content (px) */
     cropY: number;
+    /** Font size override for cell text */
+    fontSize: number;
+    /** Font family ID for cell text */
+    fontFamily: number;
   }>;
 
 export type CodeBlockLanguage =
@@ -247,6 +251,8 @@ export type ExcalidrawCodeBlockElement = _ExcalidrawElementBase &
     scrollOffsetY: number;
     /** Font size in px — scales proportionally on resize (default 13) */
     fontSize: number;
+    /** Font family ID for code text */
+    fontFamily: number;
     /** Horizontal crop offset into content (px) */
     cropX: number;
     /** Vertical crop offset into content (px) */

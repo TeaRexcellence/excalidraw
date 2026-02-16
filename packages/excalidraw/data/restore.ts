@@ -529,6 +529,8 @@ export const restoreElement = (
         scrollOffsetY: (element as any).scrollOffsetY ?? 0,
         cropX: (element as any).cropX ?? 0,
         cropY: (element as any).cropY ?? 0,
+        fontSize: (element as any).fontSize ?? 8,
+        fontFamily: (element as any).fontFamily ?? 2,
       });
     case "codeblock":
       return restoreElementWithProperties(element, {
@@ -537,6 +539,7 @@ export const restoreElement = (
         showLineNumbers: (element as any).showLineNumbers ?? true,
         scrollOffsetY: (element as any).scrollOffsetY ?? 0,
         fontSize: (element as any).fontSize ?? 13,
+        fontFamily: (element as any).fontFamily ?? 3,
         cropX: (element as any).cropX ?? 0,
         cropY: (element as any).cropY ?? 0,
       });
