@@ -403,6 +403,8 @@
     "done": "Done (Esc)",
     "importCSV": "Import CSV",
     "headerRow": "Header row",
+    "freezeRows": "Freeze rows",
+    "freezeCols": "Freeze cols",
     "csvEmpty": "No data found in CSV"
   },
   "tableActions": {

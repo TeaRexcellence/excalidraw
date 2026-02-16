@@ -210,6 +210,10 @@ export type ExcalidrawTableElement = _ExcalidrawElementBase &
     fontSize: number;
     /** Font family ID for cell text */
     fontFamily: number;
+    /** Number of rows frozen/pinned at the top (0 = none) */
+    frozenRows: number;
+    /** Number of columns frozen/pinned on the left (0 = none) */
+    frozenColumns: number;
   }>;
 
 export type CodeBlockLanguage =

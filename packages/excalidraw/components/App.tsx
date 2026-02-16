@@ -7997,6 +7997,8 @@ class App extends React.Component<AppProps, AppState> {
     return true;
   }
 
+  // Returns whether the pointer down is over a table's freeze handle pill.
+  // If so, sets up drag listeners to adjust frozenRows or frozenColumns.
   // Returns whether the pointer down is over an element's internal scrollbar
   // (table or code block). If so, sets up drag listeners to scroll the element.
   private handleElementScrollbarDrag(
@@ -8067,8 +8069,12 @@ class App extends React.Component<AppProps, AppState> {
           continue; // not scrollable
         }
         maxScroll = scrollableHeight - el.height;
-        trackStart = 0;
-        trackHeight = el.height;
+        // Scrollbar track starts below frozen rows
+        const frozenRowH = (el.frozenRows || 0) > 0
+          ? el.rowHeights.slice(0, el.frozenRows).reduce((s: number, h: number) => s + h, 0)
+          : 0;
+        trackStart = frozenRowH;
+        trackHeight = el.height - frozenRowH;
       } else {
         // Code block
         const fontSize = (el as any).fontSize || 13;

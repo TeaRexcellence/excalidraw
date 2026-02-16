@@ -531,6 +531,8 @@ export const restoreElement = (
         cropY: (element as any).cropY ?? 0,
         fontSize: (element as any).fontSize ?? 8,
         fontFamily: (element as any).fontFamily ?? 2,
+        frozenRows: (element as any).frozenRows ?? 0,
+        frozenColumns: (element as any).frozenColumns ?? 0,
       });
     case "codeblock":
       return restoreElementWithProperties(element, {

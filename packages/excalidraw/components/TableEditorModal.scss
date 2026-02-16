@@ -49,8 +49,6 @@
   height: 85vh;
   min-width: 500px;
   min-height: 400px;
-  max-width: 1400px;
-  max-height: 1000px;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
@@ -97,6 +95,13 @@
     }
   }
 
+  &__freezeInfo {
+    font-size: 12px;
+    color: #777;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+    white-space: nowrap;
+  }
+
   &__btn {
     background: none;
     border: 1px solid #bbb;
@@ -138,6 +143,55 @@
       font-size: 14px;
     }
   }
+
+  // ── Freeze handle overlay ──────────────────────────────────────────
+  &__freezeOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    // Handsontable uses: clone overlays 100-180, editor 200, resize 210.
+    // Must be above all grid overlays.
+    z-index: 250;
+  }
+
+  &__freezeHandle {
+    position: absolute;
+    pointer-events: auto;
+    border-radius: 3px;
+    opacity: 0.55;
+    transition: opacity 0.15s, box-shadow 0.15s;
+
+    &:hover {
+      opacity: 1;
+      box-shadow: 0 0 4px rgba(100, 100, 160, 0.5);
+    }
+
+    &--row {
+      width: 36px;
+      height: 4px;
+      background: #6868a8;
+      cursor: ns-resize;
+    }
+
+    &--col {
+      width: 4px;
+      height: 24px;
+      background: #6868a8;
+      cursor: ew-resize;
+    }
+  }
+
+  &__freezeIndicator {
+    position: absolute;
+    background: var(--color-primary, #6c63ff);
+    pointer-events: none;
+    z-index: 260;
+    display: none;
+    opacity: 0.7;
+  }
 }
 
 // ── Dark mode — uses Excalidraw theme variables for consistency ───────
@@ -156,6 +210,21 @@
 
   .TableEditorModal__headerToggle {
     color: var(--color-gray-50, #999);
+  }
+
+  .TableEditorModal__freezeInfo {
+    color: var(--color-gray-50, #999);
+  }
+
+  .TableEditorModal__freezeHandle {
+    &--row,
+    &--col {
+      background: #a0a0c0;
+    }
+  }
+
+  .TableEditorModal__freezeIndicator {
+    background: var(--color-primary, #a8a5ff);
   }
 
   .TableEditorModal__btn {
@@ -180,21 +249,61 @@
   }
 
   .TableEditorModal__sheet {
+    // Dark safety-net: any gap or transparent Handsontable element
+    // shows this instead of white.
+    background: var(--island-bg-color, #232329);
+
     .handsontable {
       color: var(--color-on-surface, #e3e3e8);
-      background: var(--island-bg-color, #232329);
+      background: var(--island-bg-color, #232329) !important;
+
+      // Kill all default white backgrounds on internal Handsontable containers.
+      // !important needed to beat inline styles Handsontable sets via JS.
+      table,
+      table.htCore,
+      .wtHolder,
+      .wtHider,
+      .wtSpreader,
+      thead,
+      tbody,
+      tr,
+      colgroup,
+      col {
+        background-color: var(--island-bg-color, #232329) !important;
+      }
 
       // Override white backgrounds on frozen header clone containers
       .ht_clone_left,
       .ht_clone_top,
-      .ht_clone_top_inline_start_corner {
-        background: var(--color-surface-high, #2e2d39);
+      .ht_clone_top_inline_start_corner,
+      .ht_clone_inline_start {
+        background: var(--color-surface-high, #2e2d39) !important;
+
+        table,
+        table.htCore,
+        .wtHolder,
+        .wtHider,
+        .wtSpreader,
+        thead,
+        tbody,
+        tr,
+        colgroup,
+        col {
+          background-color: var(--color-surface-high, #2e2d39) !important;
+        }
+
+        th,
+        td {
+          background-color: var(--color-surface-high, #2e2d39) !important;
+        }
       }
 
       th,
       td {
         background: var(--island-bg-color, #232329);
-        border-color: var(--color-border-outline-variant, #46464f);
+        // !important needed to beat Handsontable's high-specificity
+        // .ht_master:not(.innerBorderInlineStart):not(.emptyColumns) selectors
+        border-color: var(--color-border-outline-variant, #46464f) !important;
         color: var(--color-on-surface, #e3e3e8);
       }
 
@@ -205,16 +314,29 @@
         color: var(--color-gray-50, #999);
       }
 
+      // Active highlight (selected row/col header) — readable text
+      .ht__active_highlight {
+        background: var(--color-surface-high, #2e2d39);
+        color: var(--color-on-surface, #e3e3e8);
+      }
+
       // Row header
       th {
         background: var(--color-surface-high, #2e2d39);
         color: var(--color-gray-50, #999);
-        border-color: var(--color-border-outline-variant, #46464f);
+        border-color: var(--color-border-outline-variant, #46464f) !important;
       }
 
-      // Selection highlight
+      // Selection highlight — visible on dark bg with readable text
       .area {
         background: rgba(168, 165, 255, 0.15);
+      }
+
+      // Ensure selected cell text is always visible
+      td.area,
+      td.highlight,
+      td.current {
+        color: var(--color-on-surface, #e3e3e8);
       }
 
       // Active cell border
@@ -222,11 +344,42 @@
         border-color: var(--color-primary, #a8a5ff);
       }
 
+      // Kill any remaining white backgrounds on Handsontable internals.
+      // The master table, borders container, and overlay wrappers can all
+      // leak white in edge cases (around row headers, between cells, etc.).
+      .ht_master,
+      .ht_master .wtHolder,
+      .ht_master .wtHider,
+      .ht_master .wtSpreader,
+      .htBorders,
+      .wtBorder {
+        background: var(--island-bg-color, #232329);
+      }
+
+      // Ensure currentRow / currentCol highlights are visible, not white
+      td.currentRow,
+      td.currentCol {
+        background: rgba(168, 165, 255, 0.08);
+        color: var(--color-on-surface, #e3e3e8);
+      }
+
+      // Fix text-selection highlight (browser native) — prevent white-on-white
+      td::selection,
+      th::selection {
+        background: rgba(168, 165, 255, 0.4);
+        color: var(--color-on-surface, #e3e3e8);
+      }
+
       // Cell editor
       .handsontableInput {
         background: var(--island-bg-color, #232329);
         color: var(--color-on-surface, #e3e3e8);
         border-color: var(--color-primary, #a8a5ff);
+
+        &::selection {
+          background: rgba(168, 165, 255, 0.4);
+          color: var(--color-on-surface, #e3e3e8);
+        }
       }
 
       // Context menu
@@ -266,6 +419,10 @@
           &:hover {
             background: var(--color-gray-60, #7a7a7a);
           }
+        }
+
+        &::-webkit-scrollbar-corner {
+          background: var(--island-bg-color, #232329);
         }
       }
     }

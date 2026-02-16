@@ -571,6 +571,8 @@ export const newTableElement = (
     headerRow?: boolean;
     fontSize?: number;
     fontFamily?: number;
+    frozenRows?: number;
+    frozenColumns?: number;
   } & ElementConstructorOpts,
 ): NonDeleted<ExcalidrawTableElement> => {
   const rows = Math.max(1, opts.rows || 3);
@@ -615,6 +617,8 @@ export const newTableElement = (
     cropY: 0,
     fontSize: opts.fontSize ?? DEFAULT_TABLE_FONT_SIZE,
     fontFamily: opts.fontFamily ?? FONT_FAMILY.Helvetica,
+    frozenRows: opts.frozenRows ?? 0,
+    frozenColumns: opts.frozenColumns ?? 0,
   };
 };
 

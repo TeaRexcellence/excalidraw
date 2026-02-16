@@ -25,6 +25,14 @@ const INITIAL_ROWS = 100;
 const INITIAL_COLS = 26;
 const MIN_SPARE_ROWS = 20;
 
+// Canvas ↔ editor scale factors.
+// Editor displays at comfortable editing sizes; canvas uses compact sizes.
+// A fixed scale ensures: editorWidth = canvasWidth × SCALE, and vice versa.
+const CANVAS_COL_WIDTH = 40;
+const CANVAS_ROW_HEIGHT = 14;
+const CANVAS_TO_EDITOR_COL = DEFAULT_COL_WIDTH / CANVAS_COL_WIDTH; // 3.0
+const CANVAS_TO_EDITOR_ROW = DEFAULT_ROW_HEIGHT / CANVAS_ROW_HEIGHT; // ~2.571
+
 interface TableEditorModalInnerProps {
   elementId: string;
   onClose: () => void;
@@ -38,12 +46,29 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
   const hotRef = useRef<HotTableClass>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const headerMeasured = useRef(false);
+  // Capture initial editor dimensions from Handsontable after mount,
+  // so we can detect which columns/rows the user actually resized.
+  const initEditorWidths = useRef<number[]>([]);
+  const initEditorHeights = useRef<number[]>([]);
 
   const element = app.scene.getElement(elementId) as
     | ExcalidrawTableElement
     | undefined;
 
   const [headerRow, setHeaderRow] = useState(element?.headerRow ?? true);
+  const [frozenRows, setFrozenRows] = useState(element?.frozenRows ?? 0);
+  const [frozenColumns, setFrozenColumns] = useState(
+    element?.frozenColumns ?? 0,
+  );
+
+  // Handsontable header dimensions (measured after mount)
+  const [headerDims, setHeaderDims] = useState({
+    rowHeaderW: 50,
+    colHeaderH: 26,
+  });
 
   // Track whether the element was empty when the editor opened.
   // If still empty on close, treat as cancel and delete the element.
@@ -51,29 +76,45 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     !element?.cells?.some((row) => row.some((cell) => cell.trim() !== "")),
   );
 
-  // Build initial data from element — minRows/minCols will expand the grid
-  const initialData = useCallback((): string[][] => {
+  // Build initial data ONCE — stored in a ref so re-renders (e.g. from
+  // freeze handle state changes) don't reset HotTable's live data.
+  const initDataRef = useRef<string[][] | null>(null);
+  if (initDataRef.current === null) {
     if (!element) {
-      return [[""]];
-    }
-    const data: string[][] = [];
-    for (let r = 0; r < element.rows; r++) {
-      const row: string[] = [];
-      for (let c = 0; c < element.columns; c++) {
-        row.push(element.cells[r]?.[c] ?? "");
+      initDataRef.current = [[""]];
+    } else {
+      const data: string[][] = [];
+      for (let r = 0; r < element.rows; r++) {
+        const row: string[] = [];
+        for (let c = 0; c < element.columns; c++) {
+          row.push(element.cells[r]?.[c] ?? "");
+        }
+        data.push(row);
       }
-      data.push(row);
+      initDataRef.current = data;
     }
-    return data;
-  }, [element]);
+  }
 
-  // Column width function — returns existing widths for loaded columns, default for the rest
+  // Column width: canvas width × scale factor → comfortable editor size
   const getColWidth = useCallback(
     (index: number): number => {
       if (element && index < element.columnWidths.length) {
-        return Math.max(element.columnWidths[index] || DEFAULT_COL_WIDTH, 50);
+        const canvasW = element.columnWidths[index] || CANVAS_COL_WIDTH;
+        return Math.max(Math.round(canvasW * CANVAS_TO_EDITOR_COL), 30);
       }
       return DEFAULT_COL_WIDTH;
+    },
+    [element],
+  );
+
+  // Row height: canvas height × scale factor → comfortable editor size
+  const getRowHeight = useCallback(
+    (index: number): number => {
+      if (element && index < element.rowHeights.length) {
+        const canvasH = element.rowHeights[index] || CANVAS_ROW_HEIGHT;
+        return Math.max(Math.round(canvasH * CANVAS_TO_EDITOR_ROW), 20);
+      }
+      return DEFAULT_ROW_HEIGHT;
     },
     [element],
   );
@@ -133,38 +174,45 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
       newCells.push(row);
     }
 
-    // Map editor sizes back to canvas sizes.
-    // The editor displays each column at getColWidth() and rows at DEFAULT_ROW_HEIGHT.
-    // If the user resized a column/row in the editor, we detect the change ratio
-    // and apply it to the canvas size so the user's resizing is preserved.
-    const CANVAS_COL_WIDTH = 40;
-    const CANVAS_ROW_HEIGHT = 14;
-
+    // Map editor sizes → canvas sizes using fixed scale factors.
+    // Unchanged columns/rows keep their exact canvas values (no drift).
+    // Changed columns/rows use: canvasSize = editorSize / SCALE.
     const newColumnWidths: number[] = [];
     for (let c = 0; c < usedCols; c++) {
-      // What the editor initially showed for this column
-      const editorInitialWidth =
-        c < element.columnWidths.length
-          ? Math.max(element.columnWidths[c] || DEFAULT_COL_WIDTH, 50)
-          : DEFAULT_COL_WIDTH;
-      // What Handsontable has now (after user may have resized)
-      const editorCurrentWidth = hot.getColWidth(c) || editorInitialWidth;
-      // The canvas size for this column
-      const canvasWidth =
-        c < element.columnWidths.length ? element.columnWidths[c] : CANVAS_COL_WIDTH;
-      // Apply the ratio of editor change to the canvas size
-      const ratio = editorCurrentWidth / editorInitialWidth;
-      newColumnWidths.push(Math.max(1, canvasWidth * ratio));
+      const editorW = hot.getColWidth(c) || DEFAULT_COL_WIDTH;
+      const initW = initEditorWidths.current[c] ?? DEFAULT_COL_WIDTH;
+      if (Math.abs(editorW - initW) < 2) {
+        // Not resized — keep exact canvas width (prevents drift)
+        newColumnWidths.push(
+          c < element.columnWidths.length
+            ? element.columnWidths[c]
+            : CANVAS_COL_WIDTH,
+        );
+      } else {
+        // Resized — direct scale mapping
+        newColumnWidths.push(
+          Math.max(1, Math.round(editorW / CANVAS_TO_EDITOR_COL)),
+        );
+      }
     }
 
     const newRowHeights: number[] = [];
     for (let r = 0; r < usedRows; r++) {
-      const editorInitialHeight = DEFAULT_ROW_HEIGHT;
-      const editorCurrentHeight = hot.getRowHeight(r) || editorInitialHeight;
-      const canvasHeight =
-        r < element.rowHeights.length ? element.rowHeights[r] : CANVAS_ROW_HEIGHT;
-      const ratio = editorCurrentHeight / editorInitialHeight;
-      newRowHeights.push(Math.max(1, canvasHeight * ratio));
+      const editorH = hot.getRowHeight(r) || DEFAULT_ROW_HEIGHT;
+      const initH = initEditorHeights.current[r] ?? DEFAULT_ROW_HEIGHT;
+      if (Math.abs(editorH - initH) < 2) {
+        // Not resized — keep exact canvas height
+        newRowHeights.push(
+          r < element.rowHeights.length
+            ? element.rowHeights[r]
+            : CANVAS_ROW_HEIGHT,
+        );
+      } else {
+        // Resized — direct scale mapping
+        newRowHeights.push(
+          Math.max(1, Math.round(editorH / CANVAS_TO_EDITOR_ROW)),
+        );
+      }
     }
 
     const contentWidth = newColumnWidths.reduce((s, w) => s + w, 0);
@@ -186,6 +234,8 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
         columnWidths: newColumnWidths,
         rowHeights: newRowHeights,
         headerRow,
+        frozenRows: Math.min(frozenRows, usedRows),
+        frozenColumns: Math.min(frozenColumns, usedCols),
         width: newWidth,
         height: newHeight,
         scrollOffsetY: 0,
@@ -204,7 +254,7 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     });
 
     onClose();
-  }, [app, element, elementId, headerRow, onClose]);
+  }, [app, element, elementId, headerRow, frozenRows, frozenColumns, onClose]);
 
   // Handle CSV import
   const handleCSVImport = useCallback(
@@ -236,6 +286,17 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     },
     [],
   );
+
+  // Sync freeze settings to Handsontable when stepper values change
+  useEffect(() => {
+    const hot = hotRef.current?.hotInstance;
+    if (hot) {
+      hot.updateSettings({
+        fixedRowsTop: frozenRows,
+        fixedColumnsStart: frozenColumns,
+      });
+    }
+  }, [frozenRows, frozenColumns]);
 
   // Escape key to close (when not editing a cell).
   // Uses capture phase so it fires before Handsontable's own Escape handler.
@@ -276,6 +337,152 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     };
   }, []);
 
+  // ── Freeze handle drag ──────────────────────────────────────────────
+  const handleRowDragStart = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const sheetEl = sheetRef.current;
+      const indicator = indicatorRef.current;
+      const hot = hotRef.current?.hotInstance;
+      if (!sheetEl || !indicator || !hot || !element) {
+        return;
+      }
+
+      const sheetRect = sheetEl.getBoundingClientRect();
+
+      // Compute initial indicator position
+      let initY = headerDims.colHeaderH;
+      for (let r = 0; r < frozenRows; r++) {
+        initY += hot.getRowHeight(r) ?? DEFAULT_ROW_HEIGHT;
+      }
+
+      // Show horizontal indicator line spanning the data area
+      indicator.style.display = "block";
+      indicator.style.left = `${headerDims.rowHeaderW}px`;
+      indicator.style.width = `${sheetRect.width - headerDims.rowHeaderW}px`;
+      indicator.style.height = "2px";
+      indicator.style.top = `${initY}px`;
+
+      let snapValue = frozenRows;
+
+      const onMove = (me: PointerEvent) => {
+        const localY = me.clientY - sheetRect.top;
+        let accum = headerDims.colHeaderH;
+        let newSnap = 0;
+        for (let r = 0; r < element.rows; r++) {
+          const rh = hot.getRowHeight(r) ?? DEFAULT_ROW_HEIGHT;
+          if (localY >= accum + rh / 2) {
+            newSnap = r + 1;
+            accum += rh;
+          } else {
+            break;
+          }
+        }
+        newSnap = Math.max(0, Math.min(newSnap, element.rows - 1));
+        snapValue = newSnap;
+
+        // Update indicator position
+        let snapY = headerDims.colHeaderH;
+        for (let r = 0; r < newSnap; r++) {
+          snapY += hot.getRowHeight(r) ?? DEFAULT_ROW_HEIGHT;
+        }
+        indicator.style.top = `${snapY}px`;
+      };
+
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        indicator.style.display = "none";
+        setFrozenRows(snapValue);
+      };
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    },
+    [element, headerDims, frozenRows],
+  );
+
+  const handleColDragStart = useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const sheetEl = sheetRef.current;
+      const indicator = indicatorRef.current;
+      const hot = hotRef.current?.hotInstance;
+      if (!sheetEl || !indicator || !hot || !element) {
+        return;
+      }
+
+      const sheetRect = sheetEl.getBoundingClientRect();
+
+      // Compute initial indicator position
+      let initX = headerDims.rowHeaderW;
+      for (let c = 0; c < frozenColumns; c++) {
+        initX += hot.getColWidth(c) ?? DEFAULT_COL_WIDTH;
+      }
+
+      // Show vertical indicator line spanning the data area
+      indicator.style.display = "block";
+      indicator.style.top = `${headerDims.colHeaderH}px`;
+      indicator.style.height = `${sheetRect.height - headerDims.colHeaderH}px`;
+      indicator.style.width = "2px";
+      indicator.style.left = `${initX}px`;
+
+      let snapValue = frozenColumns;
+
+      const onMove = (me: PointerEvent) => {
+        const localX = me.clientX - sheetRect.left;
+        let accum = headerDims.rowHeaderW;
+        let newSnap = 0;
+        for (let c = 0; c < element.columns; c++) {
+          const cw = hot.getColWidth(c) ?? DEFAULT_COL_WIDTH;
+          if (localX >= accum + cw / 2) {
+            newSnap = c + 1;
+            accum += cw;
+          } else {
+            break;
+          }
+        }
+        newSnap = Math.max(0, Math.min(newSnap, element.columns - 1));
+        snapValue = newSnap;
+
+        // Update indicator position
+        let snapX = headerDims.rowHeaderW;
+        for (let c = 0; c < newSnap; c++) {
+          snapX += hot.getColWidth(c) ?? DEFAULT_COL_WIDTH;
+        }
+        indicator.style.left = `${snapX}px`;
+      };
+
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        indicator.style.display = "none";
+        setFrozenColumns(snapValue);
+      };
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    },
+    [element, headerDims, frozenColumns],
+  );
+
+  // Compute freeze handle positions for the overlay
+  const computeFreezeHandlePos = () => {
+    const hot = hotRef.current?.hotInstance;
+    let rowPx = 0;
+    for (let r = 0; r < frozenRows; r++) {
+      rowPx += hot?.getRowHeight(r) ?? DEFAULT_ROW_HEIGHT;
+    }
+    let colPx = 0;
+    for (let c = 0; c < frozenColumns; c++) {
+      colPx += hot?.getColWidth(c) ?? DEFAULT_COL_WIDTH;
+    }
+    return { frozenRowsPx: rowPx, frozenColsPx: colPx };
+  };
+  const { frozenRowsPx, frozenColsPx } = computeFreezeHandlePos();
+
   // Detect dark mode
   const isDark = document.querySelector(".excalidraw.theme--dark") !== null;
 
@@ -313,6 +520,13 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
               />
               {t("tableEditor.headerRow")}
             </label>
+            {(frozenRows > 0 || frozenColumns > 0) && (
+              <span className="TableEditorModal__freezeInfo">
+                {frozenRows > 0 && `${frozenRows} ${t("tableEditor.freezeRows").toLowerCase()}`}
+                {frozenRows > 0 && frozenColumns > 0 && ", "}
+                {frozenColumns > 0 && `${frozenColumns} ${t("tableEditor.freezeCols").toLowerCase()}`}
+              </span>
+            )}
             <button
               className="TableEditorModal__btn"
               onClick={() => fileInputRef.current?.click()}
@@ -336,15 +550,17 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
         </div>
 
         {/* Spreadsheet */}
-        <div className="TableEditorModal__sheet">
+        <div className="TableEditorModal__sheet" ref={sheetRef}>
           <HotTable
             ref={hotRef}
-            data={initialData()}
+            data={initDataRef.current!}
             colWidths={getColWidth}
-            rowHeights={DEFAULT_ROW_HEIGHT}
+            rowHeights={getRowHeight}
             minRows={INITIAL_ROWS}
             minCols={INITIAL_COLS}
             minSpareRows={MIN_SPARE_ROWS}
+            fixedRowsTop={frozenRows}
+            fixedColumnsStart={frozenColumns}
             contextMenu={true}
             manualColumnResize={true}
             manualRowResize={true}
@@ -361,7 +577,63 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
             width="100%"
             height="100%"
             licenseKey="non-commercial-and-evaluation"
+            afterRender={() => {
+              if (!headerMeasured.current) {
+                const hot = hotRef.current?.hotInstance;
+                if (!hot) {
+                  return;
+                }
+                const corner = hot.rootElement?.querySelector(
+                  ".ht_clone_top_inline_start_corner",
+                );
+                if (corner && (corner as HTMLElement).offsetWidth > 0) {
+                  headerMeasured.current = true;
+                  setHeaderDims({
+                    rowHeaderW: (corner as HTMLElement).offsetWidth,
+                    colHeaderH: (corner as HTMLElement).offsetHeight,
+                  });
+                  // Capture initial editor dimensions for change detection
+                  if (initEditorWidths.current.length === 0) {
+                    for (let c = 0; c < INITIAL_COLS; c++) {
+                      initEditorWidths.current.push(
+                        hot.getColWidth(c) || DEFAULT_COL_WIDTH,
+                      );
+                    }
+                    for (let r = 0; r < INITIAL_ROWS; r++) {
+                      initEditorHeights.current.push(
+                        hot.getRowHeight(r) || DEFAULT_ROW_HEIGHT,
+                      );
+                    }
+                  }
+                }
+              }
+            }}
           />
+          {/* Freeze handle overlay — drag these bars to freeze rows/cols */}
+          <div className="TableEditorModal__freezeOverlay">
+            <div
+              className="TableEditorModal__freezeHandle TableEditorModal__freezeHandle--row"
+              style={{
+                top: headerDims.colHeaderH + frozenRowsPx - 2,
+                left: Math.max(0, (headerDims.rowHeaderW - 36) / 2),
+              }}
+              onPointerDown={handleRowDragStart}
+              title={t("tableEditor.freezeRows")}
+            />
+            <div
+              className="TableEditorModal__freezeHandle TableEditorModal__freezeHandle--col"
+              style={{
+                left: headerDims.rowHeaderW + frozenColsPx - 2,
+                top: Math.max(0, (headerDims.colHeaderH - 24) / 2),
+              }}
+              onPointerDown={handleColDragStart}
+              title={t("tableEditor.freezeCols")}
+            />
+            <div
+              ref={indicatorRef}
+              className="TableEditorModal__freezeIndicator"
+            />
+          </div>
         </div>
       </div>
     </div>
