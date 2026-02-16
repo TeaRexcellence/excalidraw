@@ -69,7 +69,12 @@ export const Picker = React.forwardRef(
       : null;
 
     const [customColors] = React.useState(() => {
-      if (type === "canvasBackground") {
+      if (
+        type === "canvasBackground" ||
+        type === "tableBackground" ||
+        type === "tableGrid" ||
+        type === "tableHeader"
+      ) {
         return [];
       }
       return getMostUsedCustomColors(elements, type, palette);

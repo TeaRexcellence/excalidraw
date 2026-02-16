@@ -573,6 +573,11 @@ export const newTableElement = (
     fontFamily?: number;
     frozenRows?: number;
     frozenColumns?: number;
+    backgroundOpacity?: number;
+    gridColor?: string;
+    gridOpacity?: number;
+    headerColor?: string;
+    headerOpacity?: number;
   } & ElementConstructorOpts,
 ): NonDeleted<ExcalidrawTableElement> => {
   const rows = Math.max(1, opts.rows || 3);
@@ -619,6 +624,11 @@ export const newTableElement = (
     fontFamily: opts.fontFamily ?? FONT_FAMILY.Helvetica,
     frozenRows: opts.frozenRows ?? 0,
     frozenColumns: opts.frozenColumns ?? 0,
+    backgroundOpacity: opts.backgroundOpacity ?? 100,
+    gridColor: opts.gridColor ?? "#868e96",
+    gridOpacity: opts.gridOpacity ?? 100,
+    headerColor: opts.headerColor ?? "#d5d8eb",
+    headerOpacity: opts.headerOpacity ?? 100,
   };
 };
 

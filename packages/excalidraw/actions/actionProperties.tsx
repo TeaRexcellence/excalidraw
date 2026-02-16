@@ -2210,3 +2210,381 @@ export const actionChangeTableCodeBlockFontFamily = register<
     );
   },
 });
+
+// ── Table color controls ────────────────────────────────────────────
+
+export const actionChangeTableBackgroundColor = register<Record<string, any>>({
+  name: "changeTableBackgroundColor",
+  label: "labels.background",
+  trackEvent: false,
+  perform: (elements, appState, value) => {
+    if (!value) {
+      return false;
+    }
+    if (value.tableBgColor) {
+      return {
+        elements: changeProperty(
+          elements,
+          appState,
+          (el) =>
+            isTableElement(el)
+              ? newElementWith(el, {
+                  backgroundColor: value.tableBgColor,
+                } as any)
+              : el,
+          true,
+        ),
+        appState: { ...appState },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
+    if (value.backgroundOpacity !== undefined) {
+      return {
+        elements: changeProperty(
+          elements,
+          appState,
+          (el) =>
+            isTableElement(el)
+              ? newElementWith(el, {
+                  backgroundOpacity: value.backgroundOpacity,
+                } as any)
+              : el,
+          true,
+        ),
+        appState: { ...appState },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
+    return {
+      appState: { ...appState, ...value },
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData, app }) => {
+    const { stylesPanelMode } = getStylesPanelInfo(app);
+
+    const selectedElements = app.scene.getSelectedElements(app.state);
+    const table = selectedElements.find(isTableElement) as
+      | ExcalidrawTableElement
+      | undefined;
+
+    const bgColor = String(table?.backgroundColor || "transparent");
+    const bgOpacity = table?.backgroundOpacity ?? 100;
+
+    const rangeRef = useRef<HTMLInputElement>(null);
+    const bubbleRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (rangeRef.current && bubbleRef.current) {
+        const inputWidth = rangeRef.current.offsetWidth;
+        const thumbWidth = 15;
+        const pos =
+          (bgOpacity / 100) * (inputWidth - thumbWidth) + thumbWidth / 2;
+        bubbleRef.current.style.left = `${pos}px`;
+        rangeRef.current.style.background = `linear-gradient(to right, var(--color-slider-track) 0%, var(--color-slider-track) ${bgOpacity}%, var(--button-bg) ${bgOpacity}%, var(--button-bg) 100%)`;
+      }
+    }, [bgOpacity]);
+
+    const { transparent: _t, ...bgPalette } =
+      DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE;
+
+    const bgTopPicks = [
+      DEFAULT_ELEMENT_STROKE_PICKS[0],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[1],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[2],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[3],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[4],
+    ] as const;
+
+    return (
+      <>
+        {stylesPanelMode === "full" && (
+          <h3 aria-hidden="true">{t("labels.background")}</h3>
+        )}
+        <ColorPicker
+          topPicks={bgTopPicks}
+          palette={bgPalette}
+          type="tableBackground"
+          label={t("labels.background")}
+          color={bgColor}
+          onChange={(color) => updateData({ tableBgColor: color })}
+          elements={elements}
+          appState={appState}
+          updateData={updateData}
+        />
+        <label className="control-label">
+          {t("labels.opacity")}
+          <div className="range-wrapper">
+            <input
+              ref={rangeRef}
+              type="range"
+              min="0"
+              max="100"
+              step="10"
+              value={bgOpacity}
+              onChange={(e) =>
+                updateData({ backgroundOpacity: +e.target.value })
+              }
+              className="range-input"
+            />
+            <div className="value-bubble" ref={bubbleRef}>
+              {bgOpacity !== 0 ? bgOpacity : null}
+            </div>
+            <div className="zero-label">0</div>
+          </div>
+        </label>
+      </>
+    );
+  },
+});
+
+export const actionChangeTableGridColor = register<Record<string, any>>({
+  name: "changeTableGridColor",
+  label: "labels.tableGridColor",
+  trackEvent: false,
+  perform: (elements, appState, value) => {
+    if (!value) {
+      return false;
+    }
+    // Color change (from onChange → updateData({ tableGridColor: color }))
+    if (value.tableGridColor) {
+      return {
+        elements: changeProperty(
+          elements,
+          appState,
+          (el) =>
+            isTableElement(el)
+              ? newElementWith(el, {
+                  gridColor: value.tableGridColor,
+                } as any)
+              : el,
+          true,
+        ),
+        appState: { ...appState },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
+    // Opacity slider
+    if (value.gridOpacity !== undefined) {
+      return {
+        elements: changeProperty(
+          elements,
+          appState,
+          (el) =>
+            isTableElement(el)
+              ? newElementWith(el, {
+                  gridOpacity: value.gridOpacity,
+                } as any)
+              : el,
+          true,
+        ),
+        appState: { ...appState },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
+    // Popup toggle ({ openPopup: type } or { openPopup: null })
+    return {
+      appState: { ...appState, ...value },
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData, app }) => {
+    const { stylesPanelMode } = getStylesPanelInfo(app);
+
+    const selectedElements = app.scene.getSelectedElements(app.state);
+    const table = selectedElements.find(isTableElement) as
+      | ExcalidrawTableElement
+      | undefined;
+
+    const gridColor = String(table?.gridColor || "#868e96");
+    const gridOpacity = table?.gridOpacity ?? 100;
+
+    const rangeRef = useRef<HTMLInputElement>(null);
+    const bubbleRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (rangeRef.current && bubbleRef.current) {
+        const inputWidth = rangeRef.current.offsetWidth;
+        const thumbWidth = 15;
+        const pos =
+          (gridOpacity / 100) * (inputWidth - thumbWidth) + thumbWidth / 2;
+        bubbleRef.current.style.left = `${pos}px`;
+        rangeRef.current.style.background = `linear-gradient(to right, var(--color-slider-track) 0%, var(--color-slider-track) ${gridOpacity}%, var(--button-bg) ${gridOpacity}%, var(--button-bg) 100%)`;
+      }
+    }, [gridOpacity]);
+
+    // Palette without transparent (opacity slider handles transparency)
+    const { transparent: _t, ...gridPalette } =
+      DEFAULT_ELEMENT_STROKE_COLOR_PALETTE;
+
+    return (
+      <>
+        {stylesPanelMode === "full" && (
+          <h3 aria-hidden="true">{t("labels.tableGridColor")}</h3>
+        )}
+        <ColorPicker
+          topPicks={DEFAULT_ELEMENT_STROKE_PICKS}
+          palette={gridPalette}
+          type="tableGrid"
+          label={t("labels.tableGridColor")}
+          color={gridColor}
+          onChange={(color) => updateData({ tableGridColor: color })}
+          elements={elements}
+          appState={appState}
+          updateData={updateData}
+        />
+        <label className="control-label">
+          {t("labels.opacity")}
+          <div className="range-wrapper">
+            <input
+              ref={rangeRef}
+              type="range"
+              min="0"
+              max="100"
+              step="10"
+              value={gridOpacity}
+              onChange={(e) =>
+                updateData({ gridOpacity: +e.target.value })
+              }
+              className="range-input"
+            />
+            <div className="value-bubble" ref={bubbleRef}>
+              {gridOpacity !== 0 ? gridOpacity : null}
+            </div>
+            <div className="zero-label">0</div>
+          </div>
+        </label>
+      </>
+    );
+  },
+});
+
+export const actionChangeTableHeaderColor = register<Record<string, any>>({
+  name: "changeTableHeaderColor",
+  label: "labels.tableHeaderColor",
+  trackEvent: false,
+  perform: (elements, appState, value) => {
+    if (!value) {
+      return false;
+    }
+    // Color change
+    if (value.tableHeaderColor) {
+      return {
+        elements: changeProperty(
+          elements,
+          appState,
+          (el) =>
+            isTableElement(el)
+              ? newElementWith(el, {
+                  headerColor: value.tableHeaderColor,
+                } as any)
+              : el,
+          true,
+        ),
+        appState: { ...appState },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
+    // Opacity slider
+    if (value.headerOpacity !== undefined) {
+      return {
+        elements: changeProperty(
+          elements,
+          appState,
+          (el) =>
+            isTableElement(el)
+              ? newElementWith(el, {
+                  headerOpacity: value.headerOpacity,
+                } as any)
+              : el,
+          true,
+        ),
+        appState: { ...appState },
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
+    // Popup toggle
+    return {
+      appState: { ...appState, ...value },
+      captureUpdate: CaptureUpdateAction.EVENTUALLY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData, app }) => {
+    const { stylesPanelMode } = getStylesPanelInfo(app);
+
+    const selectedElements = app.scene.getSelectedElements(app.state);
+    const table = selectedElements.find(isTableElement) as
+      | ExcalidrawTableElement
+      | undefined;
+
+    const headerColor = String(table?.headerColor || "#d5d8eb");
+    const headerOpacity = table?.headerOpacity ?? 100;
+
+    const rangeRef = useRef<HTMLInputElement>(null);
+    const bubbleRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (rangeRef.current && bubbleRef.current) {
+        const inputWidth = rangeRef.current.offsetWidth;
+        const thumbWidth = 15;
+        const pos =
+          (headerOpacity / 100) * (inputWidth - thumbWidth) + thumbWidth / 2;
+        bubbleRef.current.style.left = `${pos}px`;
+        rangeRef.current.style.background = `linear-gradient(to right, var(--color-slider-track) 0%, var(--color-slider-track) ${headerOpacity}%, var(--button-bg) ${headerOpacity}%, var(--button-bg) 100%)`;
+      }
+    }, [headerOpacity]);
+
+    // Palette without transparent (opacity slider handles transparency)
+    const { transparent: _t, ...headerPalette } =
+      DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE;
+
+    // Top picks: replace transparent with black
+    const headerTopPicks = [
+      DEFAULT_ELEMENT_STROKE_PICKS[0],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[1],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[2],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[3],
+      DEFAULT_ELEMENT_BACKGROUND_PICKS[4],
+    ] as const;
+
+    return (
+      <>
+        {stylesPanelMode === "full" && (
+          <h3 aria-hidden="true">{t("labels.tableHeaderColor")}</h3>
+        )}
+        <ColorPicker
+          topPicks={headerTopPicks}
+          palette={headerPalette}
+          type="tableHeader"
+          label={t("labels.tableHeaderColor")}
+          color={headerColor}
+          onChange={(color) => updateData({ tableHeaderColor: color })}
+          elements={elements}
+          appState={appState}
+          updateData={updateData}
+        />
+        <label className="control-label">
+          {t("labels.opacity")}
+          <div className="range-wrapper">
+            <input
+              ref={rangeRef}
+              type="range"
+              min="0"
+              max="100"
+              step="10"
+              value={headerOpacity}
+              onChange={(e) =>
+                updateData({ headerOpacity: +e.target.value })
+              }
+              className="range-input"
+            />
+            <div className="value-bubble" ref={bubbleRef}>
+              {headerOpacity !== 0 ? headerOpacity : null}
+            </div>
+            <div className="zero-label">0</div>
+          </div>
+        </label>
+      </>
+    );
+  },
+});

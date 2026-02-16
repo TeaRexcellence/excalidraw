@@ -154,7 +154,10 @@ export type ActionName =
   | "editProjectLink"
   | "navigateToProject"
   | "changeTableCodeBlockFontSize"
-  | "changeTableCodeBlockFontFamily";
+  | "changeTableCodeBlockFontFamily"
+  | "changeTableBackgroundColor"
+  | "changeTableGridColor"
+  | "changeTableHeaderColor";
 
 export type PanelComponentProps = {
   elements: readonly ExcalidrawElement[];

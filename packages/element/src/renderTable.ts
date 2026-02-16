@@ -4,10 +4,9 @@ import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/type
 
 import type { ExcalidrawTableElement } from "./types";
 
-const TABLE_HEADER_BG_LIGHT = "rgba(213, 216, 235, 0.35)";
-const TABLE_HEADER_BG_DARK = "rgba(99, 102, 140, 0.35)";
-const TABLE_GRID_COLOR_LIGHT = "#c4c4c4";
-const TABLE_GRID_COLOR_DARK = "#555";
+// Fallback defaults (used if element properties are missing)
+const DEFAULT_GRID_COLOR = "#868e96";
+const DEFAULT_HEADER_COLOR = "#d5d8eb";
 
 // Font scales with row height: ~44% of row height, clamped
 const MIN_FONT_SIZE = 1;
@@ -69,23 +68,32 @@ const drawCellRange = (
   }
 
   // 1. Opaque background (must cover scrolled content behind)
+  // Always draw an opaque base first so scrolled content doesn't bleed through
+  ctx.fillStyle = isDark ? "#1e1e1e" : "#ffffff";
+  ctx.fillRect(zoneX, zoneY, zoneW, zoneH);
   if (element.backgroundColor && element.backgroundColor !== "transparent") {
+    const prevBgAlpha = ctx.globalAlpha;
+    ctx.globalAlpha = prevBgAlpha * ((element.backgroundOpacity ?? 100) / 100);
     ctx.fillStyle = isDark
       ? applyDarkModeFilter(element.backgroundColor)
       : element.backgroundColor;
-  } else {
-    // Default opaque fill when no explicit background
-    ctx.fillStyle = isDark ? "#1e1e1e" : "#ffffff";
+    ctx.fillRect(zoneX, zoneY, zoneW, zoneH);
+    ctx.globalAlpha = prevBgAlpha;
   }
-  ctx.fillRect(zoneX, zoneY, zoneW, zoneH);
 
   // 2. Header row background (only if row 0 is in range)
   if (headerRow && rowStart === 0 && element.rows > 0) {
-    ctx.fillStyle = isDark ? TABLE_HEADER_BG_DARK : TABLE_HEADER_BG_LIGHT;
+    const hc = element.headerColor || DEFAULT_HEADER_COLOR;
+    const prevAlpha = ctx.globalAlpha;
+    ctx.globalAlpha = prevAlpha * ((element.headerOpacity ?? 100) / 100);
+    ctx.fillStyle = isDark ? applyDarkModeFilter(hc) : hc;
     ctx.fillRect(zoneX, 0, zoneW, rowHeights[0]);
+    ctx.globalAlpha = prevAlpha;
   }
 
   // 3. Grid lines
+  const prevGridAlpha = ctx.globalAlpha;
+  ctx.globalAlpha = prevGridAlpha * ((element.gridOpacity ?? 100) / 100);
   ctx.strokeStyle = gridColor;
   ctx.lineWidth = lineWidth;
 
@@ -112,6 +120,8 @@ const drawCellRange = (
       ctx.stroke();
     }
   }
+
+  ctx.globalAlpha = prevGridAlpha;
 
   // 4. Cell text
   const cellPadding = Math.max(1, tableFontSize * PADDING_RATIO);
@@ -222,7 +232,8 @@ export const drawTableOnCanvas = (
   const strokeColor = isDark
     ? applyDarkModeFilter(element.strokeColor)
     : element.strokeColor;
-  const gridColor = isDark ? TABLE_GRID_COLOR_DARK : TABLE_GRID_COLOR_LIGHT;
+  const gc = element.gridColor || DEFAULT_GRID_COLOR;
+  const gridColor = isDark ? applyDarkModeFilter(gc) : gc;
 
   const minRowH = Math.min(...rowHeights);
   const tableFontSize = element.fontSize
@@ -239,7 +250,7 @@ export const drawTableOnCanvas = (
 
   // Scale grid lines with table size — 1px at normal size, thinner when small
   // Base reference: 14px row height = 1px lines
-  const gridLineWidth = Math.max(0.2, Math.min(1, minRowH / 14));
+  const gridLineWidth = Math.max(0.15, Math.min(0.5, minRowH / 28));
 
 
   // ════════════════════════════════════════════════════════════════════
@@ -250,19 +261,29 @@ export const drawTableOnCanvas = (
 
   // 1. Background fill
   if (element.backgroundColor && element.backgroundColor !== "transparent") {
+    const prevBgAlpha = context.globalAlpha;
+    context.globalAlpha =
+      prevBgAlpha * ((element.backgroundOpacity ?? 100) / 100);
     context.fillStyle = isDark
       ? applyDarkModeFilter(element.backgroundColor)
       : element.backgroundColor;
     context.fillRect(0, 0, totalWidth, totalHeight);
+    context.globalAlpha = prevBgAlpha;
   }
 
   // 2. Header row background
   if (headerRow && rows > 0) {
-    context.fillStyle = isDark ? TABLE_HEADER_BG_DARK : TABLE_HEADER_BG_LIGHT;
+    const hc = element.headerColor || DEFAULT_HEADER_COLOR;
+    const prevAlpha = context.globalAlpha;
+    context.globalAlpha = prevAlpha * ((element.headerOpacity ?? 100) / 100);
+    context.fillStyle = isDark ? applyDarkModeFilter(hc) : hc;
     context.fillRect(0, 0, totalWidth, rowHeights[0]);
+    context.globalAlpha = prevAlpha;
   }
 
   // 3. Inner grid lines
+  const prevGridAlpha1 = context.globalAlpha;
+  context.globalAlpha = prevGridAlpha1 * ((element.gridOpacity ?? 100) / 100);
   context.strokeStyle = gridColor;
   context.lineWidth = gridLineWidth;
 
@@ -283,6 +304,7 @@ export const drawTableOnCanvas = (
     context.lineTo(x, totalHeight);
     context.stroke();
   }
+  context.globalAlpha = prevGridAlpha1;
 
   // 4. Cell text
   context.fillStyle = strokeColor;

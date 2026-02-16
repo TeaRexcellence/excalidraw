@@ -533,6 +533,11 @@ export const restoreElement = (
         fontFamily: (element as any).fontFamily ?? 2,
         frozenRows: (element as any).frozenRows ?? 0,
         frozenColumns: (element as any).frozenColumns ?? 0,
+        backgroundOpacity: (element as any).backgroundOpacity ?? 100,
+        gridColor: (element as any).gridColor ?? "#868e96",
+        gridOpacity: (element as any).gridOpacity ?? 100,
+        headerColor: (element as any).headerColor ?? "#d5d8eb",
+        headerOpacity: (element as any).headerOpacity ?? 100,
       });
     case "codeblock":
       return restoreElementWithProperties(element, {

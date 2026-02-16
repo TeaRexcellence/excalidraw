@@ -214,6 +214,16 @@ export type ExcalidrawTableElement = _ExcalidrawElementBase &
     frozenRows: number;
     /** Number of columns frozen/pinned on the left (0 = none) */
     frozenColumns: number;
+    /** Opacity of cell background (0-100) */
+    backgroundOpacity: number;
+    /** Color of grid lines and outer border */
+    gridColor: string;
+    /** Opacity of grid lines (0-100) */
+    gridOpacity: number;
+    /** Background color for header row */
+    headerColor: string;
+    /** Opacity of header row background (0-100) */
+    headerOpacity: number;
   }>;
 
 export type CodeBlockLanguage =

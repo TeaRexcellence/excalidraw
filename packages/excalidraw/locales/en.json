@@ -57,6 +57,8 @@
     "arrowtype_elbowed": "Elbow arrow",
     "fontSize": "Font size",
     "fontFamily": "Font family",
+    "tableGridColor": "Grid",
+    "tableHeaderColor": "Header",
     "addWatermark": "Add \"Made with Excalidraw\"",
     "handDrawn": "Hand-drawn",
     "normal": "Normal",

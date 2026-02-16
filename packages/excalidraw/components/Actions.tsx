@@ -180,7 +180,8 @@ export const SelectedShapeActions = ({
       !isTransparent(appState.currentItemBackgroundColor)) ||
     targetElements.some(
       (element) =>
-        hasBackground(element.type) && !isTransparent(element.backgroundColor),
+        hasBackground(element.type) &&
+        !isTransparent(element.backgroundColor),
     );
 
   const showLinkIcon =
@@ -334,6 +335,13 @@ export const SelectedShapeActions = ({
           </div>
         </fieldset>
       )}
+      {targetElements.some((el) => isTableElement(el)) && (
+        <>
+          {renderAction("changeTableBackgroundColor")}
+          {renderAction("changeTableGridColor")}
+          {renderAction("changeTableHeaderColor")}
+        </>
+      )}
     </div>
   );
 };
@@ -356,7 +364,8 @@ const CombinedShapeProperties = ({
       !isTransparent(appState.currentItemBackgroundColor)) ||
     targetElements.some(
       (element) =>
-        hasBackground(element.type) && !isTransparent(element.backgroundColor),
+        hasBackground(element.type) &&
+        !isTransparent(element.backgroundColor),
     );
 
   const shouldShowCombinedProperties =
@@ -926,6 +935,19 @@ export const CompactShapeActions = ({
         container={container}
         app={app}
       />
+      {targetElements.some((el) => isTableElement(el)) && (
+        <>
+          <div className="compact-action-item">
+            {renderAction("changeTableBackgroundColor")}
+          </div>
+          <div className="compact-action-item">
+            {renderAction("changeTableGridColor")}
+          </div>
+          <div className="compact-action-item">
+            {renderAction("changeTableHeaderColor")}
+          </div>
+        </>
+      )}
     </div>
   );
 };
