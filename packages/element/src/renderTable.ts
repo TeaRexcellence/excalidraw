@@ -47,7 +47,8 @@ const drawCellRange = (
   isDark: boolean,
   lineWidth: number,
 ) => {
-  const { cells, columnWidths, rowHeights, headerRow } = element;
+  const { cells, columnWidths, rowHeights } = element;
+  const frozenRows = element.frozenRows || 0;
 
   // Content-space origin for this range
   let zoneX = 0;
@@ -81,13 +82,17 @@ const drawCellRange = (
     ctx.globalAlpha = prevBgAlpha;
   }
 
-  // 2. Header row background (only if row 0 is in range)
-  if (headerRow && rowStart === 0 && element.rows > 0) {
+  // 2. Header row background — driven by frozen rows
+  if (frozenRows > 0 && rowStart === 0 && element.rows > 0) {
     const hc = element.headerColor || DEFAULT_HEADER_COLOR;
     const prevAlpha = ctx.globalAlpha;
     ctx.globalAlpha = prevAlpha * ((element.headerOpacity ?? 100) / 100);
     ctx.fillStyle = isDark ? applyDarkModeFilter(hc) : hc;
-    ctx.fillRect(zoneX, 0, zoneW, rowHeights[0]);
+    let headerH = 0;
+    for (let r = 0; r < Math.min(frozenRows, rowEnd); r++) {
+      headerH += rowHeights[r];
+    }
+    ctx.fillRect(zoneX, 0, zoneW, headerH);
     ctx.globalAlpha = prevAlpha;
   }
 
@@ -131,7 +136,7 @@ const drawCellRange = (
   for (let r = rowStart; r < rowEnd; r++) {
     x = zoneX;
     const cellH = rowHeights[r];
-    const isHeader = headerRow && r === 0;
+    const isHeader = frozenRows > 0 && r < frozenRows;
     ctx.font = `${isHeader ? "bold " : ""}${tableFontSize}px ${fontFamilyStr}`;
 
     for (let c = colStart; c < colEnd; c++) {
@@ -182,7 +187,6 @@ export const drawTableOnCanvas = (
     cells,
     columnWidths,
     rowHeights,
-    headerRow,
     scrollOffsetY,
     cropX,
     cropY,
@@ -271,13 +275,17 @@ export const drawTableOnCanvas = (
     context.globalAlpha = prevBgAlpha;
   }
 
-  // 2. Header row background
-  if (headerRow && rows > 0) {
+  // 2. Header row background — driven by frozen rows
+  if (frozenRows > 0 && rows > 0) {
     const hc = element.headerColor || DEFAULT_HEADER_COLOR;
     const prevAlpha = context.globalAlpha;
     context.globalAlpha = prevAlpha * ((element.headerOpacity ?? 100) / 100);
     context.fillStyle = isDark ? applyDarkModeFilter(hc) : hc;
-    context.fillRect(0, 0, totalWidth, rowHeights[0]);
+    let headerH = 0;
+    for (let r = 0; r < frozenRows; r++) {
+      headerH += rowHeights[r];
+    }
+    context.fillRect(0, 0, totalWidth, headerH);
     context.globalAlpha = prevAlpha;
   }
 
@@ -315,7 +323,7 @@ export const drawTableOnCanvas = (
   for (let r = 0; r < rows; r++) {
     x = 0;
     const cellH = rowHeights[r];
-    const isHeader = headerRow && r === 0;
+    const isHeader = frozenRows > 0 && r < frozenRows;
     context.font = `${isHeader ? "bold " : ""}${tableFontSize}px ${fontFamilyStr}`;
 
     // Skip rows entirely above the visible area for performance

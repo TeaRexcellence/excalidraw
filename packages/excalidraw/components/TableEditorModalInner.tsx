@@ -62,7 +62,6 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     | ExcalidrawTableElement
     | undefined;
 
-  const [headerRow, setHeaderRow] = useState(element?.headerRow ?? true);
   const [frozenRows, setFrozenRows] = useState(element?.frozenRows ?? 0);
   const [frozenColumns, setFrozenColumns] = useState(
     element?.frozenColumns ?? 0,
@@ -238,7 +237,7 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
         columns: usedCols,
         columnWidths: newColumnWidths,
         rowHeights: newRowHeights,
-        headerRow,
+        headerRow: frozenRows > 0,
         frozenRows: Math.min(frozenRows, usedRows),
         frozenColumns: Math.min(frozenColumns, usedCols),
         width: newWidth,
@@ -259,7 +258,7 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     });
 
     onClose();
-  }, [app, element, elementId, headerRow, frozenRows, frozenColumns, onClose]);
+  }, [app, element, elementId, frozenRows, frozenColumns, onClose]);
 
   // Handle CSV import
   const handleCSVImport = useCallback(
@@ -517,14 +516,6 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
             {t("tableEditor.title")}
           </span>
           <div className="TableEditorModal__toolbarActions">
-            <label className="TableEditorModal__headerToggle">
-              <input
-                type="checkbox"
-                checked={headerRow}
-                onChange={(e) => setHeaderRow(e.target.checked)}
-              />
-              {t("tableEditor.headerRow")}
-            </label>
             {(frozenRows > 0 || frozenColumns > 0) && (
               <span className="TableEditorModal__freezeInfo">
                 {frozenRows > 0 && `${frozenRows} ${t("tableEditor.freezeRows").toLowerCase()}`}

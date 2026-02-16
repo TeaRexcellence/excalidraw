@@ -38,6 +38,7 @@ import "prismjs/components/prism-r";
 import "prismjs/components/prism-dart";
 
 import { CaptureUpdateAction } from "@excalidraw/element";
+import { THEME } from "@excalidraw/common";
 
 import type {
   ExcalidrawCodeBlockElement,
@@ -119,8 +120,8 @@ const PRISM_LANG_KEY: Record<CodeBlockLanguage, string | null> = {
   plaintext: null,
 };
 
-// Inline token colors — same Catppuccin Mocha palette as the SCSS fallback
-const TOKEN_COLORS: Record<string, string> = {
+// Inline token colors — dark (Catppuccin Mocha)
+const DARK_TOKEN_COLORS: Record<string, string> = {
   keyword: "#cba6f7",
   string: "#a6e3a1",
   char: "#a6e3a1",
@@ -146,22 +147,55 @@ const TOKEN_COLORS: Record<string, string> = {
   "template-string": "#a6e3a1",
 };
 
+// Inline token colors — light
+const LIGHT_TOKEN_COLORS: Record<string, string> = {
+  keyword: "#7c3aed",
+  string: "#16a34a",
+  char: "#16a34a",
+  comment: "#9ca3af",
+  number: "#ea580c",
+  function: "#2563eb",
+  punctuation: "#6b7280",
+  operator: "#0891b2",
+  "class-name": "#ca8a04",
+  builtin: "#ca8a04",
+  boolean: "#7c3aed",
+  property: "#2563eb",
+  tag: "#dc2626",
+  "attr-name": "#ea580c",
+  "attr-value": "#16a34a",
+  regex: "#db2777",
+  important: "#dc2626",
+  deleted: "#dc2626",
+  inserted: "#16a34a",
+  selector: "#16a34a",
+  atrule: "#7c3aed",
+  constant: "#ea580c",
+  "template-string": "#16a34a",
+};
+
 const escapeHTML = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 // Convert Prism tokens to HTML with inline styles (bulletproof, no CSS needed)
-const tokensToInlineHTML = (tokens: Array<string | Prism.Token>): string => {
+const tokensToInlineHTML = (
+  tokens: Array<string | Prism.Token>,
+  tokenColors: Record<string, string>,
+): string => {
   let html = "";
   for (const token of tokens) {
     if (typeof token === "string") {
       html += escapeHTML(token);
     } else {
-      const color = TOKEN_COLORS[token.type];
+      const color = tokenColors[token.type];
       const italic = token.type === "comment" ? ";font-style:italic" : "";
       const styleAttr =
         color || italic ? ` style="color:${color || "inherit"}${italic}"` : "";
       const content = Array.isArray(token.content)
-        ? tokensToInlineHTML(token.content as Array<string | Prism.Token>)
+        ? tokensToInlineHTML(
+            token.content as Array<string | Prism.Token>,
+            tokenColors,
+          )
         : escapeHTML(String(token.content));
       html += `<span${styleAttr}>${content}</span>`;
     }
@@ -211,15 +245,18 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
   const editorWrapRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isDark = app.state.theme === THEME.DARK;
+  const tokenColors = isDark ? DARK_TOKEN_COLORS : LIGHT_TOKEN_COLORS;
+
   // Highlight code with Prism — uses inline styles for bulletproof rendering
   const highlightedHTML = useMemo(() => {
     const langKey = PRISM_LANG_KEY[language];
     if (langKey && Prism.languages[langKey]) {
       const tokens = Prism.tokenize(code, Prism.languages[langKey]);
-      return tokensToInlineHTML(tokens);
+      return tokensToInlineHTML(tokens, tokenColors);
     }
     return escapeHTML(code);
-  }, [code, language]);
+  }, [code, language, tokenColors]);
 
   // Line numbers
   const lineCount = useMemo(() => code.split("\n").length, [code]);
@@ -495,7 +532,7 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
                 color: "transparent",
                 backgroundColor: "transparent",
                 border: "none",
-                caretColor: "#cdd6f4",
+                caretColor: isDark ? "#cdd6f4" : "#1f2937",
               }}
               value={code}
               onChange={(e) => setCode(e.target.value)}

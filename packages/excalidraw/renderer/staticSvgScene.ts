@@ -753,8 +753,13 @@ const renderElementToSvg = (
           ? applyDarkModeFilter(element.strokeColor)
           : element.strokeColor;
 
-        // Header background
-        if (tableEl.headerRow && tableEl.rows > 0) {
+        // Header background — driven by frozen rows
+        const frozenRows = tableEl.frozenRows || 0;
+        if (frozenRows > 0 && tableEl.rows > 0) {
+          let headerH = 0;
+          for (let r = 0; r < Math.min(frozenRows, tableEl.rows); r++) {
+            headerH += tableEl.rowHeights[r];
+          }
           const headerRect = svgRoot.ownerDocument.createElementNS(
             SVG_NS,
             "rect",
@@ -768,7 +773,7 @@ const renderElementToSvg = (
               0,
             )}`,
           );
-          headerRect.setAttribute("height", `${tableEl.rowHeights[0]}`);
+          headerRect.setAttribute("height", `${headerH}`);
           headerRect.setAttribute(
             "fill",
             isDark ? "rgba(99,102,140,0.35)" : "rgba(213,216,235,0.35)",
@@ -821,7 +826,7 @@ const renderElementToSvg = (
           for (let c = 0; c < tableEl.columns; c++) {
             const cellText = tableEl.cells[r]?.[c] || "";
             if (cellText) {
-              const isHeader = tableEl.headerRow && r === 0;
+              const isHeader = frozenRows > 0 && r < frozenRows;
               const text = svgRoot.ownerDocument.createElementNS(
                 SVG_NS,
                 "text",

@@ -35,13 +35,13 @@
   width: 100%;
   height: 100%;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-// ── Modal ────────────────────────────────────────────────────────────
+// ── Modal (light mode defaults) ─────────────────────────────────────
 .CodeBlockEditorModal {
   display: flex;
   flex-direction: column;
@@ -51,8 +51,8 @@
   min-height: 350px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
-  background: #1e1e2e;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  background: #ffffff;
 
   // ── Toolbar ──────────────────────────────────────────────────────
   &__toolbar {
@@ -61,8 +61,8 @@
     justify-content: space-between;
     gap: 12px;
     padding: 8px 16px;
-    background: #14141f;
-    border-bottom: 1px solid #2a2a3c;
+    background: #f8f8f8;
+    border-bottom: 1px solid #e5e5e5;
     flex-shrink: 0;
   }
 
@@ -81,15 +81,15 @@
   &__title {
     font-size: 13px;
     font-weight: 600;
-    color: #cdd6f4;
+    color: #1f2937;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     white-space: nowrap;
   }
 
   &__langSelect {
-    background: #2a2a3c;
-    color: #cdd6f4;
-    border: 1px solid #3a3a4c;
+    background: #f0f0f0;
+    color: #1f2937;
+    border: 1px solid #d1d5db;
     border-radius: 6px;
     padding: 4px 10px;
     font-size: 12px;
@@ -98,11 +98,11 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
     &:hover {
-      border-color: #555;
+      border-color: #9ca3af;
     }
 
     &:focus {
-      border-color: #89b4fa;
+      border-color: var(--color-primary, #2563eb);
     }
   }
 
@@ -111,7 +111,7 @@
     align-items: center;
     gap: 5px;
     font-size: 12px;
-    color: #6c7086;
+    color: #6b7280;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     cursor: pointer;
     user-select: none;
@@ -125,9 +125,9 @@
 
   &__btn {
     background: none;
-    border: 1px solid #3a3a4c;
+    border: 1px solid #d1d5db;
     border-radius: 6px;
-    color: #cdd6f4;
+    color: #1f2937;
     padding: 4px 12px;
     font-size: 12px;
     cursor: pointer;
@@ -135,20 +135,20 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
     &:hover {
-      background: #2a2a3c;
-      border-color: #555;
+      background: #f0f0f0;
+      border-color: #9ca3af;
     }
 
     &--primary {
-      background: var(--color-primary, #89b4fa);
-      color: #1e1e2e;
-      border-color: var(--color-primary, #89b4fa);
+      background: var(--color-primary, #2563eb);
+      color: #ffffff;
+      border-color: var(--color-primary, #2563eb);
       font-weight: 600;
 
       &:hover {
         opacity: 0.9;
-        background: var(--color-primary, #89b4fa);
-        border-color: var(--color-primary, #89b4fa);
+        background: var(--color-primary, #2563eb);
+        border-color: var(--color-primary, #2563eb);
       }
     }
   }
@@ -160,15 +160,15 @@
     min-height: 0;
     overflow: hidden;
     display: flex;
-    background: #1e1e2e;
+    background: #ffffff;
   }
 
   &__lineNumbers {
     width: 48px;
     min-width: 48px;
     overflow: hidden;
-    background: #181825;
-    border-right: 1px solid #2a2a3c;
+    background: #f8f8f8;
+    border-right: 1px solid #e5e5e5;
     padding-top: 12px;
     user-select: none;
     flex-shrink: 0;
@@ -184,7 +184,7 @@
       text-align: right;
       font-family: Consolas, "SF Mono", Monaco, "Fira Code", monospace;
       font-size: 13px;
-      color: #555570;
+      color: #b0b0b0;
     }
   }
 
@@ -223,91 +223,18 @@
     resize: none;
     background: transparent;
     color: transparent;
-    caret-color: #cdd6f4;
+    caret-color: #1f2937;
     z-index: 2;
 
     &::selection {
-      background: rgba(137, 180, 250, 0.25);
+      background: rgba(37, 99, 235, 0.2);
     }
   }
 
   &__highlighted {
     z-index: 1;
     pointer-events: none;
-    color: #cdd6f4;
-
-    // Prism token colors — Catppuccin Mocha inspired
-    .token.keyword {
-      color: #cba6f7;
-    }
-    .token.string,
-    .token.char {
-      color: #a6e3a1;
-    }
-    .token.comment {
-      color: #6c7086;
-      font-style: italic;
-    }
-    .token.number {
-      color: #fab387;
-    }
-    .token.function {
-      color: #89b4fa;
-    }
-    .token.punctuation {
-      color: #9399b2;
-    }
-    .token.operator {
-      color: #89dceb;
-    }
-    .token.class-name {
-      color: #f9e2af;
-    }
-    .token.builtin {
-      color: #f9e2af;
-    }
-    .token.boolean {
-      color: #cba6f7;
-    }
-    .token.property {
-      color: #89b4fa;
-    }
-    .token.tag {
-      color: #f38ba8;
-    }
-    .token.attr-name {
-      color: #fab387;
-    }
-    .token.attr-value {
-      color: #a6e3a1;
-    }
-    .token.regex {
-      color: #f5c2e7;
-    }
-    .token.important {
-      color: #f38ba8;
-    }
-    .token.deleted {
-      color: #f38ba8;
-    }
-    .token.inserted {
-      color: #a6e3a1;
-    }
-    .token.selector {
-      color: #a6e3a1;
-    }
-    .token.atrule {
-      color: #cba6f7;
-    }
-    .token.constant {
-      color: #fab387;
-    }
-    .token.variable {
-      color: #cdd6f4;
-    }
-    .token.template-string {
-      color: #a6e3a1;
-    }
+    color: #1f2937;
   }
 
   // Scrollbar styling
@@ -323,21 +250,108 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.12);
       border-radius: 4px;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.2);
       }
     }
   }
 }
 
 // ── Dark mode ────────────────────────────────────────────────────────
-// The code editor always uses a dark theme (like VS Code), so only
-// the backdrop needs a slight tweak for dark-mode Excalidraw.
 .excalidraw.theme--dark {
   .CodeBlockEditorModal-backdrop {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(22, 22, 22, 0.7);
+  }
+
+  .CodeBlockEditorModal {
+    background: #111111;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+    &__toolbar {
+      background: #111111;
+      border-bottom-color: #1a1a1a;
+    }
+
+    &__title {
+      color: #cdd6f4;
+    }
+
+    &__langSelect {
+      background: #1a1a1a;
+      color: #cdd6f4;
+      border-color: #2a2a2a;
+
+      &:hover {
+        border-color: #555;
+      }
+
+      &:focus {
+        border-color: var(--color-primary, #89b4fa);
+      }
+    }
+
+    &__lineNumToggle {
+      color: #6c7086;
+    }
+
+    &__btn {
+      border-color: #2a2a2a;
+      color: #cdd6f4;
+
+      &:hover {
+        background: #1a1a1a;
+        border-color: #555;
+      }
+
+      &--primary {
+        background: var(--color-primary, #89b4fa);
+        color: #111111;
+        border-color: var(--color-primary, #89b4fa);
+
+        &:hover {
+          background: var(--color-primary, #89b4fa);
+          border-color: var(--color-primary, #89b4fa);
+        }
+      }
+    }
+
+    &__editorWrap {
+      background: #0a0a0a;
+    }
+
+    &__lineNumbers {
+      background: #0e0e0e;
+      border-right-color: #1a1a1a;
+
+      div > div {
+        color: #555555;
+      }
+    }
+
+    &__textarea {
+      caret-color: #cdd6f4;
+
+      &::selection {
+        background: rgba(255, 255, 255, 0.15);
+      }
+    }
+
+    &__highlighted {
+      color: #cdd6f4;
+    }
+
+    &__textarea,
+    &__highlighted {
+      &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.12);
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      }
+    }
   }
 }
