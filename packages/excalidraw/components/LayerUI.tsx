@@ -171,10 +171,12 @@ const GridStepDragInput = ({
   appState,
   setAppState,
   onDragStateChange,
+  disabled,
 }: {
   appState: UIAppState;
   setAppState: React.Component<any, AppState>["setState"];
   onDragStateChange?: (dragging: boolean) => void;
+  disabled?: boolean;
 }) => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState("");
@@ -259,8 +261,10 @@ const GridStepDragInput = ({
   );
 
   return (
-    <div className="grid-step-row" title="Grid steps">
-      {isEditing ? (
+    <div className={clsx("grid-step-row", {
+      "grid-step-row--disabled": disabled,
+    })} title="Grid steps">
+      {isEditing && !disabled ? (
         <input
           ref={inputRef}
           className="grid-step-row__input grid-step-row__input--editing"
@@ -285,8 +289,9 @@ const GridStepDragInput = ({
           value={appState.gridStep}
           title="Grid steps"
           readOnly
-          onPointerDown={startDrag}
-          onClick={(e) => {
+          disabled={disabled}
+          onPointerDown={disabled ? undefined : startDrag}
+          onClick={disabled ? undefined : (e) => {
             if (!isDragging.current) {
               setEditValue(String(appState.gridStep));
               setIsEditing(true);
@@ -383,7 +388,9 @@ const GridTypeDropdown = ({
               }}
             />
           ))}
-          <div className="grid-opacity-sliders-row">
+          <div className={clsx("grid-opacity-sliders-row", {
+            "grid-opacity-sliders-row--disabled": appState.objectsSnapModeEnabled,
+          })}>
             <div
               className={clsx("grid-slider-group", {
                 "grid-slider-group--disabled": !appState.majorGridEnabled,
@@ -400,6 +407,7 @@ const GridTypeDropdown = ({
                   max="100"
                   step="10"
                   value={appState.gridOpacity}
+                  disabled={appState.objectsSnapModeEnabled}
                   onChange={(e) => {
                     setAppState({ gridOpacity: +e.target.value });
                   }}
@@ -434,6 +442,7 @@ const GridTypeDropdown = ({
                   max="100"
                   step="10"
                   value={appState.gridMinorOpacity}
+                  disabled={appState.objectsSnapModeEnabled}
                   onChange={(e) => {
                     setAppState({ gridMinorOpacity: +e.target.value });
                   }}
@@ -457,10 +466,14 @@ const GridTypeDropdown = ({
             appState={appState}
             setAppState={setAppState}
             onDragStateChange={setIsDraggingStep}
+            disabled={appState.objectsSnapModeEnabled}
           />
           <button
-            className="grid-reset-button"
+            className={clsx("grid-reset-button", {
+              "grid-reset-button--disabled": appState.objectsSnapModeEnabled,
+            })}
             title="Reset grid to default settings"
+            disabled={appState.objectsSnapModeEnabled}
             onClick={() => {
               const defaults = getDefaultAppState();
               setAppState({
@@ -471,6 +484,7 @@ const GridTypeDropdown = ({
                 gridMinorOpacity: defaults.gridMinorOpacity,
                 majorGridEnabled: defaults.majorGridEnabled,
                 minorGridEnabled: defaults.minorGridEnabled,
+                objectsSnapModeEnabled: false,
               });
             }}
           >

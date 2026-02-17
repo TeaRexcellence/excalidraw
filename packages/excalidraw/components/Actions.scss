@@ -263,6 +263,11 @@
       gap: 0.3rem;
       max-width: 41px;
       border-top: 1px solid var(--color-border-outline-variant);
+
+      &--disabled {
+        opacity: 0.3;
+        pointer-events: none;
+      }
     }
 
     .grid-slider-group {
@@ -353,6 +358,11 @@
       border-top: 1px solid var(--color-border-outline-variant);
       border-bottom: 1px solid var(--color-border-outline-variant);
 
+      &--disabled {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+
       &__input {
         width: 100%;
         text-align: center;
@@ -390,6 +400,12 @@
 
       &:hover {
         opacity: 1;
+      }
+
+      &--disabled {
+        opacity: 0.2;
+        pointer-events: none;
+        cursor: default;
       }
     }
   }
