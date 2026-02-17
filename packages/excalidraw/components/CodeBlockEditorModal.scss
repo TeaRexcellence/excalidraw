@@ -45,13 +45,13 @@
 .CodeBlockEditorModal {
   display: flex;
   flex-direction: column;
-  width: 80vw;
-  height: 80vh;
+  width: 93vw;
+  height: 93vh;
   min-width: 480px;
   min-height: 350px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  border: 1px solid #d1d5db;
   background: #ffffff;
 
   // ── Toolbar ──────────────────────────────────────────────────────
@@ -188,6 +188,19 @@
     }
   }
 
+  &__placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 12px 14px;
+    font-family: Consolas, "SF Mono", Monaco, "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 22px;
+    white-space: pre;
+    pointer-events: none;
+    z-index: 1;
+  }
+
   &__codeArea {
     position: relative;
     flex: 1;
@@ -268,7 +281,7 @@
 
   .CodeBlockEditorModal {
     background: #111111;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    border-color: #333;
 
     &__toolbar {
       background: #111111;

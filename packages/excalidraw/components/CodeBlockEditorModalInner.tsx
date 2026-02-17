@@ -520,6 +520,14 @@ const CodeBlockEditorModalInner: React.FC<CodeBlockEditorModalInnerProps> = ({
               showLineNumbers ? "" : "CodeBlockEditorModal__codeArea--noGutter"
             }`}
           >
+            {!code && (
+              <div
+                className="CodeBlockEditorModal__placeholder"
+                style={{ color: isDark ? "#6c7086" : "#9ca3af", fontStyle: "italic" }}
+              >
+                {"// Code Editor\n//\n// Start typing or paste your code here.\n// Language is detected automatically.\n// You can also import a file using the\n// button in the top right of the toolbar."}
+              </div>
+            )}
             <pre
               ref={highlightRef}
               className="CodeBlockEditorModal__highlighted"

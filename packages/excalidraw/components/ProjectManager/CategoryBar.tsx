@@ -127,7 +127,16 @@ export const CategoryBar: React.FC<CategoryBarProps> = ({
 
   return (
     <div className="CategoryBar">
-      <div className="CategoryBar__scroll" ref={scrollRef}>
+      <div
+        className="CategoryBar__scroll"
+        ref={scrollRef}
+        onWheel={(e) => {
+          if (scrollRef.current && e.deltaY !== 0) {
+            e.preventDefault();
+            scrollRef.current.scrollLeft += e.deltaY;
+          }
+        }}
+      >
         {/* Create new category — first in row */}
         {isCreating ? (
           <input

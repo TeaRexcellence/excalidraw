@@ -1163,7 +1163,7 @@
 
 // ─── Dark Mode Colors Only ──────────────────────────────────────
 .excalidraw.theme--dark .CategoryBar {
-  &__scroll button {
+  &__scroll button:not(.CategoryBar__pill--active) {
     background: #232329;
   }
 
