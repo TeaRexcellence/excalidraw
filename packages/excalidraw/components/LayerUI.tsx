@@ -170,9 +170,11 @@ const GRID_TYPES = [
 const GridStepDragInput = ({
   appState,
   setAppState,
+  onDragStateChange,
 }: {
   appState: UIAppState;
   setAppState: React.Component<any, AppState>["setState"];
+  onDragStateChange?: (dragging: boolean) => void;
 }) => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState("");
@@ -222,6 +224,7 @@ const GridStepDragInput = ({
       });
 
       document.body.classList.add("excalidraw-cursor-resize");
+      onDragStateChange?.(true);
 
       const onPointerMove = (ev: PointerEvent) => {
         isDragging.current = true;
@@ -246,12 +249,13 @@ const GridStepDragInput = ({
           setAppState(savedGridState.current);
           savedGridState.current = null;
         }
+        onDragStateChange?.(false);
       };
 
       document.addEventListener("pointermove", onPointerMove);
       document.addEventListener("pointerup", onPointerUp);
     },
-    [appState, setAppState],
+    [appState, setAppState, onDragStateChange],
   );
 
   return (
@@ -304,6 +308,7 @@ const GridTypeDropdown = ({
   actionManager: ActionManager;
 }) => {
   const [hiddenDropdown, setHiddenDropdown] = React.useState(false);
+  const [isDraggingStep, setIsDraggingStep] = React.useState(false);
   const majorSliderRef = React.useRef<HTMLInputElement>(null);
   const minorSliderRef = React.useRef<HTMLInputElement>(null);
 
@@ -349,7 +354,10 @@ const GridTypeDropdown = ({
           actionManager.executeAction(actionToggleGridMode);
         }}
       />
-      <div className="tool-hover-dropdown__panel">
+      <div
+        className="tool-hover-dropdown__panel"
+        style={isDraggingStep ? { opacity: 1, pointerEvents: "auto" } : undefined}
+      >
         <div className="tool-hover-dropdown__shapes">
           {otherTypes.map((gridType) => (
             <ToolButton
@@ -403,7 +411,7 @@ const GridTypeDropdown = ({
                 <Switch
                   name="majorGridToggle"
                   checked={appState.majorGridEnabled}
-                  title="Toggle major grid"
+                  title="Toggle major grid visibility"
                   onChange={(checked) =>
                     setAppState({ majorGridEnabled: checked })
                   }
@@ -437,7 +445,7 @@ const GridTypeDropdown = ({
                 <Switch
                   name="minorGridToggle"
                   checked={appState.minorGridEnabled}
-                  title="Toggle minor grid"
+                  title="Toggle minor grid visibility"
                   onChange={(checked) =>
                     setAppState({ minorGridEnabled: checked })
                   }
@@ -448,6 +456,7 @@ const GridTypeDropdown = ({
           <GridStepDragInput
             appState={appState}
             setAppState={setAppState}
+            onDragStateChange={setIsDraggingStep}
           />
           <button
             className="grid-reset-button"
