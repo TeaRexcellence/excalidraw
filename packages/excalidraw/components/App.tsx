@@ -48,7 +48,6 @@ import {
   THEME,
   TOUCH_CTX_MENU_TIMEOUT,
   VERTICAL_ALIGN,
-  YOUTUBE_STATES,
   ZOOM_STEP,
   POINTER_EVENTS,
   TOOL_TYPE,
@@ -292,7 +291,7 @@ import type {
   ExcalidrawTableElement,
 } from "@excalidraw/element/types";
 
-import type { Mutable, ValueOf } from "@excalidraw/common/utility-types";
+import type { Mutable } from "@excalidraw/common/utility-types";
 
 import {
   actionAddToLibrary,
@@ -464,6 +463,7 @@ import { findShapeByKey } from "./shapes";
 
 import UnlockPopup from "./UnlockPopup";
 import { VideoPlayer } from "./VideoPlayer";
+import * as YTManager from "./YouTubePlayerManager";
 
 import type { ExcalidrawLibraryIds } from "../data/types";
 
@@ -584,12 +584,9 @@ let touchTimeout = 0;
 let invalidateContextMenu = false;
 
 /**
- * Map of youtube embed video states
+ * Map of youtube embed video states (backed by YouTubePlayerManager)
  */
-const YOUTUBE_VIDEO_STATES = new Map<
-  ExcalidrawElement["id"],
-  ValueOf<typeof YOUTUBE_STATES>
->();
+export const YOUTUBE_VIDEO_STATES = YTManager.youtubePlayerStates;
 
 let IS_PLAIN_PASTE = false;
 let IS_PLAIN_PASTE_TIMER = 0;
@@ -821,10 +818,7 @@ class App extends React.Component<AppProps, AppState> {
   };
 
   private onWindowMessage(event: MessageEvent) {
-    if (
-      event.origin !== "https://player.vimeo.com" &&
-      event.origin !== "https://www.youtube.com"
-    ) {
+    if (event.origin !== "https://player.vimeo.com") {
       return;
     }
 
@@ -836,50 +830,28 @@ class App extends React.Component<AppProps, AppState> {
       return;
     }
 
-    switch (event.origin) {
-      case "https://player.vimeo.com":
-        //Allowing for multiple instances of Excalidraw running in the window
-        if (data.method === "paused") {
-          let source: Window | null = null;
-          const iframes = document.body.querySelectorAll(
-            "iframe.excalidraw__embeddable",
-          );
-          if (!iframes) {
-            break;
-          }
-          for (const iframe of iframes as NodeListOf<HTMLIFrameElement>) {
-            if (iframe.contentWindow === event.source) {
-              source = iframe.contentWindow;
-            }
-          }
-          source?.postMessage(
-            JSON.stringify({
-              method: data.value ? "play" : "pause",
-              value: true,
-            }),
-            "*",
-          );
+    // YouTube is handled by YouTubePlayerManager (JS API, not postMessage)
+    // Only Vimeo uses postMessage
+    if (data.method === "paused") {
+      let source: Window | null = null;
+      const iframes = document.body.querySelectorAll(
+        "iframe.excalidraw__embeddable",
+      );
+      if (!iframes) {
+        return;
+      }
+      for (const iframe of iframes as NodeListOf<HTMLIFrameElement>) {
+        if (iframe.contentWindow === event.source) {
+          source = iframe.contentWindow;
         }
-        break;
-      case "https://www.youtube.com":
-        if (
-          data.event === "infoDelivery" &&
-          data.info &&
-          data.id &&
-          typeof data.info.playerState === "number"
-        ) {
-          const id = data.id;
-          const playerState = data.info.playerState as number;
-          if (
-            (Object.values(YOUTUBE_STATES) as number[]).includes(playerState)
-          ) {
-            YOUTUBE_VIDEO_STATES.set(
-              id,
-              playerState as ValueOf<typeof YOUTUBE_STATES>,
-            );
-          }
-        }
-        break;
+      }
+      source?.postMessage(
+        JSON.stringify({
+          method: data.value ? "play" : "pause",
+          value: true,
+        }),
+        "*",
+      );
     }
   }
 
@@ -1256,39 +1228,7 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     if (iframe.src.includes("youtube")) {
-      const state = YOUTUBE_VIDEO_STATES.get(element.id);
-      if (!state) {
-        YOUTUBE_VIDEO_STATES.set(element.id, YOUTUBE_STATES.UNSTARTED);
-        iframe.contentWindow.postMessage(
-          JSON.stringify({
-            event: "listening",
-            id: element.id,
-          }),
-          "*",
-        );
-      }
-      switch (state) {
-        case YOUTUBE_STATES.PLAYING:
-        case YOUTUBE_STATES.BUFFERING:
-          iframe.contentWindow?.postMessage(
-            JSON.stringify({
-              event: "command",
-              func: "pauseVideo",
-              args: "",
-            }),
-            "*",
-          );
-          break;
-        default:
-          iframe.contentWindow?.postMessage(
-            JSON.stringify({
-              event: "command",
-              func: "playVideo",
-              args: "",
-            }),
-            "*",
-          );
-      }
+      YTManager.togglePlay(element.id);
     }
 
     if (iframe.src.includes("player.vimeo.com")) {
@@ -1584,9 +1524,9 @@ class App extends React.Component<AppProps, AppState> {
                     ? DEFAULT_REDUCED_GLOBAL_ALPHA
                     : 1,
                 ),
-                ["--embeddable-radius" as string]: `${getCornerRadius(
-                  Math.min(el.width, el.height),
-                  el,
+                ["--embeddable-radius" as string]: `${Math.min(
+                  getCornerRadius(Math.min(el.width, el.height), el),
+                  8,
                 )}px`,
               }}
             >
@@ -1608,6 +1548,7 @@ class App extends React.Component<AppProps, AppState> {
                   }
                 }}*/
                 className="excalidraw__embeddable-container__inner"
+                data-element-id={el.id}
                 style={{
                   width: isVisible ? `${el.width}px` : 0,
                   height: isVisible ? `${el.height}px` : 0,
@@ -1658,6 +1599,12 @@ class App extends React.Component<AppProps, AppState> {
                     ) : (
                       <iframe
                         ref={(ref) => this.cacheEmbeddableRef(el, ref)}
+                        onLoad={() => {
+                          const iframeRef = this.iFrameRefs.get(el.id);
+                          if (iframeRef && iframeRef.src.includes("youtube")) {
+                            YTManager.initPlayer(el.id, iframeRef, src?.videoOptions);
+                          }
+                        }}
                         className="excalidraw__embeddable"
                         srcDoc={
                           src?.type === "document"
@@ -8824,7 +8771,9 @@ class App extends React.Component<AppProps, AppState> {
       strokeWidth: this.state.currentItemStrokeWidth,
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
-      roundness: this.getCurrentItemRoundness("embeddable"),
+      roundness: this.state.currentItemRoundness === "round"
+        ? { type: ROUNDNESS.ADAPTIVE_RADIUS, value: 8 }
+        : null,
       opacity: this.state.currentItemOpacity,
       locked: false,
       width: embedLink.intrinsicSize.w,

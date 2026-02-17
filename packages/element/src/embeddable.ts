@@ -360,37 +360,60 @@ export const getEmbedLink = (
   let aspectRatio = { w: 560, h: 840 };
   const ytLink = link.match(RE_YOUTUBE);
   if (ytLink?.[2]) {
-    const startTime = parseYouTubeTimestamp(originalLink);
-    const time = startTime > 0 ? `&start=${startTime}` : ``;
+    // Parse video options from our hash (if any)
+    const videoOptions = parseVideoOptions(originalLink);
+
+    // If no explicit start time in our options, inherit from YouTube URL timestamp
+    if (videoOptions.startTime === 0) {
+      const ytTimestamp = parseYouTubeTimestamp(originalLink);
+      if (ytTimestamp > 0) {
+        videoOptions.startTime = ytTimestamp;
+      }
+    }
+
     const isPortrait = link.includes("shorts");
     type = "video";
+
+    // Build YouTube embed URL with params
+    const params = new URLSearchParams();
+    let baseUrl: string;
     switch (ytLink[1]) {
+      case "playlist?list=":
+      case "embed/videoseries?list=":
+        baseUrl = `https://www.youtube.com/embed/videoseries`;
+        params.set("list", ytLink[2]);
+        break;
       case "embed/":
       case "watch?v=":
       case "shorts/":
-        link = `https://www.youtube.com/embed/${ytLink[2]}?enablejsapi=1${time}`;
-        break;
-      case "playlist?list=":
-      case "embed/videoseries?list=":
-        link = `https://www.youtube.com/embed/videoseries?list=${ytLink[2]}&enablejsapi=1${time}`;
-        break;
       default:
-        link = `https://www.youtube.com/embed/${ytLink[2]}?enablejsapi=1${time}`;
+        baseUrl = `https://www.youtube.com/embed/${ytLink[2]}`;
         break;
     }
-    aspectRatio = isPortrait ? { w: 315, h: 560 } : { w: 560, h: 315 };
-    embeddedLinkCache.set(originalLink, {
+
+    params.set("enablejsapi", "1");
+    // origin is required for the YT IFrame JS API to respond to events
+    if (typeof window !== "undefined") {
+      params.set("origin", window.location.origin);
+    }
+    // Disable related videos at end (keeps our UI clean)
+    params.set("rel", "0");
+    // ALL other options (start, end, loop, autoplay, mute) are applied
+    // by YouTubePlayerManager via the JS API in onReady. This keeps the
+    // embed URL stable — changing options never reloads the iframe.
+
+    link = `${baseUrl}?${params.toString()}`;
+
+    aspectRatio = isPortrait ? { w: 180, h: 320 } : { w: 320, h: 180 };
+    const ret: IframeDataWithSandbox = {
       link,
       intrinsicSize: aspectRatio,
       type,
       sandbox: { allowSameOrigin },
-    });
-    return {
-      link,
-      intrinsicSize: aspectRatio,
-      type,
-      sandbox: { allowSameOrigin },
+      videoOptions,
     };
+    embeddedLinkCache.set(originalLink, ret);
+    return ret;
   }
 
   const vimeoLink = link.match(RE_VIMEO);
@@ -646,6 +669,13 @@ export const embeddableURLValidator = (
 ): boolean => {
   // Allow ALL URLs - no restrictions
   return !!url;
+};
+
+/**
+ * Check if a URL is a YouTube video URL
+ */
+export const isYouTubeUrl = (url: string): boolean => {
+  return RE_YOUTUBE.test(url);
 };
 
 /**

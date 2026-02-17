@@ -8,7 +8,11 @@ import {
   useState,
 } from "react";
 
-import { EVENT, HYPERLINK_TOOLTIP_DELAY, KEYS } from "@excalidraw/common";
+import {
+  EVENT,
+  HYPERLINK_TOOLTIP_DELAY,
+  KEYS,
+} from "@excalidraw/common";
 
 import { getElementAbsoluteCoords } from "@excalidraw/element";
 
@@ -20,6 +24,7 @@ import {
   getEmbedLink,
   embeddableURLValidator,
   isDirectVideoUrl,
+  isYouTubeUrl,
   parseVideoOptions,
   updateVideoOptionsInUrl,
   formatTimeDisplay,
@@ -51,7 +56,12 @@ import { getTooltipDiv, updateTooltipPosition } from "../../components/Tooltip";
 
 import { t } from "../../i18n";
 
-import { useAppProps, useEditorInterface, useExcalidrawAppState } from "../App";
+import {
+  useAppProps,
+  useEditorInterface,
+  useExcalidrawAppState,
+} from "../App";
+import * as YTManager from "../YouTubePlayerManager";
 import { ToolButton } from "../ToolButton";
 import {
   FreedrawIcon,
@@ -87,12 +97,20 @@ const embeddableLinkCache = new Map<
   string
 >();
 
-// Helper to check if element is a video embeddable
+// Helper to check if element is a video embeddable (direct video OR YouTube)
 const isVideoElement = (element: NonDeletedExcalidrawElement): boolean => {
   if (!isEmbeddableElement(element) || !element.link) {
     return false;
   }
-  return isDirectVideoUrl(element.link);
+  return isDirectVideoUrl(element.link) || isYouTubeUrl(element.link);
+};
+
+// Helper to check if element is specifically a YouTube embed
+const isYouTubeElement = (element: NonDeletedExcalidrawElement): boolean => {
+  if (!isEmbeddableElement(element) || !element.link) {
+    return false;
+  }
+  return isYouTubeUrl(element.link);
 };
 
 // Helper to get video duration from a URL
@@ -165,6 +183,7 @@ export const Hyperlink = ({
 
   const linkVal = element.link || "";
   const isVideo = isVideoElement(element);
+  const isYouTube = isYouTubeElement(element);
 
   const [inputVal, setInputVal] = useState(linkVal);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -186,8 +205,11 @@ export const Hyperlink = ({
       : "",
   );
 
-  // Get video element from DOM
+  // Get video element from DOM (for direct videos)
   const getVideoElement = useCallback((): HTMLVideoElement | null => {
+    if (isYouTube) {
+      return null;
+    }
     // Find video in the embeddable container
     const container = document.querySelector(
       `.excalidraw__embeddable-container [data-element-id="${element.id}"]`,
@@ -205,28 +227,63 @@ export const Hyperlink = ({
       }
     }
     return null;
-  }, [element.id, element.link]);
+  }, [element.id, element.link, isYouTube]);
 
   // Toggle play/pause
   const togglePlayPause = useCallback(() => {
-    const video = getVideoElement();
-    if (!video) {
-      return;
-    }
-    if (video.paused) {
-      video.play();
-      setIsPlaying(true);
+    if (isYouTube) {
+      // YouTube: use JS API via YouTubePlayerManager
+      const nowPlaying = YTManager.togglePlay(element.id);
+      setIsPlaying(nowPlaying);
     } else {
-      video.pause();
-      setIsPlaying(false);
+      // Direct video: use HTML5 video API
+      const video = getVideoElement();
+      if (!video) {
+        return;
+      }
+      if (video.paused) {
+        video.play();
+        setIsPlaying(true);
+      } else {
+        video.pause();
+        setIsPlaying(false);
+      }
     }
-  }, [getVideoElement]);
+  }, [isYouTube, getVideoElement, element.id]);
 
   // Sync playing state and current time with actual video
   useEffect(() => {
     if (!isVideo) {
       return;
     }
+
+    if (isYouTube) {
+      // Use YouTubePlayerManager's onStateChange for play state
+      const unsubscribe = YTManager.onStateChange(element.id, (state) => {
+        const { YOUTUBE_STATES } = YTManager;
+        setIsPlaying(
+          state === YOUTUBE_STATES.PLAYING ||
+            state === YOUTUBE_STATES.BUFFERING,
+        );
+      });
+      // Poll current time from the manager (no "timeupdate" event for YT)
+      const timeInterval = window.setInterval(() => {
+        setCurrentTime(YTManager.getCurrentTime(element.id));
+      }, 250);
+      // Initial state
+      const { YOUTUBE_STATES } = YTManager;
+      const initialState = YTManager.getState(element.id);
+      setIsPlaying(
+        initialState === YOUTUBE_STATES.PLAYING ||
+          initialState === YOUTUBE_STATES.BUFFERING,
+      );
+      setCurrentTime(YTManager.getCurrentTime(element.id));
+      return () => {
+        unsubscribe();
+        clearInterval(timeInterval);
+      };
+    }
+
     const video = getVideoElement();
     if (!video) {
       return;
@@ -249,11 +306,11 @@ export const Hyperlink = ({
       video.removeEventListener("pause", handlePause);
       video.removeEventListener("timeupdate", handleTimeUpdate);
     };
-  }, [isVideo, getVideoElement]);
+  }, [isVideo, isYouTube, getVideoElement, element.id]);
 
   // Fetch video duration when element changes
   useEffect(() => {
-    if (isVideo && linkVal) {
+    if (isVideo && !isYouTube && linkVal) {
       const cleanUrl = linkVal.split("#")[0];
       getVideoDuration(cleanUrl).then((duration) => {
         if (duration !== null && isFinite(duration)) {
@@ -265,7 +322,29 @@ export const Hyperlink = ({
         }
       });
     }
-  }, [isVideo, linkVal, videoOptions.endTime]);
+    if (isVideo && isYouTube) {
+      // Poll for YouTube duration (available once video starts playing)
+      const checkDuration = () => {
+        const d = YTManager.getDuration(element.id);
+        if (d !== null) {
+          setVideoDuration(d);
+          if (videoOptions.endTime === null) {
+            setEndTimeInput(formatTimeDisplay(d));
+          }
+          return true;
+        }
+        return false;
+      };
+      if (!checkDuration()) {
+        const interval = window.setInterval(() => {
+          if (checkDuration()) {
+            clearInterval(interval);
+          }
+        }, 1000);
+        return () => clearInterval(interval);
+      }
+    }
+  }, [isVideo, isYouTube, linkVal, videoOptions.endTime, element.id]);
 
   // Update video options when link changes
   useEffect(() => {
@@ -287,8 +366,13 @@ export const Hyperlink = ({
         const newLink = updateVideoOptionsInUrl(element.link, updatedOptions);
         scene.mutateElement(element, { link: newLink });
       }
+
+      // Keep YouTubePlayerManager in sync for loop/end-time enforcement
+      if (isYouTube) {
+        YTManager.updateOptions(element.id, updatedOptions);
+      }
     },
-    [videoOptions, element, scene],
+    [videoOptions, element, scene, isYouTube],
   );
 
   const handleSubmit = useCallback(() => {
