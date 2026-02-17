@@ -392,6 +392,12 @@ export const drawCodeBlockOnCanvas = (
   const totalContentHeight = lines.length * LINE_HEIGHT;
   const viewHeight = height - codeAreaTop - PADDING;
 
+  // Clip to code area so scrolled content doesn't overlap the header
+  context.save();
+  context.beginPath();
+  context.rect(-10000, codeAreaTop, 20000, 20000);
+  context.clip();
+
   // Apply scroll offset
   context.save();
   context.translate(0, codeAreaTop - scrollOffsetY);
@@ -481,5 +487,6 @@ export const drawCodeBlockOnCanvas = (
     context.fill();
   }
 
-  context.restore();
+  context.restore(); // code area clip
+  context.restore(); // main
 };
