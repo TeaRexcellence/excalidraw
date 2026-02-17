@@ -3,6 +3,7 @@ import { THEME, applyDarkModeFilter, getFontFamilyString } from "@excalidraw/com
 import type { StaticCanvasRenderConfig } from "@excalidraw/excalidraw/scene/types";
 
 import type { ExcalidrawTableElement } from "./types";
+import { getCornerRadius } from "./utils";
 
 // Fallback defaults (used if element properties are missing)
 const DEFAULT_GRID_COLOR = "#868e96";
@@ -251,9 +252,21 @@ export const drawTableOnCanvas = (
   const hasFrozenRows = frozenRows > 0 && frozenRowClipH > 0;
   const hasFrozenCols = frozenColumns > 0 && frozenColClipW > 0;
 
-  // Clip to element viewport bounds
+  // Clip to element viewport bounds with rounded corners
+  const cornerRadius = element.roundness
+    ? getCornerRadius(Math.min(viewWidth, viewHeight), element)
+    : 0;
   context.beginPath();
-  context.rect(0, 0, viewWidth, viewHeight);
+  context.moveTo(cornerRadius, 0);
+  context.lineTo(viewWidth - cornerRadius, 0);
+  context.arcTo(viewWidth, 0, viewWidth, cornerRadius, cornerRadius);
+  context.lineTo(viewWidth, viewHeight - cornerRadius);
+  context.arcTo(viewWidth, viewHeight, viewWidth - cornerRadius, viewHeight, cornerRadius);
+  context.lineTo(cornerRadius, viewHeight);
+  context.arcTo(0, viewHeight, 0, viewHeight - cornerRadius, cornerRadius);
+  context.lineTo(0, cornerRadius);
+  context.arcTo(0, 0, cornerRadius, 0, cornerRadius);
+  context.closePath();
   context.clip();
 
   // Common computed values
@@ -535,6 +548,29 @@ export const drawTableOnCanvas = (
     context.arcTo(sbX, thumbY, sbX + radius, thumbY, radius);
     context.closePath();
     context.fill();
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // Outer border with rounded corners (only when roundness is enabled)
+  // ════════════════════════════════════════════════════════════════════
+  if (cornerRadius > 0) {
+    const prevBorderAlpha = context.globalAlpha;
+    context.globalAlpha = prevBorderAlpha * ((element.gridOpacity ?? 100) / 100);
+    context.strokeStyle = gridColor;
+    context.lineWidth = gridLineWidth;
+    context.beginPath();
+    context.moveTo(cornerRadius, 0);
+    context.lineTo(viewWidth - cornerRadius, 0);
+    context.arcTo(viewWidth, 0, viewWidth, cornerRadius, cornerRadius);
+    context.lineTo(viewWidth, viewHeight - cornerRadius);
+    context.arcTo(viewWidth, viewHeight, viewWidth - cornerRadius, viewHeight, cornerRadius);
+    context.lineTo(cornerRadius, viewHeight);
+    context.arcTo(0, viewHeight, 0, viewHeight - cornerRadius, cornerRadius);
+    context.lineTo(0, cornerRadius);
+    context.arcTo(0, 0, cornerRadius, 0, cornerRadius);
+    context.closePath();
+    context.stroke();
+    context.globalAlpha = prevBorderAlpha;
   }
 
   context.restore();
