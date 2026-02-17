@@ -1410,6 +1410,7 @@ export const ProjectManager: React.FC = () => {
           elements: [],
           appState: {
             ...defaults,
+            theme: app.state.theme,
             name,
             viewBackgroundColor: app.state.viewBackgroundColor,
             scrollX: 0,
@@ -1542,6 +1543,7 @@ export const ProjectManager: React.FC = () => {
             appState: {
               ...switchDefaults,
               ...sceneData.appState,
+              theme: app.state.theme,
               name: projectTitle,
             },
             captureUpdate: CaptureUpdateAction.IMMEDIATELY,
@@ -1565,6 +1567,7 @@ export const ProjectManager: React.FC = () => {
             elements: [],
             appState: {
               ...switchDefaults,
+              theme: app.state.theme,
               name: projectTitle,
             },
             captureUpdate: CaptureUpdateAction.IMMEDIATELY,
@@ -2225,6 +2228,7 @@ export const ProjectManager: React.FC = () => {
         elements: [],
         appState: {
           ...resetDefaults,
+          theme: app.state.theme,
           name: "",
           viewBackgroundColor: app.state.viewBackgroundColor,
         },
