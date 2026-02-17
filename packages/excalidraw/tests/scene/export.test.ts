@@ -15,8 +15,8 @@ import type {
 import { prepareElementsForExport } from "../../data";
 import * as exportUtils from "../../scene/export";
 import {
-  diamondFixture,
   ellipseFixture,
+  rectangleFixture,
   rectangleWithLinkFixture,
   textFixture,
 } from "../fixtures/elementFixture";
@@ -27,7 +27,7 @@ describe("exportToSvg", () => {
   const ELEMENT_WIDTH = 100;
   const ELEMENTS = [
     {
-      ...diamondFixture,
+      ...rectangleFixture,
       height: ELEMENT_HEIGHT,
       width: ELEMENT_WIDTH,
       index: "a0",

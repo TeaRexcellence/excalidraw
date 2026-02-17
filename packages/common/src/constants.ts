@@ -386,7 +386,7 @@ export const ROUNDNESS = {
   // forwards-compat.
   LEGACY: 1,
 
-  // Used for linear elements & diamonds
+  // Used for linear elements & polygons
   PROPORTIONAL_RADIUS: 2,
 
   // Current default algorithm for rectangles, using fixed pixel radius.
@@ -454,7 +454,6 @@ export const TOOL_TYPE = {
   selection: "selection",
   lasso: "lasso",
   rectangle: "rectangle",
-  diamond: "diamond",
   ellipse: "ellipse",
   arrow: "arrow",
   line: "line",

@@ -125,6 +125,7 @@ import {
   newFrameElement,
   newFreeDrawElement,
   newEmbeddableElement,
+  newRectangleElement,
   newMagicFrameElement,
   newIframeElement,
   newArrowElement,
@@ -9126,7 +9127,6 @@ class App extends React.Component<AppProps, AppState> {
     elementType:
       | "selection"
       | "rectangle"
-      | "diamond"
       | "ellipse"
       | "iframe"
       | "embeddable",
@@ -9176,6 +9176,11 @@ class App extends React.Component<AppProps, AppState> {
     if (elementType === "embeddable") {
       element = newEmbeddableElement({
         type: "embeddable",
+        ...baseElementAttributes,
+      });
+    } else if (elementType === "rectangle") {
+      element = newRectangleElement({
+        sides: this.state.currentItemSides,
         ...baseElementAttributes,
       });
     } else {

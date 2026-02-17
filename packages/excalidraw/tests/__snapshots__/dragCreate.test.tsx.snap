@@ -51,9 +51,9 @@ exports[`Test dragCreate > add element to the scene when pointer dragging long e
 }
 `;
 
-exports[`Test dragCreate > add element to the scene when pointer dragging long enough > diamond 3`] = `1`;
+exports[`Test dragCreate > add element to the scene when pointer dragging long enough > ellipse 3`] = `1`;
 
-exports[`Test dragCreate > add element to the scene when pointer dragging long enough > diamond 4`] = `
+exports[`Test dragCreate > add element to the scene when pointer dragging long enough > ellipse 4`] = `
 {
   "angle": 0,
   "backgroundColor": "transparent",
@@ -75,7 +75,7 @@ exports[`Test dragCreate > add element to the scene when pointer dragging long e
   "strokeColor": "#1e1e1e",
   "strokeStyle": "solid",
   "strokeWidth": "0.50000",
-  "type": "diamond",
+  "type": "ellipse",
   "updated": 1,
   "version": 3,
   "versionNonce": 401146281,
@@ -85,9 +85,9 @@ exports[`Test dragCreate > add element to the scene when pointer dragging long e
 }
 `;
 
-exports[`Test dragCreate > add element to the scene when pointer dragging long enough > ellipse 3`] = `1`;
+exports[`Test dragCreate > add element to the scene when pointer dragging long enough > ellipse 7`] = `1`;
 
-exports[`Test dragCreate > add element to the scene when pointer dragging long enough > ellipse 4`] = `
+exports[`Test dragCreate > add element to the scene when pointer dragging long enough > ellipse 8`] = `
 {
   "angle": 0,
   "backgroundColor": "transparent",
@@ -187,6 +187,7 @@ exports[`Test dragCreate > add element to the scene when pointer dragging long e
   "roughness": 0,
   "roundness": null,
   "seed": 1278240551,
+  "sides": 4,
   "strokeColor": "#1e1e1e",
   "strokeStyle": "solid",
   "strokeWidth": "0.50000",

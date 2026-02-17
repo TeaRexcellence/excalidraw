@@ -58,7 +58,6 @@ import type {
   ConvertibleGenericTypes,
   ConvertibleLinearTypes,
   ConvertibleTypes,
-  ExcalidrawDiamondElement,
   ExcalidrawElement,
   ExcalidrawEllipseElement,
   ExcalidrawLinearElement,
@@ -83,7 +82,6 @@ import { atom } from "../editor-jotai";
 import "./ConvertElementTypePopup.scss";
 import { ToolButton } from "./ToolButton";
 import {
-  DiamondIcon,
   elbowArrowIcon,
   EllipseIcon,
   LineIcon,
@@ -101,12 +99,11 @@ const GAP_VERTICAL = 10;
 
 type ExcalidrawConvertibleElement =
   | ExcalidrawRectangleElement
-  | ExcalidrawDiamondElement
   | ExcalidrawEllipseElement
   | ExcalidrawLinearElement;
 
 // indicates order of switching
-const GENERIC_TYPES = ["rectangle", "diamond", "ellipse"] as const;
+const GENERIC_TYPES = ["rectangle", "ellipse"] as const;
 // indicates order of switching
 const LINEAR_TYPES = [
   "line",
@@ -303,7 +300,6 @@ const Panel = ({
       : conversionType === "generic"
       ? [
           ["rectangle", RectangleIcon],
-          ["diamond", DiamondIcon],
           ["ellipse", EllipseIcon],
         ]
       : [];
@@ -672,7 +668,6 @@ const toCacheKey = (
 const filterGenericConvetibleElements = (elements: ExcalidrawElement[]) =>
   elements.filter((element) => isConvertibleGenericType(element.type)) as Array<
     | ExcalidrawRectangleElement
-    | ExcalidrawDiamondElement
     | ExcalidrawEllipseElement
   >;
 
@@ -804,7 +799,7 @@ const sanitizePoints = (points: readonly LocalPoint[]): LocalPoint[] => {
  *
  * Valid conversions at this point:
  * - switching between generic elements
- *   e.g. rectangle -> diamond
+ *   e.g. rectangle -> ellipse
  * - switching between linear elements
  *   e.g. elbow arrow -> line
  */
@@ -833,14 +828,7 @@ const convertElementType = <
       newElement({
         ...element,
         type: targetType,
-        roundness:
-          targetType === "diamond" && element.roundness
-            ? {
-                type: isUsingAdaptiveRadius(targetType)
-                  ? ROUNDNESS.ADAPTIVE_RADIUS
-                  : ROUNDNESS.PROPORTIONAL_RADIUS,
-              }
-            : element.roundness,
+        roundness: element.roundness,
       }),
     ) as typeof element;
 

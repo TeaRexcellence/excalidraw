@@ -34,6 +34,7 @@ import type {
   ExcalidrawTextElement,
   ExcalidrawLinearElement,
   ExcalidrawGenericElement,
+  ExcalidrawRectangleElement,
   NonDeleted,
   TextAlign,
   VerticalAlign,
@@ -164,9 +165,26 @@ const _newElementBase = <T extends ExcalidrawElement>(
 export const newElement = (
   opts: {
     type: ExcalidrawGenericElement["type"];
+    sides?: number;
   } & ElementConstructorOpts,
-): NonDeleted<ExcalidrawGenericElement> =>
-  _newElementBase<ExcalidrawGenericElement>(opts.type, opts);
+): NonDeleted<ExcalidrawGenericElement> => {
+  if (opts.type === "rectangle") {
+    return newRectangleElement(opts) as NonDeleted<ExcalidrawGenericElement>;
+  }
+  return _newElementBase(opts.type, opts) as NonDeleted<ExcalidrawGenericElement>;
+};
+
+export const newRectangleElement = (
+  opts: {
+    sides?: number;
+  } & ElementConstructorOpts,
+): NonDeleted<ExcalidrawRectangleElement> => {
+  return {
+    ..._newElementBase<ExcalidrawRectangleElement>("rectangle", opts),
+    type: "rectangle",
+    sides: opts.sides ?? 4,
+  };
+};
 
 export const newEmbeddableElement = (
   opts: {

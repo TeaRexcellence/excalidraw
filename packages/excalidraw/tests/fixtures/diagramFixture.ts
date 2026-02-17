@@ -1,7 +1,6 @@
 import { VERSIONS } from "@excalidraw/common";
 
 import {
-  diamondFixture,
   ellipseFixture,
   rectangleFixture,
 } from "./elementFixture";
@@ -10,7 +9,7 @@ export const diagramFixture = {
   type: "excalidraw",
   version: VERSIONS.excalidraw,
   source: "https://excalidraw.com",
-  elements: [diamondFixture, ellipseFixture, rectangleFixture],
+  elements: [rectangleFixture, ellipseFixture, rectangleFixture],
   appState: {
     viewBackgroundColor: "#ffffff",
     gridModeEnabled: false,
@@ -24,7 +23,7 @@ export const diagramFactory = ({
 } = {}) => ({
   ...diagramFixture,
   elements: [
-    { ...diamondFixture, ...elementOverrides },
+    { ...rectangleFixture, ...elementOverrides },
     { ...ellipseFixture, ...elementOverrides },
     { ...rectangleFixture, ...elementOverrides },
   ],

@@ -82,14 +82,14 @@ describe("getElementBounds", () => {
     expect(y2).toEqual(45.60660171779821);
   });
 
-  it("diamond", () => {
+  it("ellipse", () => {
     const element = _ce({
       x: 40,
       y: 30,
       w: 20,
       h: 10,
       a: Math.PI / 4,
-      t: "diamond",
+      t: "ellipse",
     });
 
     const [x1, y1, x2, y2] = getElementBounds(element, arrayToMap([element]));

@@ -648,19 +648,19 @@ describe("textWysiwyg", () => {
     });
 
     it("should compute the container height correctly and not throw error when height is updated while editing the text", async () => {
-      const diamond = API.createElement({
-        type: "diamond",
+      const ellipse = API.createElement({
+        type: "ellipse",
         x: 10,
         y: 20,
         width: 90,
         height: 75,
       });
-      API.setElements([diamond]);
+      API.setElements([ellipse]);
 
       expect(h.elements.length).toBe(1);
-      expect(h.elements[0].id).toBe(diamond.id);
+      expect(h.elements[0].id).toBe(ellipse.id);
 
-      API.setSelectedElements([diamond]);
+      API.setSelectedElements([ellipse]);
       Keyboard.keyPress(KEYS.ENTER);
 
       const editor = await getTextEditor();
@@ -672,12 +672,12 @@ describe("textWysiwyg", () => {
         fireEvent.input(editor, { target: { value } }),
       ).not.toThrow();
 
-      expect(diamond.height).toBe(50020);
+      expect(ellipse.height).toBe(50020);
 
       // Clearing text to simulate height decrease
       expect(() => updateTextEditor(editor, "")).not.toThrow();
 
-      expect(diamond.height).toBe(70);
+      expect(ellipse.height).toBe(70);
     });
 
     it("should bind text to container when double clicked inside of the transparent container", async () => {
@@ -1031,7 +1031,7 @@ describe("textWysiwyg", () => {
       expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
         [
           85,
-          "6.00000",
+          "11.75000",
         ]
       `);
 
@@ -1051,7 +1051,7 @@ describe("textWysiwyg", () => {
       expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
         [
           15,
-          67,
+          "78.50000",
         ]
       `);
 
@@ -1383,7 +1383,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             15,
-            46,
+            "51.75000",
           ]
         `);
       });
@@ -1395,7 +1395,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             30,
-            46,
+            "51.75000",
           ]
         `);
       });
@@ -1407,7 +1407,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             45,
-            46,
+            "51.75000",
           ]
         `);
       });
@@ -1419,7 +1419,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             15,
-            67,
+            "78.50000",
           ]
         `);
       });
@@ -1430,7 +1430,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             30,
-            67,
+            "78.50000",
           ]
         `);
       });
@@ -1441,7 +1441,7 @@ describe("textWysiwyg", () => {
         expect([h.elements[1].x, h.elements[1].y]).toMatchInlineSnapshot(`
           [
             45,
-            67,
+            "78.50000",
           ]
         `);
       });

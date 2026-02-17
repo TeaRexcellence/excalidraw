@@ -40,14 +40,14 @@ describe("Test measureText", () => {
       });
     });
 
-    it("should compute coords correctly when diamond", () => {
+    it("should compute coords correctly when rectangle", () => {
       const element = API.createElement({
-        type: "diamond",
+        type: "rectangle",
         ...params,
       });
       expect(getContainerCoords(element)).toEqual({
-        x: 65,
-        y: 50,
+        x: 55,
+        y: 45,
       });
     });
   });
@@ -78,13 +78,13 @@ describe("Test measureText", () => {
       );
     });
 
-    it("should compute container height correctly for diamond", () => {
+    it("should compute container height correctly for rectangle (second)", () => {
       const element = API.createElement({
-        type: "diamond",
+        type: "rectangle",
         ...params,
       });
       expect(computeContainerDimensionForBoundText(150, element.type)).toEqual(
-        320,
+        160,
       );
     });
   });
@@ -105,9 +105,9 @@ describe("Test measureText", () => {
       expect(getBoundTextMaxWidth(container, null)).toBe(116);
     });
 
-    it("should return max width when container is diamond", () => {
-      const container = API.createElement({ type: "diamond", ...params });
-      expect(getBoundTextMaxWidth(container, null)).toBe(79);
+    it("should return max width when container is rectangle (second)", () => {
+      const container = API.createElement({ type: "rectangle", ...params });
+      expect(getBoundTextMaxWidth(container, null)).toBe(168);
     });
   });
 
@@ -143,9 +143,9 @@ describe("Test measureText", () => {
       expect(getBoundTextMaxHeight(container, boundTextElement)).toBe(127);
     });
 
-    it("should return max height when container is diamond", () => {
-      const container = API.createElement({ type: "diamond", ...params });
-      expect(getBoundTextMaxHeight(container, boundTextElement)).toBe(87);
+    it("should return max height when container is rectangle (second)", () => {
+      const container = API.createElement({ type: "rectangle", ...params });
+      expect(getBoundTextMaxHeight(container, boundTextElement)).toBe(184);
     });
 
     it("should return max height when container is arrow", () => {

@@ -105,10 +105,10 @@ describe("Test dragCreate", () => {
       h.elements.forEach((element) => expect(element).toMatchSnapshot());
     });
 
-    it("diamond", async () => {
+    it("ellipse", async () => {
       const { getByToolName, container } = await render(<Excalidraw />);
       // select tool
-      const tool = getByToolName("diamond");
+      const tool = getByToolName("ellipse");
       fireEvent.click(tool);
 
       const canvas = container.querySelector("canvas.interactive")!;
@@ -129,7 +129,7 @@ describe("Test dragCreate", () => {
       expect(h.state.selectionElement).toBeNull();
 
       expect(h.elements.length).toEqual(1);
-      expect(h.elements[0].type).toEqual("diamond");
+      expect(h.elements[0].type).toEqual("ellipse");
       expect(h.elements[0].x).toEqual(30);
       expect(h.elements[0].y).toEqual(20);
       expect(h.elements[0].width).toEqual(30); // 60 - 30
@@ -267,10 +267,10 @@ describe("Test dragCreate", () => {
       expect(h.elements.length).toEqual(0);
     });
 
-    it("diamond", async () => {
+    it("ellipse", async () => {
       const { getByToolName, container } = await render(<Excalidraw />);
       // select tool
-      const tool = getByToolName("diamond");
+      const tool = getByToolName("ellipse");
       fireEvent.click(tool);
 
       const canvas = container.querySelector("canvas.interactive")!;

@@ -35,6 +35,7 @@ const elementBase: Omit<ExcalidrawElement, "type"> = {
 export const rectangleFixture: ExcalidrawElement = {
   ...elementBase,
   type: "rectangle",
+  sides: 4,
 };
 export const embeddableFixture: ExcalidrawElement = {
   ...elementBase,
@@ -44,13 +45,10 @@ export const ellipseFixture: ExcalidrawElement = {
   ...elementBase,
   type: "ellipse",
 };
-export const diamondFixture: ExcalidrawElement = {
-  ...elementBase,
-  type: "diamond",
-};
 export const rectangleWithLinkFixture: ExcalidrawElement = {
   ...elementBase,
   type: "rectangle",
+  sides: 4,
   link: "excalidraw.com",
 };
 

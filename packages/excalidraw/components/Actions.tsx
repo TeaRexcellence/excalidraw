@@ -90,7 +90,6 @@ import {
   LockedIcon,
   UnlockedIcon,
   RectangleIcon,
-  DiamondIcon,
   EllipseIcon,
   ArrowIcon,
   LineIcon,
@@ -211,6 +210,10 @@ export const SelectedShapeActions = ({
         <div>{renderAction("changeBackgroundColor")}</div>
       )}
       {showFillIcons && renderAction("changeFillStyle")}
+
+      {(appState.activeTool.type === "rectangle" ||
+        targetElements.some((element) => element.type === "rectangle")) &&
+        renderAction("changeSides")}
 
       {(hasStrokeWidth(appState.activeTool.type) ||
         targetElements.some((element) => hasStrokeWidth(element.type))) &&
@@ -426,6 +429,11 @@ const CombinedShapeProperties = ({
           >
             <div className="selected-shape-actions">
               {showFillIcons && renderAction("changeFillStyle")}
+              {(appState.activeTool.type === "rectangle" ||
+                targetElements.some(
+                  (element) => element.type === "rectangle",
+                )) &&
+                renderAction("changeSides")}
               {(hasStrokeWidth(appState.activeTool.type) ||
                 targetElements.some((element) =>
                   hasStrokeWidth(element.type),
@@ -1141,7 +1149,6 @@ export const ShapesSwitcher = ({
 
   const SHAPE_GROUP_TYPES = [
     "rectangle",
-    "diamond",
     "ellipse",
     "arrow",
     "line",
@@ -1150,7 +1157,6 @@ export const ShapesSwitcher = ({
   const SHAPE_GROUP = [
     { type: "ellipse", icon: EllipseIcon, label: t("toolBar.ellipse") },
     { type: "rectangle", icon: RectangleIcon, label: t("toolBar.rectangle") },
-    { type: "diamond", icon: DiamondIcon, label: t("toolBar.diamond") },
     { type: "arrow", icon: ArrowIcon, label: t("toolBar.arrow") },
     { type: "line", icon: LineIcon, label: t("toolBar.line") },
   ] as const;
@@ -1321,7 +1327,7 @@ export const ShapesSwitcher = ({
             return null;
           }
 
-          // Shape group dropdown (rectangle, diamond, ellipse, line)
+          // Shape group dropdown (rectangle, ellipse, line)
           if (
             (SHAPE_GROUP_TYPES as readonly string[]).includes(value) &&
             !isCompactStylesPanel

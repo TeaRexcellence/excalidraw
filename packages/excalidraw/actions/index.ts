@@ -25,6 +25,7 @@ export {
   actionChangeTableBackgroundColor,
   actionChangeTableGridColor,
   actionChangeTableHeaderColor,
+  actionChangeSides,
 } from "./actionProperties";
 
 export {

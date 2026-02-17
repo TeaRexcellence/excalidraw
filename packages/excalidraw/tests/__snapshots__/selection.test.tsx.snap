@@ -96,7 +96,7 @@ exports[`select single element on the scene > arrow escape 1`] = `
 }
 `;
 
-exports[`select single element on the scene > diamond 1`] = `
+exports[`select single element on the scene > ellipse 1`] = `
 {
   "angle": 0,
   "backgroundColor": "transparent",
@@ -118,7 +118,7 @@ exports[`select single element on the scene > diamond 1`] = `
   "strokeColor": "#1e1e1e",
   "strokeStyle": "solid",
   "strokeWidth": "0.50000",
-  "type": "diamond",
+  "type": "ellipse",
   "updated": 1,
   "version": 4,
   "versionNonce": 2019559783,
@@ -128,7 +128,7 @@ exports[`select single element on the scene > diamond 1`] = `
 }
 `;
 
-exports[`select single element on the scene > ellipse 1`] = `
+exports[`select single element on the scene > ellipse 2`] = `
 {
   "angle": 0,
   "backgroundColor": "transparent",
@@ -179,6 +179,7 @@ exports[`select single element on the scene > rectangle 1`] = `
   "roughness": 0,
   "roundness": null,
   "seed": 1278240551,
+  "sides": 4,
   "strokeColor": "#1e1e1e",
   "strokeStyle": "solid",
   "strokeWidth": "0.50000",

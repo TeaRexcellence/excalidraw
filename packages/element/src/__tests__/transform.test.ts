@@ -46,7 +46,7 @@ describe("Test Transform", () => {
         y: 250,
       },
       {
-        type: "diamond",
+        type: "rectangle",
         x: 100,
         y: 400,
       },
@@ -71,7 +71,7 @@ describe("Test Transform", () => {
         strokeWidth: 2,
       },
       {
-        type: "diamond",
+        type: "rectangle",
         x: 300,
         y: 400,
         width: 200,
@@ -191,23 +191,23 @@ describe("Test Transform", () => {
         },
       },
       {
-        type: "diamond",
+        type: "rectangle",
         x: 100,
         y: 150,
         width: 280,
         label: {
-          text: "DIAMOND\nTEXT CONTAINER",
+          text: "RECTANGLE\nTEXT CONTAINER",
         },
       },
       {
-        type: "diamond",
+        type: "rectangle",
         x: 100,
         y: 400,
         width: 300,
         backgroundColor: "#fff3bf",
         strokeWidth: 2,
         label: {
-          text: "STYLED DIAMOND TEXT CONTAINER",
+          text: "STYLED RECTANGLE TEXT CONTAINER",
           strokeColor: "#099268",
           fontSize: 20,
         },
@@ -322,7 +322,7 @@ describe("Test Transform", () => {
         id: "1",
       },
       {
-        type: "diamond",
+        type: "ellipse",
         x: 120,
         y: 20,
         backgroundColor: "#fff3bf",
@@ -575,8 +575,8 @@ describe("Test Transform", () => {
           backgroundColor: "#d8f5a2",
         },
         {
-          type: "diamond",
-          id: "diamond-1",
+          type: "rectangle",
+          id: "rect-2",
           strokeColor: "#9c36b5",
           width: 140,
           x: 96,
@@ -605,7 +605,7 @@ describe("Test Transform", () => {
           width: 400,
           strokeColor: "#e67700",
           start: {
-            id: "diamond-1",
+            id: "rect-2",
           },
           end: {
             id: "ellipse-1",

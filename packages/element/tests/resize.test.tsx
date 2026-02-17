@@ -70,7 +70,7 @@ beforeEach(async () => {
 });
 
 describe("generic element", () => {
-  // = rectangle/diamond/ellipse
+  // = rectangle/ellipse
 
   describe("resizes", () => {
     it.each`
@@ -841,7 +841,7 @@ describe("multiple selection", () => {
       height: 80,
     });
     const rectLabel = await UI.editText(rectangle, "hello\nworld");
-    const diamond = UI.createElement("diamond", {
+    const ellipseShape = UI.createElement("ellipse", {
       x: 140,
       y: 40,
       size: 80,
@@ -861,7 +861,7 @@ describe("multiple selection", () => {
       1 + move[1] / selectionHeight,
     );
 
-    UI.resize([rectangle, diamond, ellipse], "se", move, {
+    UI.resize([rectangle, ellipseShape, ellipse], "se", move, {
       shift: true,
     });
 
@@ -882,11 +882,11 @@ describe("multiple selection", () => {
     expect(rectLabel.angle).toEqual(0);
     expect(rectLabel.fontSize).toBeCloseTo(20 * scale, -1);
 
-    expect(diamond.x).toBeCloseTo(140 * scale);
-    expect(diamond.y).toBeCloseTo(40 * scale);
-    expect(diamond.width).toBeCloseTo(80 * scale);
-    expect(diamond.height).toBeCloseTo(80 * scale);
-    expect(diamond.angle).toEqual(0);
+    expect(ellipseShape.x).toBeCloseTo(140 * scale);
+    expect(ellipseShape.y).toBeCloseTo(40 * scale);
+    expect(ellipseShape.width).toBeCloseTo(80 * scale);
+    expect(ellipseShape.height).toBeCloseTo(80 * scale);
+    expect(ellipseShape.angle).toEqual(0);
 
     expect(ellipse.x).toBeCloseTo(40 * scale);
     expect(ellipse.y).toBeCloseTo(100 * scale);

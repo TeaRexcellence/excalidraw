@@ -158,7 +158,8 @@ export type ActionName =
   | "changeCodeBlockBackgroundOpacity"
   | "changeTableBackgroundColor"
   | "changeTableGridColor"
-  | "changeTableHeaderColor";
+  | "changeTableHeaderColor"
+  | "changeSides";
 
 export type PanelComponentProps = {
   elements: readonly ExcalidrawElement[];

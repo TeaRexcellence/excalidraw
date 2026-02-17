@@ -79,7 +79,7 @@ describe("regression tests", () => {
     mouse.down(10, -10);
     mouse.up(20, 10);
 
-    UI.clickTool("diamond");
+    UI.clickTool("ellipse");
     mouse.down(10, -10);
     mouse.up(20, 10);
 
@@ -113,7 +113,7 @@ describe("regression tests", () => {
 
     expect(h.elements.map((element) => element.type)).toEqual([
       "rectangle",
-      "diamond",
+      "ellipse",
       "ellipse",
       "arrow",
       "line",
@@ -146,9 +146,8 @@ describe("regression tests", () => {
     [`3${KEYS.T}`, "text", false],
     [`4${KEYS.O}`, "ellipse", true],
     [`5${KEYS.R}`, "rectangle", true],
-    [`6${KEYS.D}`, "diamond", true],
-    [`7${KEYS.A}`, "arrow", true],
-    [`8${KEYS.L}`, "line", true],
+    [`6${KEYS.A}`, "arrow", true],
+    [`7${KEYS.L}`, "line", true],
   ] as [string, ExcalidrawElement["type"], boolean][]) {
     for (const key of keys) {
       it(`key ${key} selects ${shape} tool`, () => {
@@ -859,12 +858,12 @@ describe("regression tests", () => {
     mouse.down(100, 100);
     mouse.up(100, 100);
 
-    UI.clickTool("diamond");
+    UI.clickTool("rectangle");
     mouse.down(100, 100);
     mouse.up(100, 100);
 
-    // Selects ellipse without deselecting the diamond
-    // Diamond is already selected because creating it was our last action
+    // Selects ellipse without deselecting the rectangle
+    // Rectangle is already selected because creating it was our last action
     mouse.reset();
     Keyboard.withModifierKeys({ shift: true }, () => {
       mouse.click(110, 160);
@@ -954,12 +953,12 @@ describe("regression tests", () => {
       mouse.down(100, 100);
       mouse.up(100, 100);
 
-      UI.clickTool("diamond");
+      UI.clickTool("rectangle");
       mouse.down(100, 100);
       mouse.up(100, 100);
 
-      // Selects rectangle without deselecting the diamond
-      // Diamond is already selected because creating it was our last action
+      // Selects rectangle without deselecting the second rectangle
+      // Second rectangle is already selected because creating it was our last action
       mouse.reset();
       Keyboard.withModifierKeys({ shift: true }, () => {
         mouse.click();

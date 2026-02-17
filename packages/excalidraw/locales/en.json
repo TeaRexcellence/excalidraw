@@ -30,6 +30,7 @@
     "strokeStyle_solid": "Solid",
     "strokeStyle_dashed": "Dashed",
     "strokeStyle_dotted": "Dotted",
+    "sides": "Sides",
     "sloppiness": "Sloppiness",
     "opacity": "Opacity",
     "backgroundOpacity": "Background opacity",
@@ -310,8 +311,7 @@
     "selection": "Selection",
     "lasso": "Lasso selection",
     "image": "Insert image",
-    "rectangle": "Rectangle",
-    "diamond": "Diamond",
+    "rectangle": "Polygon",
     "ellipse": "Ellipse",
     "arrow": "Arrow",
     "line": "Line",
@@ -376,8 +376,7 @@
     "navigate": "Navigate to project"
   },
   "element": {
-    "rectangle": "Rectangle",
-    "diamond": "Diamond",
+    "rectangle": "Polygon",
     "ellipse": "Ellipse",
     "arrow": "Arrow",
     "line": "Line",

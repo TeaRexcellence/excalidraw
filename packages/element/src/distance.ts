@@ -9,7 +9,7 @@ import { ellipse, ellipseDistanceFromPoint } from "@excalidraw/math/ellipse";
 import type { GlobalPoint, Radians } from "@excalidraw/math";
 
 import {
-  deconstructDiamondElement,
+  deconstructPolygonElement,
   deconstructLinearOrFreeDrawElement,
   deconstructRectanguloidElement,
 } from "./utils";
@@ -18,11 +18,11 @@ import { elementCenterPoint } from "./bounds";
 
 import type {
   ElementsMap,
-  ExcalidrawDiamondElement,
   ExcalidrawElement,
   ExcalidrawEllipseElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawLinearElement,
+  ExcalidrawRectangleElement,
   ExcalidrawRectanguloidElement,
 } from "./types";
 
@@ -43,10 +43,21 @@ export const distanceToElement = (
     case "table":
     case "codeblock":
     case "document":
-    case "projectLink":
+    case "projectLink": {
+      // For polygon rectangles (sides != 4), use polygon distance
+      if (
+        element.type === "rectangle" &&
+        (element as ExcalidrawRectangleElement).sides != null &&
+        (element as ExcalidrawRectangleElement).sides !== 4
+      ) {
+        return distanceToPolygonElement(
+          element as ExcalidrawRectangleElement,
+          elementsMap,
+          p,
+        );
+      }
       return distanceToRectanguloidElement(element, elementsMap, p);
-    case "diamond":
-      return distanceToDiamondElement(element, elementsMap, p);
+    }
     case "ellipse":
       return distanceToEllipseElement(element, elementsMap, p);
     case "line":
@@ -86,25 +97,20 @@ const distanceToRectanguloidElement = (
 };
 
 /**
- * Returns the distance of a point and the provided diamond element, accounting
- * for roundness and rotation
- *
- * @param element The diamond element
- * @param p The point to consider
- * @returns The eucledian distance to the outline of the diamond
+ * Returns the distance of a point and the provided polygon element (rectangle
+ * with sides != 4), accounting for roundness and rotation
  */
-const distanceToDiamondElement = (
-  element: ExcalidrawDiamondElement,
+const distanceToPolygonElement = (
+  element: ExcalidrawRectangleElement,
   elementsMap: ElementsMap,
   p: GlobalPoint,
 ): number => {
   const center = elementCenterPoint(element, elementsMap);
 
-  // Rotate the point to the inverse direction to simulate the rotated diamond
-  // points. It's all the same distance-wise.
+  // Rotate the point to the inverse direction to simulate the rotated polygon
   const rotatedPoint = pointRotateRads(p, center, -element.angle as Radians);
 
-  const [sides, curves] = deconstructDiamondElement(element);
+  const [sides, curves] = deconstructPolygonElement(element);
 
   return Math.min(
     ...sides.map((s) => distanceToLineSegment(rotatedPoint, s)),

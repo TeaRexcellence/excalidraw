@@ -33,7 +33,7 @@ import {
   elementCenterPoint,
   getCenterForBounds,
   getCubicBezierCurveBound,
-  getDiamondPoints,
+  getPolygonPoints,
   getElementBounds,
   pointInsideBounds,
 } from "./bounds";
@@ -49,7 +49,7 @@ import {
   isTextElement,
 } from "./typeChecks";
 import {
-  deconstructDiamondElement,
+  deconstructPolygonElement,
   deconstructLinearOrFreeDrawElement,
   deconstructRectanguloidElement,
 } from "./utils";
@@ -66,11 +66,11 @@ import type {
   ElementsMap,
   ExcalidrawArrowElement,
   ExcalidrawBindableElement,
-  ExcalidrawDiamondElement,
   ExcalidrawElement,
   ExcalidrawEllipseElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawLinearElement,
+  ExcalidrawRectangleElement,
   ExcalidrawRectanguloidElement,
   NonDeleted,
   NonDeletedExcalidrawElement,
@@ -448,7 +448,21 @@ export const intersectElementWithLineSegment = (
     case "table":
     case "codeblock":
     case "document":
-    case "projectLink":
+    case "projectLink": {
+      // For polygon rectangles (sides != 4), use polygon intersection
+      if (
+        element.type === "rectangle" &&
+        (element as ExcalidrawRectangleElement).sides != null &&
+        (element as ExcalidrawRectangleElement).sides !== 4
+      ) {
+        return intersectPolygonWithLineSegment(
+          element as ExcalidrawRectangleElement,
+          elementsMap,
+          line,
+          offset,
+          onlyFirst,
+        );
+      }
       return intersectRectanguloidWithLineSegment(
         element,
         elementsMap,
@@ -456,14 +470,7 @@ export const intersectElementWithLineSegment = (
         offset,
         onlyFirst,
       );
-    case "diamond":
-      return intersectDiamondWithLineSegment(
-        element,
-        elementsMap,
-        line,
-        offset,
-        onlyFirst,
-      );
+    }
     case "ellipse":
       return intersectEllipseWithLineSegment(
         element,
@@ -640,14 +647,10 @@ const intersectRectanguloidWithLineSegment = (
 };
 
 /**
- *
- * @param element
- * @param a
- * @param b
- * @returns
+ * Intersect a polygon rectangle (sides != 4) with a line segment.
  */
-const intersectDiamondWithLineSegment = (
-  element: ExcalidrawDiamondElement,
+const intersectPolygonWithLineSegment = (
+  element: ExcalidrawRectangleElement,
   elementsMap: ElementsMap,
   l: LineSegment<GlobalPoint>,
   offset: number = 0,
@@ -655,13 +658,12 @@ const intersectDiamondWithLineSegment = (
 ): GlobalPoint[] => {
   const center = elementCenterPoint(element, elementsMap);
 
-  // Rotate the point to the inverse direction to simulate the rotated diamond
-  // points. It's all the same distance-wise.
+  // Rotate the line to the inverse direction to work in unrotated space
   const rotatedA = pointRotateRads(l[0], center, -element.angle as Radians);
   const rotatedB = pointRotateRads(l[1], center, -element.angle as Radians);
   const rotatedIntersector = lineSegment(rotatedA, rotatedB);
 
-  const [sides, corners] = deconstructDiamondElement(element, offset);
+  const [sides, corners] = deconstructPolygonElement(element, offset);
   const intersections: GlobalPoint[] = [];
 
   lineIntersections(
@@ -785,16 +787,19 @@ export const isBindableElementInsideOtherBindable = (
     const { x, y, width, height, angle } = element;
     const center = elementCenterPoint(element, elementsMap);
 
-    if (element.type === "diamond") {
-      // Diamond has 4 corner points at the middle of each side
-      const [topX, topY, rightX, rightY, bottomX, bottomY, leftX, leftY] =
-        getDiamondPoints(element);
-      const corners: GlobalPoint[] = [
-        pointFrom(x + topX, y + topY - offset), // top
-        pointFrom(x + rightX + offset, y + rightY), // right
-        pointFrom(x + bottomX, y + bottomY + offset), // bottom
-        pointFrom(x + leftX - offset, y + leftY), // left
-      ];
+    // Polygon rectangles (sides != 4): use polygon vertices
+    if (
+      element.type === "rectangle" &&
+      (element as ExcalidrawRectangleElement).sides != null &&
+      (element as ExcalidrawRectangleElement).sides !== 4
+    ) {
+      const vertices = getPolygonPoints(
+        element,
+        (element as ExcalidrawRectangleElement).sides,
+      );
+      const corners: GlobalPoint[] = vertices.map(([vx, vy]) =>
+        pointFrom(x + vx, y + vy),
+      );
       return corners.map((corner) => pointRotateRads(corner, center, angle));
     }
     if (element.type === "ellipse") {

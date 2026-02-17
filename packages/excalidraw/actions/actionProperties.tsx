@@ -74,6 +74,7 @@ import type {
   ExcalidrawCodeBlockElement,
   ExcalidrawElement,
   ExcalidrawLinearElement,
+  ExcalidrawRectangleElement,
   ExcalidrawTableElement,
   ExcalidrawTextElement,
   FontFamilyValues,
@@ -2665,6 +2666,76 @@ export const actionChangeTableHeaderColor = register<Record<string, any>>({
           </div>
         </label>
       </>
+    );
+  },
+});
+
+export const actionChangeSides = register<number>({
+  name: "changeSides",
+  label: "labels.sides",
+  trackEvent: false,
+  perform: (elements, appState, value = 4) => {
+    const sides = Math.min(50, Math.max(3, Math.round(value)));
+    return {
+      elements: changeProperty(elements, appState, (el) => {
+        if (el.type === "rectangle") {
+          return newElementWith(el, { sides });
+        }
+        return el;
+      }),
+      appState: { ...appState, currentItemSides: sides },
+      captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+    };
+  },
+  PanelComponent: ({ elements, appState, updateData, app }) => {
+    const rangeRef = useRef<HTMLInputElement>(null);
+    const valueRef = useRef<HTMLDivElement>(null);
+
+    const value =
+      getFormValue(
+        elements,
+        app,
+        (element) =>
+          element.type === "rectangle"
+            ? (element as ExcalidrawRectangleElement).sides
+            : null!,
+        (element) => element.type === "rectangle",
+        (hasSelection) =>
+          hasSelection ? null! : appState.currentItemSides,
+      ) ?? 4;
+
+    useEffect(() => {
+      if (rangeRef.current && valueRef.current) {
+        const rangeElement = rangeRef.current;
+        const valueElement = valueRef.current;
+        const inputWidth = rangeElement.offsetWidth;
+        const thumbWidth = 15;
+        const pct = (value - 3) / (50 - 3);
+        const position = pct * (inputWidth - thumbWidth) + thumbWidth / 2;
+        valueElement.style.left = `${position}px`;
+        rangeElement.style.background = `linear-gradient(to right, var(--color-slider-track) 0%, var(--color-slider-track) ${pct * 100}%, var(--button-bg) ${pct * 100}%, var(--button-bg) 100%)`;
+      }
+    }, [value]);
+
+    return (
+      <label className="control-label">
+        {t("labels.sides")}
+        <div className="range-wrapper">
+          <input
+            ref={rangeRef}
+            type="range"
+            min="3"
+            max="50"
+            step="1"
+            onChange={(e) => updateData(+e.target.value)}
+            value={value}
+            className="range-input"
+          />
+          <div className="value-bubble" ref={valueRef}>
+            {value}
+          </div>
+        </div>
+      </label>
     );
   },
 });

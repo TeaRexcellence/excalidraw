@@ -75,10 +75,10 @@ describe("remove shape in non linear elements", () => {
     expect(h.elements.length).toEqual(0);
   });
 
-  it("diamond", async () => {
+  it("ellipse", async () => {
     const { getByToolName, container } = await render(<Excalidraw />);
     // select tool
-    const tool = getByToolName("diamond");
+    const tool = getByToolName("ellipse");
     fireEvent.click(tool);
 
     const canvas = container.querySelector("canvas.interactive")!;

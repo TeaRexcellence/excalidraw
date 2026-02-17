@@ -63,7 +63,6 @@ import {
 import { aabbForElement, elementCenterPoint } from "./bounds";
 import { updateElbowArrowPoints } from "./elbowArrow";
 import {
-  deconstructDiamondElement,
   deconstructRectanguloidElement,
   projectFixedPointOntoDiagonal,
 } from "./utils";
@@ -1644,49 +1643,6 @@ export const snapToMid = (
       center,
       angle,
     );
-  } else if (bindTarget.type === "diamond") {
-    const distance = bindingGap;
-    const topLeft = pointFrom<GlobalPoint>(
-      x + width / 4 - distance,
-      y + height / 4 - distance,
-    );
-    const topRight = pointFrom<GlobalPoint>(
-      x + (3 * width) / 4 + distance,
-      y + height / 4 - distance,
-    );
-    const bottomLeft = pointFrom<GlobalPoint>(
-      x + width / 4 - distance,
-      y + (3 * height) / 4 + distance,
-    );
-    const bottomRight = pointFrom<GlobalPoint>(
-      x + (3 * width) / 4 + distance,
-      y + (3 * height) / 4 + distance,
-    );
-
-    if (
-      pointDistance(topLeft, nonRotated) <
-      Math.max(horizontalThreshold, verticalThreshold)
-    ) {
-      return pointRotateRads(topLeft, center, angle);
-    }
-    if (
-      pointDistance(topRight, nonRotated) <
-      Math.max(horizontalThreshold, verticalThreshold)
-    ) {
-      return pointRotateRads(topRight, center, angle);
-    }
-    if (
-      pointDistance(bottomLeft, nonRotated) <
-      Math.max(horizontalThreshold, verticalThreshold)
-    ) {
-      return pointRotateRads(bottomLeft, center, angle);
-    }
-    if (
-      pointDistance(bottomRight, nonRotated) <
-      Math.max(horizontalThreshold, verticalThreshold)
-    ) {
-      return pointRotateRads(bottomRight, center, angle);
-    }
   }
 
   return undefined;
@@ -2457,9 +2413,9 @@ type Side =
   | "bottom-left"
   | "left"
   | "top-left";
-type ShapeType = "rectangle" | "ellipse" | "diamond";
+type ShapeType = "rectangle" | "ellipse";
 const getShapeType = (element: ExcalidrawBindableElement): ShapeType => {
-  if (element.type === "ellipse" || element.type === "diamond") {
+  if (element.type === "ellipse") {
     return element.type;
   }
   return "rectangle";
@@ -2485,18 +2441,6 @@ const SHAPE_CONFIGS: Record<ShapeType, SectorConfig[]> = {
     { centerAngle: 225, sectorWidth: 15, side: "top-left" },
     { centerAngle: 270, sectorWidth: 75, side: "top" },
     { centerAngle: 315, sectorWidth: 15, side: "top-right" },
-  ],
-
-  // diamond: 15° vertices, 75° edges
-  diamond: [
-    { centerAngle: 0, sectorWidth: 15, side: "right" },
-    { centerAngle: 45, sectorWidth: 75, side: "bottom-right" },
-    { centerAngle: 90, sectorWidth: 15, side: "bottom" },
-    { centerAngle: 135, sectorWidth: 75, side: "bottom-left" },
-    { centerAngle: 180, sectorWidth: 15, side: "left" },
-    { centerAngle: 225, sectorWidth: 75, side: "top-left" },
-    { centerAngle: 270, sectorWidth: 15, side: "top" },
-    { centerAngle: 315, sectorWidth: 75, side: "top-right" },
   ],
 
   // ellipse: 15° cardinal points, 75° diagonals
@@ -2604,101 +2548,6 @@ export const getBindingSideMidPoint = (
 
   // small offset to avoid precision issues in elbow
   const OFFSET = 0.01;
-
-  if (bindableElement.type === "diamond") {
-    const [sides, corners] = deconstructDiamondElement(bindableElement);
-    const [bottomRight, bottomLeft, topLeft, topRight] = sides;
-
-    let x: number;
-    let y: number;
-    switch (side) {
-      case "left": {
-        // left vertex - use the center of the left corner curve
-        if (corners.length >= 3) {
-          const leftCorner = corners[2];
-          const midPoint = leftCorner[1];
-          x = midPoint[0] - OFFSET;
-          y = midPoint[1];
-        } else {
-          // fallback for non-rounded diamond
-          const midPoint = getMidPoint(bottomLeft[1], topLeft[0]);
-          x = midPoint[0] - OFFSET;
-          y = midPoint[1];
-        }
-        break;
-      }
-      case "right": {
-        if (corners.length >= 1) {
-          const rightCorner = corners[0];
-          const midPoint = rightCorner[1];
-          x = midPoint[0] + OFFSET;
-          y = midPoint[1];
-        } else {
-          const midPoint = getMidPoint(topRight[1], bottomRight[0]);
-          x = midPoint[0] + OFFSET;
-          y = midPoint[1];
-        }
-        break;
-      }
-      case "top": {
-        if (corners.length >= 4) {
-          const topCorner = corners[3];
-          const midPoint = topCorner[1];
-          x = midPoint[0];
-          y = midPoint[1] - OFFSET;
-        } else {
-          const midPoint = getMidPoint(topLeft[1], topRight[0]);
-          x = midPoint[0];
-          y = midPoint[1] - OFFSET;
-        }
-        break;
-      }
-      case "bottom": {
-        if (corners.length >= 2) {
-          const bottomCorner = corners[1];
-          const midPoint = bottomCorner[1];
-          x = midPoint[0];
-          y = midPoint[1] + OFFSET;
-        } else {
-          const midPoint = getMidPoint(bottomRight[1], bottomLeft[0]);
-          x = midPoint[0];
-          y = midPoint[1] + OFFSET;
-        }
-        break;
-      }
-      case "top-right": {
-        const midPoint = getMidPoint(topRight[0], topRight[1]);
-
-        x = midPoint[0] + OFFSET * 0.707;
-        y = midPoint[1] - OFFSET * 0.707;
-        break;
-      }
-      case "bottom-right": {
-        const midPoint = getMidPoint(bottomRight[0], bottomRight[1]);
-
-        x = midPoint[0] + OFFSET * 0.707;
-        y = midPoint[1] + OFFSET * 0.707;
-        break;
-      }
-      case "bottom-left": {
-        const midPoint = getMidPoint(bottomLeft[0], bottomLeft[1]);
-        x = midPoint[0] - OFFSET * 0.707;
-        y = midPoint[1] + OFFSET * 0.707;
-        break;
-      }
-      case "top-left": {
-        const midPoint = getMidPoint(topLeft[0], topLeft[1]);
-        x = midPoint[0] - OFFSET * 0.707;
-        y = midPoint[1] - OFFSET * 0.707;
-        break;
-      }
-      default: {
-        return null;
-      }
-    }
-
-    return pointRotateRads(pointFrom(x, y), center, bindableElement.angle);
-  }
 
   if (bindableElement.type === "ellipse") {
     const ellipseCenterX = bindableElement.x + bindableElement.width / 2;

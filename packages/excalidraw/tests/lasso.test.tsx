@@ -119,7 +119,7 @@ describe("Basic lasso selection tests", () => {
       },
       {
         id: "T3TSAFUwp--pT2b_q7Y5U",
-        type: "diamond",
+        type: "rectangle",
         x: 349.822265625,
         y: -201.244140625,
         width: 123.3828125,
@@ -865,7 +865,7 @@ describe("Basic lasso selection tests", () => {
     expect(selectedElements.length).toBe(4);
     expect(selectedElements.filter((e) => e.type === "line").length).toBe(1);
     expect(selectedElements.filter((e) => e.type === "ellipse").length).toBe(1);
-    expect(selectedElements.filter((e) => e.type === "diamond").length).toBe(1);
+    expect(selectedElements.filter((e) => e.type === "rectangle").length).toBe(1);
     expect(selectedElements.filter((e) => e.type === "freedraw").length).toBe(
       1,
     );
@@ -953,7 +953,7 @@ describe("Special cases", () => {
         },
         {
           id: "RZzDDA1DBJHw5OzHVNDvc",
-          type: "diamond",
+          type: "rectangle",
           x: 126.64943039922093,
           y: -212.4920898241129,
           width: 102.55859375,

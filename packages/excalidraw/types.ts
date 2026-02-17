@@ -145,7 +145,6 @@ export type ToolType =
   | "selection"
   | "lasso"
   | "rectangle"
-  | "diamond"
   | "ellipse"
   | "arrow"
   | "line"
@@ -359,6 +358,7 @@ export interface AppState {
   currentItemEndArrowhead: Arrowhead | null;
   currentHoveredFontFamily: FontFamilyValues | null;
   currentItemRoundness: StrokeRoundness;
+  currentItemSides: number;
   currentItemArrowType: "sharp" | "round" | "elbow";
   viewBackgroundColor: string;
   scrollX: number;

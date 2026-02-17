@@ -433,15 +433,15 @@ describe("restoreElements", () => {
     expect(restoredLine_1.y).toBe(lineElement_1.y + offsetY);
   });
 
-  it("should restore correctly with rectangle, ellipse and diamond elements", () => {
-    const types = ["rectangle", "ellipse", "diamond"];
+  it("should restore correctly with rectangle and ellipse elements", () => {
+    const types = ["rectangle", "ellipse"];
 
     const elements: ExcalidrawElement[] = [];
     let idCount = 0;
     types.forEach((elType) => {
       idCount += 1;
       const element = API.createElement({
-        type: elType as "rectangle" | "ellipse" | "diamond" | "embeddable",
+        type: elType as "rectangle" | "ellipse" | "embeddable",
         id: idCount.toString(),
         fillStyle: "cross-hatch",
         strokeWidth: 2,
@@ -468,10 +468,6 @@ describe("restoreElements", () => {
       versionNonce: expect.any(Number),
     });
     expect(restoredElements[1]).toMatchSnapshot({
-      seed: expect.any(Number),
-      versionNonce: expect.any(Number),
-    });
-    expect(restoredElements[2]).toMatchSnapshot({
       seed: expect.any(Number),
       versionNonce: expect.any(Number),
     });

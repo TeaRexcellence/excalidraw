@@ -334,14 +334,14 @@ describe("select single element on the scene", () => {
     h.elements.forEach((element) => expect(element).toMatchSnapshot());
   });
 
-  it("diamond", async () => {
+  it("ellipse", async () => {
     const { getByToolName, container } = await render(
       <Excalidraw handleKeyboardGlobally={true} />,
     );
     const canvas = container.querySelector("canvas.interactive")!;
     {
       // create element
-      const tool = getByToolName("diamond");
+      const tool = getByToolName("ellipse");
       fireEvent.click(tool);
       fireEvent.pointerDown(canvas, { clientX: 30, clientY: 20 });
       fireEvent.pointerMove(canvas, { clientX: -1000, clientY: -1000 });

@@ -50,7 +50,7 @@ import {
 import { getElementShape } from "./shape";
 
 import {
-  deconstructDiamondElement,
+  deconstructPolygonElement,
   deconstructRectanguloidElement,
 } from "./utils";
 
@@ -64,6 +64,7 @@ import type {
   ExcalidrawEllipseElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawLinearElement,
+  ExcalidrawRectangleElement,
   ExcalidrawRectanguloidElement,
   ExcalidrawTextElementWithContainer,
   NonDeleted,
@@ -177,32 +178,6 @@ export class ElementBounds {
       ];
     } else if (isLinearElement(element)) {
       bounds = getLinearElementRotatedBounds(element, cx, cy, elementsMap);
-    } else if (element.type === "diamond") {
-      const [x11, y11] = pointRotateRads(
-        pointFrom(cx, y1),
-        pointFrom(cx, cy),
-        element.angle,
-      );
-      const [x12, y12] = pointRotateRads(
-        pointFrom(cx, y2),
-        pointFrom(cx, cy),
-        element.angle,
-      );
-      const [x22, y22] = pointRotateRads(
-        pointFrom(x1, cy),
-        pointFrom(cx, cy),
-        element.angle,
-      );
-      const [x21, y21] = pointRotateRads(
-        pointFrom(x2, cy),
-        pointFrom(cx, cy),
-        element.angle,
-      );
-      const minX = Math.min(x11, x12, x22, x21);
-      const minY = Math.min(y11, y12, y22, y21);
-      const maxX = Math.max(x11, x12, x22, x21);
-      const maxY = Math.max(y11, y12, y22, y21);
-      bounds = [minX, minY, maxX, maxY];
     } else if (element.type === "ellipse") {
       const w = (x2 - x1) / 2;
       const h = (y2 - y1) / 2;
@@ -211,6 +186,30 @@ export class ElementBounds {
       const ww = Math.hypot(w * cos, h * sin);
       const hh = Math.hypot(h * cos, w * sin);
       bounds = [cx - ww, cy - hh, cx + ww, cy + hh];
+    } else if (
+      element.type === "rectangle" &&
+      (element as ExcalidrawRectangleElement).sides != null &&
+      (element as ExcalidrawRectangleElement).sides !== 4
+    ) {
+      // Polygon rectangle: compute bounds from actual polygon vertices
+      const sides = (element as ExcalidrawRectangleElement).sides;
+      const vertices = getPolygonPoints(element, sides);
+      const center = pointFrom<GlobalPoint>(cx, cy);
+      const rotatedVertices = vertices.map((v) =>
+        pointRotateRads(
+          pointFrom<GlobalPoint>(v[0] + element.x, v[1] + element.y),
+          center,
+          element.angle,
+        ),
+      );
+      const xs = rotatedVertices.map((v) => v[0]);
+      const ys = rotatedVertices.map((v) => v[1]);
+      bounds = [
+        Math.min(...xs),
+        Math.min(...ys),
+        Math.max(...xs),
+        Math.max(...ys),
+      ];
     } else {
       const [x11, y11] = pointRotateRads(
         pointFrom(x1, y1),
@@ -354,20 +353,26 @@ export const getElementLineSegments = (
     return segments;
   } else if (shape.type === "polyline") {
     return shape.data as LineSegment<GlobalPoint>[];
+  } else if (
+    element.type === "rectangle" &&
+    (element as ExcalidrawRectangleElement).sides != null &&
+    (element as ExcalidrawRectangleElement).sides !== 4
+  ) {
+    // Polygon rectangle: use polygon decomposition
+    const [polySides, polyCorners] = deconstructPolygonElement(
+      element as ExcalidrawRectangleElement,
+    );
+    const cornerSegments: LineSegment<GlobalPoint>[] = polyCorners
+      .map((corner) => getSegmentsOnCurve(corner, center, element.angle))
+      .flat();
+    const rotatedSides = getRotatedSides(polySides, center, element.angle);
+    return [...rotatedSides, ...cornerSegments];
   } else if (_isRectanguloidElement(element)) {
     const [sides, corners] = deconstructRectanguloidElement(element);
     const cornerSegments: LineSegment<GlobalPoint>[] = corners
       .map((corner) => getSegmentsOnCurve(corner, center, element.angle))
       .flat();
     const rotatedSides = getRotatedSides(sides, center, element.angle);
-    return [...rotatedSides, ...cornerSegments];
-  } else if (element.type === "diamond") {
-    const [sides, corners] = deconstructDiamondElement(element);
-    const cornerSegments = corners
-      .map((corner) => getSegmentsOnCurve(corner, center, element.angle))
-      .flat();
-    const rotatedSides = getRotatedSides(sides, center, element.angle);
-
     return [...rotatedSides, ...cornerSegments];
   } else if (shape.type === "polygon") {
     if (isTextElement(element)) {
@@ -522,19 +527,57 @@ export const getRectangleBoxAbsoluteCoords = (boxSceneCoords: RectangleBox) => {
   ];
 };
 
-export const getDiamondPoints = (element: ExcalidrawElement) => {
-  // Here we add +1 to avoid these numbers to be 0
-  // otherwise rough.js will throw an error complaining about it
-  const topX = Math.floor(element.width / 2) + 1;
-  const topY = 0;
-  const rightX = element.width;
-  const rightY = Math.floor(element.height / 2) + 1;
-  const bottomX = topX;
-  const bottomY = element.height;
-  const leftX = 0;
-  const leftY = rightY;
+/**
+ * Compute N polygon vertices that fill the full bounding box.
+ * First vertex is at the top center; vertices go clockwise.
+ * Vertices are computed on a unit circle then scaled to fill (0,0)-(width,height).
+ *
+ * @param element - Element with width and height
+ * @param sides - Number of sides (3-50)
+ * @returns Array of [x, y] pairs in local coordinates (relative to element origin)
+ */
+export const getPolygonPoints = (
+  element: { width: number; height: number },
+  sides: number,
+): [number, number][] => {
+  // Start at -PI/2 so first vertex is at top center
+  const startAngle = -Math.PI / 2;
 
-  return [topX, topY, rightX, rightY, bottomX, bottomY, leftX, leftY];
+  // Compute raw unit-circle vertices
+  const raw: [number, number][] = [];
+  for (let i = 0; i < sides; i++) {
+    const angle = startAngle + (2 * Math.PI * i) / sides;
+    raw.push([Math.cos(angle), Math.sin(angle)]);
+  }
+
+  // Find the actual bounding box of the raw vertices
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const [x, y] of raw) {
+    if (x < minX) {
+      minX = x;
+    }
+    if (x > maxX) {
+      maxX = x;
+    }
+    if (y < minY) {
+      minY = y;
+    }
+    if (y > maxY) {
+      maxY = y;
+    }
+  }
+
+  const rawW = maxX - minX;
+  const rawH = maxY - minY;
+
+  // Scale and translate to fill the element's bounding box exactly
+  return raw.map(([x, y]) => [
+    ((x - minX) / rawW) * element.width,
+    ((y - minY) / rawH) * element.height,
+  ]);
 };
 
 // reference: https://eliot-jones.com/2019/12/cubic-bezier-curve-bounding-boxes

@@ -523,7 +523,7 @@ describe("stats for multiple elements", () => {
     mouse.down(50, 50);
     mouse.up(100, 100);
 
-    UI.clickTool("diamond");
+    UI.clickTool("rectangle");
     mouse.down(-100, -100);
     mouse.up(125, 145);
 

@@ -36,10 +36,11 @@ import {
 
 import { getElementAbsoluteCoords } from "@excalidraw/element";
 
+import { getPolygonPoints } from "@excalidraw/element";
+
 import type {
   ElementsMap,
   ExcalidrawBindableElement,
-  ExcalidrawDiamondElement,
   ExcalidrawElement,
   ExcalidrawEllipseElement,
   ExcalidrawEmbeddableElement,
@@ -108,7 +109,6 @@ export type GeometricShape<Point extends GlobalPoint | LocalPoint> =
 
 type RectangularElement =
   | ExcalidrawRectangleElement
-  | ExcalidrawDiamondElement
   | ExcalidrawFrameLikeElement
   | ExcalidrawEmbeddableElement
   | ExcalidrawImageElement
@@ -133,13 +133,18 @@ export const getPolygonShape = <Point extends GlobalPoint | LocalPoint>(
 
   let data: Polygon<Point>;
 
-  if (element.type === "diamond") {
-    data = polygon(
-      pointRotateRads(pointFrom(cx, y), center, angle),
-      pointRotateRads(pointFrom(x + width, cy), center, angle),
-      pointRotateRads(pointFrom(cx, y + height), center, angle),
-      pointRotateRads(pointFrom(x, cy), center, angle),
+  const sides =
+    element.type === "rectangle"
+      ? (element as ExcalidrawRectangleElement).sides ?? 4
+      : 4;
+
+  if (sides !== 4 && element.type === "rectangle") {
+    // N-sided polygon inscribed in bounding box ellipse
+    const vertices = getPolygonPoints(element, sides);
+    const rotatedVertices = vertices.map(([vx, vy]) =>
+      pointRotateRads(pointFrom<Point>(x + vx, y + vy), center, angle),
     );
+    data = polygonFromPoints(rotatedVertices);
   } else {
     data = polygon(
       pointRotateRads(pointFrom(x, y), center, angle),

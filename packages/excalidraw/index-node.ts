@@ -8,7 +8,7 @@ const { registerFont, createCanvas } = require("canvas");
 const elements = [
   {
     id: "eVzaxG3YnHhqjEmD7NdYo",
-    type: "diamond",
+    type: "rectangle",
     x: 519,
     y: 199,
     width: 113,

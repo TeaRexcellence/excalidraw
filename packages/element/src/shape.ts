@@ -59,13 +59,14 @@ import { canChangeRoundness } from "./comparisons";
 import {
   getArrowheadPoints,
   getCenterForBounds,
-  getDiamondPoints,
+  getPolygonPoints,
   getElementAbsoluteCoords,
 } from "./bounds";
 import { shouldTestInside } from "./collision";
 
 import type {
   ExcalidrawElement,
+  ExcalidrawRectangleElement,
   NonDeletedExcalidrawElement,
   ExcalidrawSelectionElement,
   ExcalidrawLinearElement,
@@ -229,7 +230,6 @@ export const generateRoughOptions = (
     case "rectangle":
     case "iframe":
     case "embeddable":
-    case "diamond":
     case "ellipse": {
       options.fillStyle = element.fillStyle;
       options.fill = isTransparent(element.backgroundColor)
@@ -621,6 +621,70 @@ export const generateLinearCollisionShape = (
 };
 
 /**
+ * Generate an SVG path string for a rounded N-sided polygon.
+ * At each vertex, a cubic bezier curve creates a smooth corner.
+ */
+const generateRoundedPolygonPath = (
+  vertices: [number, number][],
+  element: ExcalidrawElement,
+): string => {
+  const n = vertices.length;
+
+  // Compute edge lengths to determine corner radius
+  const edgeLengths = vertices.map((v, i) => {
+    const next = vertices[(i + 1) % n];
+    return Math.sqrt((next[0] - v[0]) ** 2 + (next[1] - v[1]) ** 2);
+  });
+  const minEdge = Math.min(...edgeLengths);
+  const radius = getCornerRadius(minEdge / 2, element);
+
+  const pathParts: string[] = [];
+  let firstStartX = 0;
+  let firstStartY = 0;
+
+  for (let i = 0; i < n; i++) {
+    const prev = vertices[(i - 1 + n) % n];
+    const curr = vertices[i];
+    const next = vertices[(i + 1) % n];
+
+    // Direction vectors from current vertex to prev and next
+    const dPrevX = prev[0] - curr[0];
+    const dPrevY = prev[1] - curr[1];
+    const dPrevLen = Math.sqrt(dPrevX * dPrevX + dPrevY * dPrevY);
+    const dNextX = next[0] - curr[0];
+    const dNextY = next[1] - curr[1];
+    const dNextLen = Math.sqrt(dNextX * dNextX + dNextY * dNextY);
+
+    // Clamp radius so it doesn't exceed half of either adjacent edge
+    const r = Math.min(radius, dPrevLen / 2, dNextLen / 2);
+
+    // Points where the curve starts (coming from prev) and ends (going to next)
+    const startX = curr[0] + (dPrevX / dPrevLen) * r;
+    const startY = curr[1] + (dPrevY / dPrevLen) * r;
+    const endX = curr[0] + (dNextX / dNextLen) * r;
+    const endY = curr[1] + (dNextY / dNextLen) * r;
+
+    if (i === 0) {
+      firstStartX = startX;
+      firstStartY = startY;
+      pathParts.push(`M ${startX} ${startY}`);
+    } else {
+      pathParts.push(`L ${startX} ${startY}`);
+    }
+
+    // Cubic bezier through the vertex (control points at the vertex itself)
+    pathParts.push(
+      `C ${curr[0]} ${curr[1]}, ${curr[0]} ${curr[1]}, ${endX} ${endY}`,
+    );
+  }
+
+  // Close: line back to the exact first curve start point
+  pathParts.push(`L ${firstStartX} ${firstStartY}`);
+
+  return pathParts.join(" ");
+};
+
+/**
  * Generates the roughjs shape for given element.
  *
  * Low-level. Use `ShapeCache.generateElementShape` instead.
@@ -651,7 +715,27 @@ const _generateElementShape = (
       // this is for rendering the stroke/bg of the embeddable, especially
       // when the src url is not set
 
-      if (element.roundness) {
+      const sides =
+        element.type === "rectangle"
+          ? (element as ExcalidrawRectangleElement).sides ?? 4
+          : 4;
+
+      if (sides !== 4) {
+        // Polygon rendering path (triangle, pentagon, hexagon, etc.)
+        const vertices = getPolygonPoints(element, sides);
+
+        if (element.roundness) {
+          shape = generator.path(
+            generateRoundedPolygonPath(vertices, element),
+            generateRoughOptions(element, true, isDarkMode),
+          );
+        } else {
+          shape = generator.polygon(
+            vertices as [number, number][],
+            generateRoughOptions(element, false, isDarkMode),
+          );
+        }
+      } else if (element.roundness) {
         const w = element.width;
         const h = element.height;
         const r = getCornerRadius(Math.min(w, h), element);
@@ -686,53 +770,6 @@ const _generateElementShape = (
             false,
             isDarkMode,
           ),
-        );
-      }
-      return shape;
-    }
-    case "diamond": {
-      let shape: ElementShapes[typeof element.type];
-
-      const [topX, topY, rightX, rightY, bottomX, bottomY, leftX, leftY] =
-        getDiamondPoints(element);
-      if (element.roundness) {
-        const verticalRadius = getCornerRadius(Math.abs(topX - leftX), element);
-
-        const horizontalRadius = getCornerRadius(
-          Math.abs(rightY - topY),
-          element,
-        );
-
-        shape = generator.path(
-          `M ${topX + verticalRadius} ${topY + horizontalRadius} L ${
-            rightX - verticalRadius
-          } ${rightY - horizontalRadius}
-            C ${rightX} ${rightY}, ${rightX} ${rightY}, ${
-            rightX - verticalRadius
-          } ${rightY + horizontalRadius}
-            L ${bottomX + verticalRadius} ${bottomY - horizontalRadius}
-            C ${bottomX} ${bottomY}, ${bottomX} ${bottomY}, ${
-            bottomX - verticalRadius
-          } ${bottomY - horizontalRadius}
-            L ${leftX + verticalRadius} ${leftY + horizontalRadius}
-            C ${leftX} ${leftY}, ${leftX} ${leftY}, ${leftX + verticalRadius} ${
-            leftY - horizontalRadius
-          }
-            L ${topX - verticalRadius} ${topY + horizontalRadius}
-            C ${topX} ${topY}, ${topX} ${topY}, ${topX + verticalRadius} ${
-            topY + horizontalRadius
-          }`,
-          generateRoughOptions(element, true, isDarkMode),
-        );
-      } else {
-        shape = generator.polygon(
-          [
-            [topX, topY],
-            [rightX, rightY],
-            [bottomX, bottomY],
-            [leftX, leftY],
-          ],
-          generateRoughOptions(element, false, isDarkMode),
         );
       }
       return shape;
@@ -955,7 +992,6 @@ export const getElementShape = <Point extends GlobalPoint | LocalPoint>(
 ): GeometricShape<Point> => {
   switch (element.type) {
     case "rectangle":
-    case "diamond":
     case "frame":
     case "magicframe":
     case "embeddable":

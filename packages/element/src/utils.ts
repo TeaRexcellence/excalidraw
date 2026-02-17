@@ -34,7 +34,7 @@ import type {
   Zoom,
 } from "@excalidraw/excalidraw/types";
 
-import { elementCenterPoint, getDiamondPoints } from "./bounds";
+import { elementCenterPoint, getPolygonPoints } from "./bounds";
 
 import { generateLinearCollisionShape } from "./shape";
 
@@ -47,10 +47,10 @@ import type {
   ElementsMap,
   ExcalidrawArrowElement,
   ExcalidrawBindableElement,
-  ExcalidrawDiamondElement,
   ExcalidrawElement,
   ExcalidrawFreeDrawElement,
   ExcalidrawLinearElement,
+  ExcalidrawRectangleElement,
   ExcalidrawRectanguloidElement,
 } from "./types";
 
@@ -336,88 +336,16 @@ export function deconstructRectanguloidElement(
   return shape;
 }
 
-export function getDiamondBaseCorners(
-  element: ExcalidrawDiamondElement,
-  offset: number = 0,
-): Curve<GlobalPoint>[] {
-  const [topX, topY, rightX, rightY, bottomX, bottomY, leftX, leftY] =
-    getDiamondPoints(element);
-  const verticalRadius = element.roundness
-    ? getCornerRadius(Math.abs(topX - leftX), element)
-    : (topX - leftX) * 0.01;
-  const horizontalRadius = element.roundness
-    ? getCornerRadius(Math.abs(rightY - topY), element)
-    : (rightY - topY) * 0.01;
-
-  const [top, right, bottom, left]: GlobalPoint[] = [
-    pointFrom(element.x + topX, element.y + topY),
-    pointFrom(element.x + rightX, element.y + rightY),
-    pointFrom(element.x + bottomX, element.y + bottomY),
-    pointFrom(element.x + leftX, element.y + leftY),
-  ];
-
-  return [
-    curve(
-      pointFrom<GlobalPoint>(
-        right[0] - verticalRadius,
-        right[1] - horizontalRadius,
-      ),
-      right,
-      right,
-      pointFrom<GlobalPoint>(
-        right[0] - verticalRadius,
-        right[1] + horizontalRadius,
-      ),
-    ), // RIGHT
-    curve(
-      pointFrom<GlobalPoint>(
-        bottom[0] + verticalRadius,
-        bottom[1] - horizontalRadius,
-      ),
-      bottom,
-      bottom,
-      pointFrom<GlobalPoint>(
-        bottom[0] - verticalRadius,
-        bottom[1] - horizontalRadius,
-      ),
-    ), // BOTTOM
-    curve(
-      pointFrom<GlobalPoint>(
-        left[0] + verticalRadius,
-        left[1] + horizontalRadius,
-      ),
-      left,
-      left,
-      pointFrom<GlobalPoint>(
-        left[0] + verticalRadius,
-        left[1] - horizontalRadius,
-      ),
-    ), // LEFT
-    curve(
-      pointFrom<GlobalPoint>(
-        top[0] - verticalRadius,
-        top[1] + horizontalRadius,
-      ),
-      top,
-      top,
-      pointFrom<GlobalPoint>(
-        top[0] + verticalRadius,
-        top[1] + horizontalRadius,
-      ),
-    ), // TOP
-  ];
-}
-
 /**
- * Get the **unrotated** building components of a diamond element
- * in the form of line segments and curves as a tuple, in this order.
+ * Get the **unrotated** building components of a polygon rectangle element
+ * (sides != 4) in the form of line segments and curves as a tuple.
  *
- * @param element The element to deconstruct
+ * @param element The rectangle element with sides != 4
  * @param offset An optional offset
- * @returns Tuple of line **unrotated** segments (0) and curves (1)
+ * @returns Tuple of **unrotated** line segments (0) and curves (1)
  */
-export function deconstructDiamondElement(
-  element: ExcalidrawDiamondElement,
+export function deconstructPolygonElement(
+  element: ExcalidrawRectangleElement,
   offset: number = 0,
 ): [LineSegment<GlobalPoint>[], Curve<GlobalPoint>[]] {
   const cachedShape = getElementShapesCacheEntry(element, offset);
@@ -426,33 +354,74 @@ export function deconstructDiamondElement(
     return cachedShape;
   }
 
-  const baseCorners = getDiamondBaseCorners(element, offset);
+  const sides = element.sides ?? 4;
+  const vertices = getPolygonPoints(element, sides);
+  const n = vertices.length;
 
-  const corners = baseCorners.map(
-    (corner) =>
-      curveCatmullRomCubicApproxPoints(curveOffsetPoints(corner, offset))!,
+  // Convert to global coordinates
+  const globalVertices: GlobalPoint[] = vertices.map(([vx, vy]) =>
+    pointFrom<GlobalPoint>(element.x + vx, element.y + vy),
   );
 
-  const sides = [
-    lineSegment<GlobalPoint>(
-      corners[0][corners[0].length - 1][3],
-      corners[1][0][0],
-    ),
-    lineSegment<GlobalPoint>(
-      corners[1][corners[1].length - 1][3],
-      corners[2][0][0],
-    ),
-    lineSegment<GlobalPoint>(
-      corners[2][corners[2].length - 1][3],
-      corners[3][0][0],
-    ),
-    lineSegment<GlobalPoint>(
-      corners[3][corners[3].length - 1][3],
-      corners[0][0][0],
-    ),
-  ];
+  // Compute edge lengths to determine corner radius
+  const edgeLengths = globalVertices.map((v, i) => {
+    const next = globalVertices[(i + 1) % n];
+    return pointDistance(v, next);
+  });
+  const minEdge = Math.min(...edgeLengths);
+  const radius = element.roundness
+    ? getCornerRadius(minEdge / 2, element)
+    : minEdge * 0.01;
 
-  const shape = [sides, corners.flat()] as ElementShape;
+  // Build corner curves at each vertex
+  const baseCorners: Curve<GlobalPoint>[] = globalVertices.map((vertex, i) => {
+    const prev = globalVertices[(i - 1 + n) % n];
+    const next = globalVertices[(i + 1) % n];
+
+    const dPrev = pointDistance(vertex, prev);
+    const dNext = pointDistance(vertex, next);
+    const r = Math.min(radius, dPrev / 2, dNext / 2);
+
+    // Direction vectors
+    const toPrevX = (prev[0] - vertex[0]) / dPrev;
+    const toPrevY = (prev[1] - vertex[1]) / dPrev;
+    const toNextX = (next[0] - vertex[0]) / dNext;
+    const toNextY = (next[1] - vertex[1]) / dNext;
+
+    const startPt = pointFrom<GlobalPoint>(
+      vertex[0] + toPrevX * r,
+      vertex[1] + toPrevY * r,
+    );
+    const endPt = pointFrom<GlobalPoint>(
+      vertex[0] + toNextX * r,
+      vertex[1] + toNextY * r,
+    );
+
+    return curve(startPt, vertex, vertex, endPt);
+  });
+
+  const corners =
+    offset > 0
+      ? baseCorners.map(
+          (corner) =>
+            curveCatmullRomCubicApproxPoints(
+              curveOffsetPoints(corner, offset),
+            )!,
+        )
+      : baseCorners.map((c) => [c]);
+
+  const sideSegments: LineSegment<GlobalPoint>[] = [];
+  for (let i = 0; i < n; i++) {
+    const nextI = (i + 1) % n;
+    sideSegments.push(
+      lineSegment<GlobalPoint>(
+        corners[i][corners[i].length - 1][3],
+        corners[nextI][0][0],
+      ),
+    );
+  }
+
+  const shape = [sideSegments, corners.flat()] as ElementShape;
 
   setElementShapesCacheEntry(element, shape, offset);
 
@@ -591,46 +560,61 @@ export const getSnapOutlineMidPoint = (
   zoom: AppState["zoom"],
 ) => {
   const center = elementCenterPoint(element, elementsMap);
-  const sideMidpoints =
-    element.type === "diamond"
-      ? getDiamondBaseCorners(element).map((curve) => {
-          const point = bezierEquation(curve, 0.5);
-          const rotatedPoint = pointRotateRads(point, center, element.angle);
+  // For polygon rectangles (sides != 4), compute midpoints of polygon edges
+  const isPolygon =
+    element.type === "rectangle" &&
+    (element as ExcalidrawRectangleElement).sides != null &&
+    (element as ExcalidrawRectangleElement).sides !== 4;
 
-          return pointFrom<GlobalPoint>(rotatedPoint[0], rotatedPoint[1]);
-        })
-      : [
-          // RIGHT midpoint
-          pointRotateRads(
-            pointFrom<GlobalPoint>(
-              element.x + element.width,
-              element.y + element.height / 2,
-            ),
-            center,
-            element.angle,
-          ),
-          // BOTTOM midpoint
-          pointRotateRads(
-            pointFrom<GlobalPoint>(
-              element.x + element.width / 2,
-              element.y + element.height,
-            ),
-            center,
-            element.angle,
-          ),
-          // LEFT midpoint
-          pointRotateRads(
-            pointFrom<GlobalPoint>(element.x, element.y + element.height / 2),
-            center,
-            element.angle,
-          ),
-          // TOP midpoint
-          pointRotateRads(
-            pointFrom<GlobalPoint>(element.x + element.width / 2, element.y),
-            center,
-            element.angle,
-          ),
-        ];
+  let sideMidpoints: GlobalPoint[];
+  if (isPolygon) {
+    const sides = (element as ExcalidrawRectangleElement).sides;
+    const vertices = getPolygonPoints(element, sides);
+    sideMidpoints = vertices.map(([vx, vy], i) => {
+      const next = vertices[(i + 1) % vertices.length];
+      return pointRotateRads(
+        pointFrom<GlobalPoint>(
+          element.x + (vx + next[0]) / 2,
+          element.y + (vy + next[1]) / 2,
+        ),
+        center,
+        element.angle,
+      );
+    });
+  } else {
+    sideMidpoints = [
+      // RIGHT midpoint
+      pointRotateRads(
+        pointFrom<GlobalPoint>(
+          element.x + element.width,
+          element.y + element.height / 2,
+        ),
+        center,
+        element.angle,
+      ),
+      // BOTTOM midpoint
+      pointRotateRads(
+        pointFrom<GlobalPoint>(
+          element.x + element.width / 2,
+          element.y + element.height,
+        ),
+        center,
+        element.angle,
+      ),
+      // LEFT midpoint
+      pointRotateRads(
+        pointFrom<GlobalPoint>(element.x, element.y + element.height / 2),
+        center,
+        element.angle,
+      ),
+      // TOP midpoint
+      pointRotateRads(
+        pointFrom<GlobalPoint>(element.x + element.width / 2, element.y),
+        center,
+        element.angle,
+      ),
+    ];
+  }
   const candidate = sideMidpoints.find(
     (midpoint) =>
       pointDistance(point, midpoint) <=

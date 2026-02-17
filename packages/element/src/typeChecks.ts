@@ -186,7 +186,6 @@ export const isBindableElement = (
     element != null &&
     (!element.locked || includeLocked === true) &&
     (element.type === "rectangle" ||
-      element.type === "diamond" ||
       element.type === "ellipse" ||
       element.type === "image" ||
       element.type === "iframe" ||
@@ -203,7 +202,6 @@ export const isRectanguloidElement = (
   return (
     element != null &&
     (element.type === "rectangle" ||
-      element.type === "diamond" ||
       element.type === "image" ||
       element.type === "iframe" ||
       element.type === "embeddable" ||
@@ -247,7 +245,6 @@ export const isTextBindableContainer = (
     element != null &&
     (!element.locked || includeLocked === true) &&
     (element.type === "rectangle" ||
-      element.type === "diamond" ||
       element.type === "ellipse" ||
       isArrowElement(element))
   );
@@ -262,7 +259,6 @@ export const isExcalidrawElement = (
   }
   switch (type) {
     case "text":
-    case "diamond":
     case "rectangle":
     case "iframe":
     case "embeddable":
@@ -316,8 +312,7 @@ export const isFlowchartNodeElement = (
 ): element is ExcalidrawFlowchartNodeElement => {
   return (
     element.type === "rectangle" ||
-    element.type === "ellipse" ||
-    element.type === "diamond"
+    element.type === "ellipse"
   );
 };
 
@@ -353,7 +348,7 @@ export const isUsingAdaptiveRadius = (type: string) =>
   type === "table";
 
 export const isUsingProportionalRadius = (type: string) =>
-  type === "line" || type === "arrow" || type === "diamond";
+  type === "line" || type === "arrow";
 
 export const canApplyRoundnessTypeToElement = (
   roundnessType: RoundnessType,

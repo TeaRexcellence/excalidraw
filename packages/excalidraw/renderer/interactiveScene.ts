@@ -5,7 +5,6 @@ import {
   type GlobalPoint,
   type LocalPoint,
   type Radians,
-  bezierEquation,
   pointRotateRads,
 } from "@excalidraw/math";
 
@@ -20,10 +19,10 @@ import {
 } from "@excalidraw/common";
 
 import {
-  deconstructDiamondElement,
+  deconstructPolygonElement,
   deconstructRectanguloidElement,
   elementCenterPoint,
-  getDiamondBaseCorners,
+  getPolygonPoints,
   FOCUS_POINT_SIZE,
   getOmitSidesForEditorInterface,
   getTransformHandles,
@@ -76,6 +75,7 @@ import type {
   ExcalidrawFrameLikeElement,
   ExcalidrawImageElement,
   ExcalidrawLinearElement,
+  ExcalidrawRectangleElement,
   ExcalidrawTextElement,
   GroupId,
   NonDeleted,
@@ -322,63 +322,28 @@ const renderBindingHighlightForBindableElement_simple = (
           context.closePath();
           context.stroke();
           break;
-        case "diamond":
-          {
-            const [segments, curves] = deconstructDiamondElement(
-              suggestedBinding.element,
-            );
-
-            // Draw each line segment individually
-            segments.forEach((segment) => {
-              context.beginPath();
-              context.moveTo(
-                segment[0][0] - suggestedBinding.element.x,
-                segment[0][1] - suggestedBinding.element.y,
-              );
-              context.lineTo(
-                segment[1][0] - suggestedBinding.element.x,
-                segment[1][1] - suggestedBinding.element.y,
-              );
-              context.stroke();
-            });
-
-            // Draw each curve individually (for rounded corners)
-            curves.forEach((curve) => {
-              const [start, control1, control2, end] = curve;
-              context.beginPath();
-              context.moveTo(
-                start[0] - suggestedBinding.element.x,
-                start[1] - suggestedBinding.element.y,
-              );
-              context.bezierCurveTo(
-                control1[0] - suggestedBinding.element.x,
-                control1[1] - suggestedBinding.element.y,
-                control2[0] - suggestedBinding.element.x,
-                control2[1] - suggestedBinding.element.y,
-                end[0] - suggestedBinding.element.x,
-                end[1] - suggestedBinding.element.y,
-              );
-              context.stroke();
-            });
-          }
-
-          break;
         default:
           {
-            const [segments, curves] = deconstructRectanguloidElement(
-              suggestedBinding.element,
-            );
+            const el = suggestedBinding.element;
+            const isPolygonRect =
+              el.type === "rectangle" &&
+              (el as ExcalidrawRectangleElement).sides != null &&
+              (el as ExcalidrawRectangleElement).sides !== 4;
+
+            const [segments, curves] = isPolygonRect
+              ? deconstructPolygonElement(el as ExcalidrawRectangleElement)
+              : deconstructRectanguloidElement(el);
 
             // Draw each line segment individually
             segments.forEach((segment) => {
               context.beginPath();
               context.moveTo(
-                segment[0][0] - suggestedBinding.element.x,
-                segment[0][1] - suggestedBinding.element.y,
+                segment[0][0] - el.x,
+                segment[0][1] - el.y,
               );
               context.lineTo(
-                segment[1][0] - suggestedBinding.element.x,
-                segment[1][1] - suggestedBinding.element.y,
+                segment[1][0] - el.x,
+                segment[1][1] - el.y,
               );
               context.stroke();
             });
@@ -388,16 +353,16 @@ const renderBindingHighlightForBindableElement_simple = (
               const [start, control1, control2, end] = curve;
               context.beginPath();
               context.moveTo(
-                start[0] - suggestedBinding.element.x,
-                start[1] - suggestedBinding.element.y,
+                start[0] - el.x,
+                start[1] - el.y,
               );
               context.bezierCurveTo(
-                control1[0] - suggestedBinding.element.x,
-                control1[1] - suggestedBinding.element.y,
-                control2[0] - suggestedBinding.element.x,
-                control2[1] - suggestedBinding.element.y,
-                end[0] - suggestedBinding.element.x,
-                end[1] - suggestedBinding.element.y,
+                control1[0] - el.x,
+                control1[1] - el.y,
+                control2[0] - el.x,
+                control2[1] - el.y,
+                end[0] - el.x,
+                end[1] - el.y,
               );
               context.stroke();
             });
@@ -439,52 +404,50 @@ const renderBindingHighlightForBindableElement_simple = (
       const center = elementCenterPoint(suggestedBinding.element, elementsMap);
 
       let midpoints: LocalPoint[];
-      if (suggestedBinding.element.type === "diamond") {
-        const center = elementCenterPoint(
-          suggestedBinding.element,
-          elementsMap,
-        );
-        midpoints = getDiamondBaseCorners(suggestedBinding.element).map(
-          (curve) => {
-            const point = bezierEquation(curve, 0.5);
-            const rotatedPoint = pointRotateRads(
-              point,
-              center,
-              suggestedBinding.element.angle,
-            );
+      {
+        const el = suggestedBinding.element;
+        const isPolygonRect =
+          el.type === "rectangle" &&
+          (el as ExcalidrawRectangleElement).sides != null &&
+          (el as ExcalidrawRectangleElement).sides !== 4;
 
-            return pointFrom<LocalPoint>(
-              rotatedPoint[0] - suggestedBinding.element.x,
-              rotatedPoint[1] - suggestedBinding.element.y,
-            );
-          },
-        );
-      } else {
-        const basePoints = [
-          {
-            x: suggestedBinding.element.width,
-            y: suggestedBinding.element.height / 2,
-          }, // RIGHT
-          {
-            x: suggestedBinding.element.width / 2,
-            y: suggestedBinding.element.height,
-          }, // BOTTOM
-          { x: 0, y: suggestedBinding.element.height / 2 }, // LEFT
-          { x: suggestedBinding.element.width / 2, y: 0 }, // TOP
-        ];
+        let basePoints: { x: number; y: number }[];
+
+        if (isPolygonRect) {
+          // Compute midpoints of actual polygon edges
+          const vertices = getPolygonPoints(
+            el,
+            (el as ExcalidrawRectangleElement).sides,
+          );
+          basePoints = vertices.map((v, i) => {
+            const next = vertices[(i + 1) % vertices.length];
+            return {
+              x: (v[0] + next[0]) / 2,
+              y: (v[1] + next[1]) / 2,
+            };
+          });
+        } else {
+          basePoints = [
+            { x: el.width, y: el.height / 2 }, // RIGHT
+            { x: el.width / 2, y: el.height }, // BOTTOM
+            { x: 0, y: el.height / 2 }, // LEFT
+            { x: el.width / 2, y: 0 }, // TOP
+          ];
+        }
+
         midpoints = basePoints.map((point) => {
           const globalPoint = pointFrom<GlobalPoint>(
-            point.x + suggestedBinding.element.x,
-            point.y + suggestedBinding.element.y,
+            point.x + el.x,
+            point.y + el.y,
           );
           const rotatedPoint = pointRotateRads(
             globalPoint,
             center,
-            suggestedBinding.element.angle,
+            el.angle,
           );
           return pointFrom<LocalPoint>(
-            rotatedPoint[0] - suggestedBinding.element.x,
-            rotatedPoint[1] - suggestedBinding.element.y,
+            rotatedPoint[0] - el.x,
+            rotatedPoint[1] - el.y,
           );
         });
       }
@@ -497,22 +460,32 @@ const renderBindingHighlightForBindableElement_simple = (
 
       const target = [HEADING_RIGHT, HEADING_DOWN, HEADING_LEFT, HEADING_UP];
       midpoints.forEach((midpoint, idx) => {
-        const isHighlighted =
-          highlightedPoint &&
-          compareHeading(
-            headingForPoint(
-              pointRotateRads(
-                pointFrom<GlobalPoint>(
-                  highlightedPoint[0] + suggestedBinding.element.x,
-                  highlightedPoint[1] + suggestedBinding.element.y,
+        let isHighlighted: boolean;
+        if (idx < target.length) {
+          isHighlighted =
+            !!highlightedPoint &&
+            compareHeading(
+              headingForPoint(
+                pointRotateRads(
+                  pointFrom<GlobalPoint>(
+                    highlightedPoint[0] + suggestedBinding.element.x,
+                    highlightedPoint[1] + suggestedBinding.element.y,
+                  ),
+                  center,
+                  suggestedBinding.element.angle as Radians,
                 ),
                 center,
-                suggestedBinding.element.angle as Radians,
               ),
-              center,
-            ),
-            target[idx],
-          );
+              target[idx],
+            );
+        } else {
+          // For polygon midpoints beyond the 4 cardinal directions,
+          // highlight by proximity to the highlighted point
+          isHighlighted =
+            !!highlightedPoint &&
+            Math.abs(midpoint[0] - highlightedPoint[0]) < midpointRadius * 3 &&
+            Math.abs(midpoint[1] - highlightedPoint[1]) < midpointRadius * 3;
+        }
 
         if (!isHighlighted) {
           context.fillStyle =
@@ -649,48 +622,6 @@ const renderBindingHighlightForBindableElement_complex = (
           context.closePath();
           context.stroke();
           break;
-        case "diamond":
-          {
-            const [segments, curves] = deconstructDiamondElement(
-              element,
-              offset,
-            );
-
-            // Draw each line segment individually
-            segments.forEach((segment) => {
-              context.beginPath();
-              context.moveTo(
-                segment[0][0] - element.x + offset,
-                segment[0][1] - element.y + offset,
-              );
-              context.lineTo(
-                segment[1][0] - element.x + offset,
-                segment[1][1] - element.y + offset,
-              );
-              context.stroke();
-            });
-
-            // Draw each curve individually (for rounded corners)
-            curves.forEach((curve) => {
-              const [start, control1, control2, end] = curve;
-              context.beginPath();
-              context.moveTo(
-                start[0] - element.x + offset,
-                start[1] - element.y + offset,
-              );
-              context.bezierCurveTo(
-                control1[0] - element.x + offset,
-                control1[1] - element.y + offset,
-                control2[0] - element.x + offset,
-                control2[1] - element.y + offset,
-                end[0] - element.x + offset,
-                end[1] - element.y + offset,
-              );
-              context.stroke();
-            });
-          }
-
-          break;
         default:
           {
             const [segments, curves] = deconstructRectanguloidElement(
@@ -803,19 +734,7 @@ const renderBindingHighlightForBindableElement_complex = (
     const cutoutRadius = midpointRadius + cutoutPadding;
 
     let midpoints;
-    if (element.type === "diamond") {
-      const [, curves] = deconstructDiamondElement(element);
-      const center = elementCenterPoint(element, allElementsMap);
-
-      midpoints = curves.map((curve) => {
-        const point = bezierEquation(curve, 0.5);
-        const rotatedPoint = pointRotateRads(point, center, element.angle);
-        return {
-          x: rotatedPoint[0] - element.x,
-          y: rotatedPoint[1] - element.y,
-        };
-      });
-    } else {
+    {
       const center = elementCenterPoint(element, allElementsMap);
       const basePoints = [
         { x: element.width / 2, y: 0 }, // TOP

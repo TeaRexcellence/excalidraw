@@ -255,13 +255,13 @@ describe("Paste bound text container", () => {
     });
   });
 
-  it("should fix diamond bounding box", async () => {
+  it("should fix ellipse bounding box", async () => {
     const data = JSON.stringify({
       type: "excalidraw/clipboard",
       elements: [
         {
           ...container,
-          type: "diamond",
+          type: "ellipse",
         },
         textElement,
       ],

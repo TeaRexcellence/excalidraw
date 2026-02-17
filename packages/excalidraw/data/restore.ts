@@ -103,7 +103,6 @@ export const AllowedExcalidrawActiveTools: Record<
   lasso: true,
   text: true,
   rectangle: true,
-  diamond: true,
   ellipse: true,
   line: true,
   image: true,
@@ -500,11 +499,16 @@ export const restoreElement = (
 
     // generic elements
     case "ellipse":
-    case "rectangle":
-    case "diamond":
     case "iframe":
     case "embeddable":
       return restoreElementWithProperties(element, {});
+    case "rectangle":
+      return restoreElementWithProperties(element, { sides: (element as any).sides ?? 4 });
+    case "diamond" as any:
+      return restoreElementWithProperties(
+        { ...element, type: "rectangle" as const, sides: (element as any).sides ?? 4 } as any,
+        { sides: (element as any).sides ?? 4 },
+      );
     case "magicframe":
     case "frame":
       return restoreElementWithProperties(element, {

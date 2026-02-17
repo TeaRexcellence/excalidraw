@@ -83,8 +83,8 @@ const createAndSelectOneRectangle = (angle: number = 0) => {
   });
 };
 
-const createAndSelectOneDiamond = (angle: number = 0) => {
-  UI.createElement("diamond", {
+const createAndSelectOneEllipseAlt = (angle: number = 0) => {
+  UI.createElement("ellipse", {
     x: 0,
     y: 0,
     width: 100,
@@ -349,34 +349,34 @@ describe("rectangle", () => {
   });
 });
 
-// Diamond element
-describe("diamond", () => {
-  it("flips an unrotated diamond horizontally correctly", async () => {
-    createAndSelectOneDiamond();
+// Ellipse element (alt)
+describe("ellipse (alt)", () => {
+  it("flips an unrotated ellipse horizontally correctly", async () => {
+    createAndSelectOneEllipseAlt();
 
     await checkHorizontalFlip();
   });
 
-  it("flips an unrotated diamond vertically correctly", async () => {
-    createAndSelectOneDiamond();
+  it("flips an unrotated ellipse vertically correctly", async () => {
+    createAndSelectOneEllipseAlt();
 
     await checkVerticalFlip();
   });
 
-  it("flips a rotated diamond horizontally correctly", async () => {
+  it("flips a rotated ellipse horizontally correctly", async () => {
     const originalAngle = (5 * Math.PI) / 4;
     const expectedAngle = (3 * Math.PI) / 4;
 
-    createAndSelectOneDiamond(originalAngle);
+    createAndSelectOneEllipseAlt(originalAngle);
 
     await checkRotatedHorizontalFlip(expectedAngle);
   });
 
-  it("flips a rotated diamond vertically correctly", async () => {
+  it("flips a rotated ellipse vertically correctly", async () => {
     const originalAngle = (5 * Math.PI) / 4;
     const expectedAngle = (3 * Math.PI) / 4;
 
-    createAndSelectOneDiamond(originalAngle);
+    createAndSelectOneEllipseAlt(originalAngle);
 
     await checkRotatedVerticalFlip(expectedAngle);
   });

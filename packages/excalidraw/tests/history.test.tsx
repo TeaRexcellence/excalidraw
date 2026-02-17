@@ -2273,9 +2273,9 @@ describe("history", () => {
         width: 157,
         height: 126,
       });
-      const diamond = API.createElement({
+      const ellipse = API.createElement({
         id: "u2JGnnmoJ0VATV4vCNJE5",
-        type: "diamond",
+        type: "ellipse",
         x: 1152,
         y: 516,
         width: 124,
@@ -2288,7 +2288,7 @@ describe("history", () => {
       });
 
       API.updateScene({
-        elements: [rect, diamond],
+        elements: [rect, ellipse],
         captureUpdate: CaptureUpdateAction.IMMEDIATELY,
       });
 
@@ -2305,7 +2305,7 @@ describe("history", () => {
             ],
           },
           {
-            ...diamond,
+            ...ellipse,
             boundElements: [
               {
                 id: "6Rm4g567UQM4WjLwej2Vc",

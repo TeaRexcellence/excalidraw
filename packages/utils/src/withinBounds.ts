@@ -39,14 +39,6 @@ const getNonLinearElementRelativePoints = (
   BottomRight: LocalPoint,
   BottomLeft: LocalPoint,
 ] => {
-  if (element.type === "diamond") {
-    return [
-      pointFrom(element.width / 2, 0),
-      pointFrom(element.width, element.height / 2),
-      pointFrom(element.width / 2, element.height),
-      pointFrom(0, element.height / 2),
-    ];
-  }
   return [
     pointFrom(0, 0),
     pointFrom(0 + element.width, 0),
