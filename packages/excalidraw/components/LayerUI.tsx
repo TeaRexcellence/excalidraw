@@ -1054,6 +1054,7 @@ const LayerUI = ({
           }}
           scene={app.scene}
           appState={appState}
+          setAppState={setAppState}
           generateLinkForSelection={generateLinkForSelection}
         />
       )}

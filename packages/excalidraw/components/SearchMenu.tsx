@@ -43,6 +43,7 @@ import { t } from "../i18n";
 
 import { useApp, useExcalidrawSetAppState } from "./App";
 import { Button } from "./Button";
+import { QuickLinksSection } from "./QuickLinks";
 import { TextField } from "./TextField";
 import {
   collapseDownIcon,
@@ -399,9 +400,10 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
       }
     >
       <div className="search-menu-overlay__backdrop" onClick={onClose} />
-      <div className="search-menu-overlay__content">
-        <div className="layer-ui__search">
-          <div className="layer-ui__search-header">
+      <div className="search-menu-overlay__column">
+        <div className="search-menu-overlay__content">
+          <div className="layer-ui__search">
+            <div className="layer-ui__search-header">
             <TextField
               className={CLASSES.SEARCH_MENU_INPUT_WRAPPER}
               value={inputValue}
@@ -484,7 +486,9 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
             focusIndex={focusIndex}
             searchQuery={searchQuery}
           />
+          </div>
         </div>
+        <QuickLinksSection onClose={onClose} />
       </div>
     </div>,
     portalContainer,

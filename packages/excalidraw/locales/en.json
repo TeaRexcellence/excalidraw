@@ -213,6 +213,16 @@
     "texts": "Texts",
     "tables": "Tables"
   },
+  "quickLinks": {
+    "addLink": "Add link",
+    "selectElement": "Click an element to add as quick link",
+    "namePrompt": "Name this quick link",
+    "namePlaceholder": "Enter a name...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "notFound": "Linked element not found — link removed",
+    "noElements": "Add some elements to the canvas first"
+  },
   "buttons": {
     "clearReset": "Reset the canvas",
     "exportJSON": "Export to file",

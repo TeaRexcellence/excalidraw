@@ -1,0 +1,165 @@
+/* ── Quick-links: floating buttons below search card ──────────── */
+
+.quick-links {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 0;
+  max-height: 92px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-wrap: wrap;
+
+  /* Hide scrollbar */
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── "+" Add button — square, matches PM actionBtn ────────────── */
+
+.quick-links__add {
+  flex-shrink: 0;
+  width: 37px;
+  height: 37px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-mid);
+  color: var(--color-gray-50);
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background: var(--color-surface-high);
+    color: var(--color-on-surface);
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.excalidraw.theme--dark .quick-links__add {
+  background: #232329;
+}
+
+/* ── Link buttons — matches PM actionBtn ──────────────────────── */
+
+.quick-links__btn {
+  flex-shrink: 0;
+  height: 37px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-mid);
+  color: var(--color-gray-50);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: var(--ui-font);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background: var(--color-surface-high);
+    color: var(--color-on-surface);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.excalidraw.theme--dark .quick-links__btn {
+  background: #232329;
+}
+
+.quick-links__btn-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Inline rename input ──────────────────────────────────────── */
+
+.quick-links__rename-input {
+  width: 100px;
+  height: 100%;
+  padding: 0 4px;
+  border: 1.5px solid var(--color-primary);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-on-surface);
+  font-size: 0.8125rem;
+  font-family: var(--ui-font);
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* ── Context menu (matches ProjectManager) ────────────────────── */
+
+.quick-links__contextMenu {
+  min-width: 140px;
+  padding: 4px;
+  background: var(--island-bg-color);
+  border: 1px solid var(--color-border-outline-variant);
+  border-radius: 8px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 8px 10px -6px rgba(0, 0, 0, 0.06);
+  animation: ql-dropdown-in 0.12s ease-out;
+
+  button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-on-surface);
+    font-size: 0.8125rem;
+    font-family: var(--ui-font);
+    text-align: left;
+    cursor: pointer;
+    transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background: var(--color-surface-mid);
+    }
+  }
+
+  &__divider {
+    height: 1px;
+    margin: 4px 8px;
+    background: var(--color-border-outline-variant);
+    opacity: 0.6;
+  }
+
+  &__danger {
+    color: #dc2626 !important;
+
+    &:hover {
+      background: rgba(220, 38, 38, 0.08) !important;
+    }
+  }
+}
+
+@keyframes ql-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+

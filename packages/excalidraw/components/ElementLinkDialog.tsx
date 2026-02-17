@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { normalizeLink, KEYS } from "@excalidraw/common";
+import { normalizeLink, KEYS, randomId } from "@excalidraw/common";
 
 import {
   defaultGetElementLinkFromSelection,
   getLinkIdAndTypeFromSelection,
+  parseElementLinkFromURL,
 } from "@excalidraw/element";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";
@@ -15,32 +16,41 @@ import { t } from "../i18n";
 import { getSelectedElements } from "../scene";
 
 import DialogActionButton from "./DialogActionButton";
+import { QUICK_LINK_SENTINEL } from "./QuickLinks";
 import { TextField } from "./TextField";
 import { ToolButton } from "./ToolButton";
 import { TrashIcon } from "./icons";
 
 import "./ElementLinkDialog.scss";
 
-import type { AppProps, AppState, UIAppState } from "../types";
+import type { AppProps, AppState, QuickLink, UIAppState } from "../types";
 const ElementLinkDialog = ({
   sourceElementId,
   onClose,
   appState,
   scene,
+  setAppState,
   generateLinkForSelection = defaultGetElementLinkFromSelection,
 }: {
   sourceElementId: ExcalidrawElement["id"];
   appState: UIAppState;
   scene: Scene;
   onClose?: () => void;
+  setAppState: React.Component<any, AppState>["setState"];
   generateLinkForSelection: AppProps["generateLinkForSelection"];
 }) => {
+  const isQuickLinkMode = sourceElementId === QUICK_LINK_SENTINEL;
   const elementsMap = scene.getNonDeletedElementsMap();
-  const originalLink = elementsMap.get(sourceElementId)?.link ?? null;
+  const originalLink = isQuickLinkMode
+    ? null
+    : (elementsMap.get(sourceElementId)?.link ?? null);
 
   const [nextLink, setNextLink] = useState<string | null>(originalLink);
   const [linkEdited, setLinkEdited] = useState(false);
+  const [quickLinkName, setQuickLinkName] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
+  // Live-update the link field when the user clicks elements on the canvas
   useEffect(() => {
     const selectedElements = getSelectedElements(elementsMap, appState);
     let nextLink = originalLink;
@@ -67,7 +77,40 @@ const ElementLinkDialog = ({
     generateLinkForSelection,
   ]);
 
+  // Auto-focus naming input when a link is selected in quick link mode
+  useEffect(() => {
+    if (isQuickLinkMode && nextLink) {
+      requestAnimationFrame(() => nameInputRef.current?.focus());
+    }
+  }, [isQuickLinkMode, nextLink]);
+
   const handleConfirm = useCallback(() => {
+    if (isQuickLinkMode) {
+      if (nextLink) {
+        const targetId = parseElementLinkFromURL(nextLink);
+        if (targetId) {
+          const trimmedName = quickLinkName.trim();
+          if (!trimmedName) {
+            // Focus the name input if empty
+            nameInputRef.current?.focus();
+            return;
+          }
+          const newLink: QuickLink = {
+            id: randomId(),
+            elementId: targetId,
+            label: trimmedName,
+          };
+          setAppState((prev: AppState) => ({
+            quickLinks: [...(prev.quickLinks ?? []), newLink],
+            openDialog: null,
+          }));
+          return;
+        }
+      }
+      onClose?.();
+      return;
+    }
+
     if (nextLink && nextLink !== elementsMap.get(sourceElementId)?.link) {
       const elementToLink = elementsMap.get(sourceElementId);
       elementToLink &&
@@ -85,7 +128,17 @@ const ElementLinkDialog = ({
     }
 
     onClose?.();
-  }, [sourceElementId, nextLink, elementsMap, linkEdited, scene, onClose]);
+  }, [
+    isQuickLinkMode,
+    sourceElementId,
+    nextLink,
+    elementsMap,
+    linkEdited,
+    scene,
+    onClose,
+    setAppState,
+    quickLinkName,
+  ]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -114,7 +167,11 @@ const ElementLinkDialog = ({
   return (
     <div className="ElementLinkDialog">
       <div className="ElementLinkDialog__header">
-        <h2>{t("elementLink.title")}</h2>
+        <h2>
+          {isQuickLinkMode
+            ? t("quickLinks.addLink")
+            : t("elementLink.title")}
+        </h2>
         <p>{t("elementLink.desc")}</p>
       </div>
 
@@ -129,11 +186,16 @@ const ElementLinkDialog = ({
           }}
           onKeyDown={(event) => {
             if (event.key === KEYS.ENTER) {
-              handleConfirm();
+              if (isQuickLinkMode) {
+                // Move focus to name input instead of confirming
+                nameInputRef.current?.focus();
+              } else {
+                handleConfirm();
+              }
             }
           }}
           className="ElementLinkDialog__input-field"
-          selectOnRender
+          selectOnRender={!isQuickLinkMode}
         />
 
         {originalLink && nextLink && (
@@ -143,10 +205,6 @@ const ElementLinkDialog = ({
             aria-label={t("buttons.remove")}
             label={t("buttons.remove")}
             onClick={() => {
-              // removes the link from the input
-              // but doesn't update the element
-
-              // when confirmed, will remove the link from the element
               setNextLink(null);
               setLinkEdited(true);
             }}
@@ -155,6 +213,25 @@ const ElementLinkDialog = ({
           />
         )}
       </div>
+
+      {isQuickLinkMode && nextLink && (
+        <div className="ElementLinkDialog__naming">
+          <label>{t("quickLinks.namePrompt")}</label>
+          <input
+            ref={nameInputRef}
+            type="text"
+            value={quickLinkName}
+            onChange={(e) => setQuickLinkName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === KEYS.ENTER) {
+                e.preventDefault();
+                handleConfirm();
+              }
+            }}
+            placeholder={t("quickLinks.namePlaceholder")}
+          />
+        </div>
+      )}
 
       <div className="ElementLinkDialog__actions">
         <DialogActionButton
@@ -168,7 +245,7 @@ const ElementLinkDialog = ({
         />
 
         <DialogActionButton
-          label={t("buttons.confirm")}
+          label={isQuickLinkMode ? t("quickLinks.save") : t("buttons.confirm")}
           onClick={handleConfirm}
           actionType="primary"
         />

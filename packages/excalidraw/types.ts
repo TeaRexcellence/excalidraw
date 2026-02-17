@@ -494,8 +494,15 @@ export interface AppState {
   // as elements are unlocked, we remove the groupId from the elements
   // and also remove groupId from this map
   lockedMultiSelections: { [groupId: string]: true };
+  quickLinks: QuickLink[];
   bindMode: BindMode;
 }
+
+export type QuickLink = {
+  id: string;
+  elementId: string;
+  label: string;
+};
 
 export type SearchMatch = {
   id: string;

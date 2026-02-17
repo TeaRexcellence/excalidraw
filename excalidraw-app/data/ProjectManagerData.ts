@@ -176,6 +176,7 @@ export class ProjectManagerData {
             majorGridEnabled: appState.majorGridEnabled,
             minorGridEnabled: appState.minorGridEnabled,
             objectsSnapModeEnabled: appState.objectsSnapModeEnabled,
+            quickLinks: appState.quickLinks,
           },
           files,
         };

@@ -45,7 +45,10 @@ import {
   isIframeLikeElement,
   isImageElement,
   isLinearElement,
+  isCodeBlockElement,
+  isDocumentElement,
   isProjectLinkElement,
+  isTableElement,
   isTextElement,
 } from "./typeChecks";
 import {
@@ -100,7 +103,10 @@ export const shouldTestInside = (element: ExcalidrawElement) => {
   return (
     isDraggableFromInside ||
     isImageElement(element) ||
-    isProjectLinkElement(element)
+    isProjectLinkElement(element) ||
+    isCodeBlockElement(element) ||
+    isTableElement(element) ||
+    isDocumentElement(element)
   );
 };
 

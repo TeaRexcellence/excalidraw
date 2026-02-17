@@ -1403,24 +1403,17 @@ export const ProjectManager: React.FC = () => {
         });
 
         // NOW clear the canvas (which triggers onChange → save)
+        // Spread all defaults so new projects start clean regardless of
+        // what the previous project had in appState.
         const defaults = getDefaultAppState();
         app.syncActionResult({
           elements: [],
           appState: {
+            ...defaults,
             name,
             viewBackgroundColor: app.state.viewBackgroundColor,
-            zoom: defaults.zoom,
             scrollX: 0,
             scrollY: 0,
-            // Reset grid settings to defaults for new project
-            gridModeEnabled: defaults.gridModeEnabled,
-            gridStep: defaults.gridStep,
-            gridType: defaults.gridType,
-            gridOpacity: defaults.gridOpacity,
-            gridMinorOpacity: defaults.gridMinorOpacity,
-            majorGridEnabled: defaults.majorGridEnabled,
-            minorGridEnabled: defaults.minorGridEnabled,
-            objectsSnapModeEnabled: false,
           },
           captureUpdate: CaptureUpdateAction.IMMEDIATELY,
         });
@@ -1533,6 +1526,12 @@ export const ProjectManager: React.FC = () => {
         await api.saveIndex(newIndex);
 
         // NOW update the canvas (which triggers onChange → save)
+        // Spread defaults first so any per-project state missing from saved
+        // data (older projects, new features) resets instead of bleeding
+        // from the previous project.
+        const switchDefaults = getDefaultAppState();
+        const projectTitle = freshIndex.projects.find((p) => p.id === projectId)?.title;
+
         if (sceneData) {
           console.log(
             "[ProjectManager] Updating scene with elements:",
@@ -1541,8 +1540,9 @@ export const ProjectManager: React.FC = () => {
           app.syncActionResult({
             elements: sceneData.elements || [],
             appState: {
+              ...switchDefaults,
               ...sceneData.appState,
-              name: freshIndex.projects.find((p) => p.id === projectId)?.title,
+              name: projectTitle,
             },
             captureUpdate: CaptureUpdateAction.IMMEDIATELY,
           });
@@ -1564,7 +1564,8 @@ export const ProjectManager: React.FC = () => {
           app.syncActionResult({
             elements: [],
             appState: {
-              name: freshIndex.projects.find((p) => p.id === projectId)?.title,
+              ...switchDefaults,
+              name: projectTitle,
             },
             captureUpdate: CaptureUpdateAction.IMMEDIATELY,
           });
@@ -2219,9 +2220,11 @@ export const ProjectManager: React.FC = () => {
       ProjectManagerData.resetAll();
 
       // Clear the canvas
+      const resetDefaults = getDefaultAppState();
       app.syncActionResult({
         elements: [],
         appState: {
+          ...resetDefaults,
           name: "",
           viewBackgroundColor: app.state.viewBackgroundColor,
         },
