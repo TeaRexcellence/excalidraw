@@ -21,7 +21,6 @@ import { Island } from "../Island";
 import { CloseIcon } from "../icons";
 
 import Angle from "./Angle";
-import CanvasGrid from "./CanvasGrid";
 import Collapsible from "./Collapsible";
 import Dimension from "./Dimension";
 import FontSize from "./FontSize";
@@ -220,19 +219,6 @@ export const StatsInner = memo(
                 <div>{t("stats.height")}</div>
                 <div>{sceneDimension.height}</div>
               </StatsRow>
-              {gridModeEnabled && (
-                <>
-                  <StatsRow heading>Canvas</StatsRow>
-                  <StatsRow>
-                    <CanvasGrid
-                      property="gridStep"
-                      scene={scene}
-                      appState={appState}
-                      setAppState={setAppState}
-                    />
-                  </StatsRow>
-                </>
-              )}
             </StatsRows>
 
             {renderCustomStats?.(elements, appState)}

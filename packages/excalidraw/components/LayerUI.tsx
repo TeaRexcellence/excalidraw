@@ -35,7 +35,8 @@ import { UIAppStateContext } from "../context/ui-appState";
 import { useAtom, useAtomValue } from "../editor-jotai";
 
 import { t } from "../i18n";
-import { calculateScrollCenter } from "../scene";
+import { calculateScrollCenter, getNormalizedGridStep } from "../scene";
+import { getDefaultAppState } from "../appState";
 
 import {
   SelectedShapeActions,
@@ -70,6 +71,7 @@ import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
 import { FixedSideContainer } from "./FixedSideContainer";
 import { HandButton } from "./HandButton";
 import { ToolButton } from "./ToolButton";
+import { Switch } from "./Switch";
 import { HelpDialog } from "./HelpDialog";
 import { HintViewer } from "./HintViewer";
 import { ImageExportDialog } from "./ImageExportDialog";
@@ -165,6 +167,133 @@ const GRID_TYPES = [
   { type: "dot" as const, icon: dotGridIcon, label: "labels.dotGrid" as const },
 ];
 
+const GridStepDragInput = ({
+  appState,
+  setAppState,
+}: {
+  appState: UIAppState;
+  setAppState: React.Component<any, AppState>["setState"];
+}) => {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const dragStartX = React.useRef(0);
+  const dragStartValue = React.useRef(0);
+  const isDragging = React.useRef(false);
+  const savedGridState = React.useRef<{
+    gridModeEnabled: boolean;
+    gridOpacity: number;
+    gridMinorOpacity: number;
+    majorGridEnabled: boolean;
+    minorGridEnabled: boolean;
+  } | null>(null);
+
+  const commitEdit = React.useCallback(() => {
+    const parsed = parseInt(editValue, 10);
+    if (!isNaN(parsed)) {
+      setAppState({ gridStep: getNormalizedGridStep(parsed) });
+    }
+    setIsEditing(false);
+  }, [editValue, setAppState]);
+
+  const startDrag = React.useCallback(
+    (e: React.PointerEvent) => {
+      e.preventDefault();
+      dragStartX.current = e.clientX;
+      dragStartValue.current = appState.gridStep;
+      isDragging.current = false;
+
+      // Save current grid visual state
+      savedGridState.current = {
+        gridModeEnabled: appState.gridModeEnabled,
+        gridOpacity: appState.gridOpacity,
+        gridMinorOpacity: appState.gridMinorOpacity,
+        majorGridEnabled: appState.majorGridEnabled,
+        minorGridEnabled: appState.minorGridEnabled,
+      };
+
+      // Force full visibility for preview
+      setAppState({
+        gridModeEnabled: true,
+        gridOpacity: 100,
+        gridMinorOpacity: 100,
+        majorGridEnabled: true,
+        minorGridEnabled: true,
+      });
+
+      document.body.classList.add("excalidraw-cursor-resize");
+
+      const onPointerMove = (ev: PointerEvent) => {
+        isDragging.current = true;
+        const dx = ev.clientX - dragStartX.current;
+        const units = Math.round(dx / 8);
+        let next: number;
+        if (ev.shiftKey) {
+          next = dragStartValue.current + Math.round(units / 5) * 5;
+        } else {
+          next = dragStartValue.current + units;
+        }
+        setAppState({ gridStep: getNormalizedGridStep(next) });
+      };
+
+      const onPointerUp = () => {
+        document.removeEventListener("pointermove", onPointerMove);
+        document.removeEventListener("pointerup", onPointerUp);
+        document.body.classList.remove("excalidraw-cursor-resize");
+
+        // Restore saved grid visual state
+        if (savedGridState.current) {
+          setAppState(savedGridState.current);
+          savedGridState.current = null;
+        }
+      };
+
+      document.addEventListener("pointermove", onPointerMove);
+      document.addEventListener("pointerup", onPointerUp);
+    },
+    [appState, setAppState],
+  );
+
+  return (
+    <div className="grid-step-row" title="Grid steps">
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          className="grid-step-row__input grid-step-row__input--editing"
+          type="text"
+          value={editValue}
+          title="Grid steps"
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={commitEdit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              commitEdit();
+            } else if (e.key === "Escape") {
+              setIsEditing(false);
+            }
+          }}
+          autoFocus
+        />
+      ) : (
+        <input
+          className="grid-step-row__input"
+          type="text"
+          value={appState.gridStep}
+          title="Grid steps"
+          readOnly
+          onPointerDown={startDrag}
+          onClick={(e) => {
+            if (!isDragging.current) {
+              setEditValue(String(appState.gridStep));
+              setIsEditing(true);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
 const GridTypeDropdown = ({
   appState,
   setAppState,
@@ -248,42 +377,96 @@ const GridTypeDropdown = ({
           ))}
           <div className="grid-opacity-sliders-row">
             <div
-              className="grid-opacity-vertical-slider"
-              title={t("labels.gridOpacity")}
+              className={clsx("grid-slider-group", {
+                "grid-slider-group--disabled": !appState.majorGridEnabled,
+              })}
             >
-              <input
-                ref={majorSliderRef}
-                type="range"
-                min="10"
-                max="100"
-                step="10"
-                value={appState.gridOpacity}
-                onChange={(e) => {
-                  setAppState({ gridOpacity: +e.target.value });
-                }}
-                className="range-input"
-                data-testid="grid-opacity-slider"
-              />
+              <div
+                className="grid-opacity-vertical-slider"
+                title={t("labels.gridOpacity")}
+              >
+                <input
+                  ref={majorSliderRef}
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="10"
+                  value={appState.gridOpacity}
+                  onChange={(e) => {
+                    setAppState({ gridOpacity: +e.target.value });
+                  }}
+                  className="range-input"
+                  data-testid="grid-opacity-slider"
+                />
+              </div>
+              <div className="grid-toggle-switch">
+                <Switch
+                  name="majorGridToggle"
+                  checked={appState.majorGridEnabled}
+                  title="Toggle major grid"
+                  onChange={(checked) =>
+                    setAppState({ majorGridEnabled: checked })
+                  }
+                />
+              </div>
             </div>
             <div
-              className="grid-opacity-vertical-slider"
-              title={t("labels.gridMinorOpacity")}
+              className={clsx("grid-slider-group", {
+                "grid-slider-group--disabled": !appState.minorGridEnabled,
+              })}
             >
-              <input
-                ref={minorSliderRef}
-                type="range"
-                min="10"
-                max="100"
-                step="10"
-                value={appState.gridMinorOpacity}
-                onChange={(e) => {
-                  setAppState({ gridMinorOpacity: +e.target.value });
-                }}
-                className="range-input"
-                data-testid="grid-minor-opacity-slider"
-              />
+              <div
+                className="grid-opacity-vertical-slider"
+                title={t("labels.gridMinorOpacity")}
+              >
+                <input
+                  ref={minorSliderRef}
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="10"
+                  value={appState.gridMinorOpacity}
+                  onChange={(e) => {
+                    setAppState({ gridMinorOpacity: +e.target.value });
+                  }}
+                  className="range-input"
+                  data-testid="grid-minor-opacity-slider"
+                />
+              </div>
+              <div className="grid-toggle-switch">
+                <Switch
+                  name="minorGridToggle"
+                  checked={appState.minorGridEnabled}
+                  title="Toggle minor grid"
+                  onChange={(checked) =>
+                    setAppState({ minorGridEnabled: checked })
+                  }
+                />
+              </div>
             </div>
           </div>
+          <GridStepDragInput
+            appState={appState}
+            setAppState={setAppState}
+          />
+          <button
+            className="grid-reset-button"
+            title="Reset grid to default settings"
+            onClick={() => {
+              const defaults = getDefaultAppState();
+              setAppState({
+                gridStep: defaults.gridStep,
+                gridModeEnabled: defaults.gridModeEnabled,
+                gridType: defaults.gridType,
+                gridOpacity: defaults.gridOpacity,
+                gridMinorOpacity: defaults.gridMinorOpacity,
+                majorGridEnabled: defaults.majorGridEnabled,
+                minorGridEnabled: defaults.minorGridEnabled,
+              });
+            }}
+          >
+            Reset
+          </button>
         </div>
       </div>
     </div>

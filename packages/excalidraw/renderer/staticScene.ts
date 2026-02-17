@@ -71,6 +71,8 @@ const strokeGrid = (
   minorOpacity: number = 100,
   /** grid visual style */
   gridType: "line" | "dot" = "line",
+  majorGridEnabled: boolean = true,
+  minorGridEnabled: boolean = true,
 ) => {
   const offsetX = (scrollX % gridSize) - gridSize;
   const offsetY = (scrollY % gridSize) - gridSize;
@@ -95,19 +97,22 @@ const strokeGrid = (
           Math.round(y - scrollY) % (gridStep * gridSize) === 0;
         const isBold = isBoldX && isBoldY;
 
-        // skip regular dots when zoomed out
-        if (!isBold && actualGridSize < 10) {
+        // skip minor dots when minor disabled or zoomed out
+        if (!isBold && (!minorGridEnabled || actualGridSize < 10)) {
           continue;
         }
 
-        context.globalAlpha = (isBold ? opacity : minorOpacity) / 100;
+        // When major disabled, render major positions as minor style
+        const renderAsBold = isBold && majorGridEnabled;
 
-        const radius = isBold
+        context.globalAlpha = (renderAsBold ? opacity : minorOpacity) / 100;
+
+        const radius = renderAsBold
           ? Math.min(2.5 / zoom.value, 4)
           : Math.min(1.4 / zoom.value, 3);
 
         context.beginPath();
-        context.fillStyle = isBold
+        context.fillStyle = renderAsBold
           ? GridLineColor[theme].bold
           : GridLineColor[theme].regular;
         context.arc(x, y, radius, 0, Math.PI * 2);
@@ -133,20 +138,23 @@ const strokeGrid = (
   for (let x = offsetX; x < offsetX + width + gridSize * 2; x += gridSize) {
     const isBold =
       gridStep > 1 && Math.round(x - scrollX) % (gridStep * gridSize) === 0;
-    // don't render regular lines when zoomed out and they're barely visible
-    if (!isBold && actualGridSize < 10) {
+    // skip minor lines when minor disabled or zoomed out
+    if (!isBold && (!minorGridEnabled || actualGridSize < 10)) {
       continue;
     }
 
-    context.globalAlpha = (isBold ? opacity : minorOpacity) / 100;
+    // When major disabled, render major positions as minor style
+    const renderAsBold = isBold && majorGridEnabled;
 
-    const lineWidth = Math.min(1 / zoom.value, isBold ? 4 : 1);
+    context.globalAlpha = (renderAsBold ? opacity : minorOpacity) / 100;
+
+    const lineWidth = Math.min(1 / zoom.value, renderAsBold ? 4 : 1);
     context.lineWidth = lineWidth;
     const lineDash = [lineWidth * 3, spaceWidth + (lineWidth + spaceWidth)];
 
     context.beginPath();
-    context.setLineDash(isBold ? [] : lineDash);
-    context.strokeStyle = isBold
+    context.setLineDash(renderAsBold ? [] : lineDash);
+    context.strokeStyle = renderAsBold
       ? GridLineColor[theme].bold
       : GridLineColor[theme].regular;
     context.moveTo(x, offsetY - gridSize);
@@ -157,19 +165,23 @@ const strokeGrid = (
   for (let y = offsetY; y < offsetY + height + gridSize * 2; y += gridSize) {
     const isBold =
       gridStep > 1 && Math.round(y - scrollY) % (gridStep * gridSize) === 0;
-    if (!isBold && actualGridSize < 10) {
+    // skip minor lines when minor disabled or zoomed out
+    if (!isBold && (!minorGridEnabled || actualGridSize < 10)) {
       continue;
     }
 
-    context.globalAlpha = (isBold ? opacity : minorOpacity) / 100;
+    // When major disabled, render major positions as minor style
+    const renderAsBold = isBold && majorGridEnabled;
 
-    const lineWidth = Math.min(1 / zoom.value, isBold ? 4 : 1);
+    context.globalAlpha = (renderAsBold ? opacity : minorOpacity) / 100;
+
+    const lineWidth = Math.min(1 / zoom.value, renderAsBold ? 4 : 1);
     context.lineWidth = lineWidth;
     const lineDash = [lineWidth * 3, spaceWidth + (lineWidth + spaceWidth)];
 
     context.beginPath();
-    context.setLineDash(isBold ? [] : lineDash);
-    context.strokeStyle = isBold
+    context.setLineDash(renderAsBold ? [] : lineDash);
+    context.strokeStyle = renderAsBold
       ? GridLineColor[theme].bold
       : GridLineColor[theme].regular;
     context.moveTo(offsetX - gridSize, y);
@@ -325,6 +337,8 @@ const _renderStaticScene = ({
       appState.gridOpacity,
       appState.gridMinorOpacity,
       appState.gridType,
+      appState.majorGridEnabled,
+      appState.minorGridEnabled,
     );
   }
 
