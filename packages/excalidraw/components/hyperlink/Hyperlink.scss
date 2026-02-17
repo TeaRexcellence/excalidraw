@@ -50,10 +50,20 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 15rem;
+    color: var(--color-primary);
+    text-decoration: none;
+
+    &:link,
+    &:visited,
+    &:hover,
+    &:active {
+      color: var(--color-primary);
+    }
   }
 
-  button {
-    color: $color-blue-6;
+  &__row button,
+  &__buttons button {
+    color: var(--color-primary);
     background-color: transparent !important;
     font-weight: 500;
     &.excalidraw-hyperlinkContainer--remove {
@@ -207,7 +217,7 @@
     border: none;
     cursor: pointer;
     background: transparent;
-    color: var(--color-gray-40);
+    color: var(--color-gray-60);
     flex-shrink: 0;
     transition: color 0.15s, background 0.15s;
 
