@@ -420,9 +420,15 @@ const GridTypeDropdown = ({
                   name="majorGridToggle"
                   checked={appState.majorGridEnabled}
                   title="Toggle major grid visibility"
-                  onChange={(checked) =>
-                    setAppState({ majorGridEnabled: checked })
-                  }
+                  onChange={(checked) => {
+                    // If turning major off while minor is also off,
+                    // auto-enable minor to avoid empty grid state
+                    if (!checked && !appState.minorGridEnabled) {
+                      setAppState({ majorGridEnabled: false, minorGridEnabled: true });
+                    } else {
+                      setAppState({ majorGridEnabled: checked });
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -455,9 +461,15 @@ const GridTypeDropdown = ({
                   name="minorGridToggle"
                   checked={appState.minorGridEnabled}
                   title="Toggle minor grid visibility"
-                  onChange={(checked) =>
-                    setAppState({ minorGridEnabled: checked })
-                  }
+                  onChange={(checked) => {
+                    // If turning minor off while major is also off,
+                    // auto-enable major to avoid empty grid state
+                    if (!checked && !appState.majorGridEnabled) {
+                      setAppState({ minorGridEnabled: false, majorGridEnabled: true });
+                    } else {
+                      setAppState({ minorGridEnabled: checked });
+                    }
+                  }}
                 />
               </div>
             </div>

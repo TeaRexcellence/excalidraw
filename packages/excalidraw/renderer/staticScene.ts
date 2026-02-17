@@ -53,6 +53,17 @@ const GridLineColor = {
   },
 } as const;
 
+const GridDotColor = {
+  [THEME.LIGHT]: {
+    bold: "#d0d0d0",
+    regular: "#c4c4c4",
+  },
+  [THEME.DARK]: {
+    bold: "#505050",
+    regular: "#444444",
+  },
+} as const;
+
 const strokeGrid = (
   context: CanvasRenderingContext2D,
   /** grid cell pixel size */
@@ -113,8 +124,8 @@ const strokeGrid = (
 
         context.beginPath();
         context.fillStyle = renderAsBold
-          ? GridLineColor[theme].bold
-          : GridLineColor[theme].regular;
+          ? GridDotColor[theme].bold
+          : GridDotColor[theme].regular;
         context.arc(x, y, radius, 0, Math.PI * 2);
         context.fill();
       }
