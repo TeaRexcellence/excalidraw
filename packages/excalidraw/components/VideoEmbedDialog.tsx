@@ -250,6 +250,7 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if project is saved on mount
@@ -361,6 +362,47 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
   const handleBrowseClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
+
+      const file = e.dataTransfer.files?.[0];
+      if (!file || !file.type.startsWith("video/")) {
+        setError("Please drop a video file");
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const { url: videoUrl, width, height } = await uploadVideoFile(file);
+        await insertVideoWithDimensions(videoUrl, width, height);
+        onClose();
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        setError(`Upload failed: ${errorMessage}`);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [insertVideoWithDimensions, onClose],
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -521,30 +563,13 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
       size="small"
     >
       <div className="VideoEmbedDialog">
-        <div className="VideoEmbedDialog__inputGroup">
-          <label htmlFor="video-url-input" className="VideoEmbedDialog__label">
-            {t("videoDialog.urlLabel")}
-          </label>
-          <input
-            id="video-url-input"
-            type="text"
-            className="VideoEmbedDialog__input"
-            placeholder={t("videoDialog.urlPlaceholder")}
-            value={url}
-            onChange={handleUrlChange}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            disabled={isLoading}
-          />
-          {error && <div className="VideoEmbedDialog__error">{error}</div>}
-          <div className="VideoEmbedDialog__hint">{t("videoDialog.hint")}</div>
-        </div>
-
-        <div className="VideoEmbedDialog__divider">
-          <span>{t("videoDialog.or")}</span>
-        </div>
-
-        <div className="VideoEmbedDialog__fileSection">
+        <div
+          className={`VideoEmbedDialog__dropzone${isDragOver ? " VideoEmbedDialog__dropzone--active" : ""}${isLoading ? " VideoEmbedDialog__dropzone--loading" : ""}`}
+          onClick={isLoading ? undefined : handleBrowseClick}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <input
             ref={fileInputRef}
             type="file"
@@ -552,13 +577,46 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
             onChange={handleFileSelect}
             style={{ display: "none" }}
           />
-          <FilledButton
-            variant="outlined"
-            color="primary"
-            label={isLoading ? "Uploading..." : t("videoDialog.browseFiles")}
-            onClick={isLoading ? undefined : handleBrowseClick}
-          />
+          <div className="VideoEmbedDialog__dropzoneIcon">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+          </div>
+          <div className="VideoEmbedDialog__dropzoneText">
+            {isLoading ? t("videoDialog.uploading") : t("videoDialog.dropzone")}
+          </div>
+          <div className="VideoEmbedDialog__dropzoneHint">
+            {t("videoDialog.dropzoneHint")}
+          </div>
         </div>
+
+        <div className="VideoEmbedDialog__divider">
+          <span>{t("videoDialog.orPasteLink")}</span>
+        </div>
+
+        <input
+          id="video-url-input"
+          type="text"
+          className="VideoEmbedDialog__input"
+          placeholder={t("videoDialog.urlPlaceholder")}
+          value={url}
+          onChange={handleUrlChange}
+          onKeyDown={handleKeyDown}
+          disabled={isLoading}
+        />
+
+        {error && <div className="VideoEmbedDialog__error">{error}</div>}
 
         <div className="VideoEmbedDialog__actions">
           <FilledButton
@@ -570,7 +628,7 @@ export const VideoEmbedDialog: React.FC<VideoEmbedDialogProps> = ({
           <FilledButton
             variant="filled"
             color="primary"
-            label={isLoading ? "Loading..." : t("videoDialog.insert")}
+            label={isLoading ? t("videoDialog.uploading") : t("videoDialog.insertMedia")}
             onClick={isLoading ? undefined : handleSubmit}
           />
         </div>

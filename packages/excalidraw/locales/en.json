@@ -419,13 +419,18 @@
     "deleteColumn": "Delete last column"
   },
   "videoDialog": {
-    "title": "Insert Video",
+    "title": "Insert Media",
     "urlLabel": "Video URL",
-    "urlPlaceholder": "Paste YouTube URL or direct video file URL",
+    "urlPlaceholder": "Paste a YouTube or video URL",
     "hint": "Supports YouTube links and direct video URLs (.mp4, .webm, etc.)",
     "or": "or",
+    "orPasteLink": "or paste a link",
     "browseFiles": "Browse local files",
+    "dropzone": "Drag & drop video here",
+    "dropzoneHint": "or click to browse files",
+    "uploading": "Uploading...",
     "insert": "Insert",
+    "insertMedia": "Finish",
     "errorEmptyUrl": "Please enter a video URL"
   },
   "videoControls": {

@@ -1,8 +1,96 @@
 .VideoEmbedDialog {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 0.5rem;
+  gap: 1rem;
+  padding: 0.25rem 0;
+
+  &__dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 2rem 1.5rem;
+    border: 2px dashed var(--color-gray-30);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    user-select: none;
+
+    &:hover {
+      border-color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+    }
+
+    &--active {
+      border-color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
+
+    &--loading {
+      cursor: default;
+      opacity: 0.7;
+    }
+  }
+
+  &__dropzoneIcon {
+    color: var(--color-gray-50);
+    margin-bottom: 0.25rem;
+  }
+
+  &__dropzoneText {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-on-surface);
+  }
+
+  &__dropzoneHint {
+    font-size: 0.75rem;
+    color: var(--color-gray-50);
+  }
+
+  &__divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--color-gray-50);
+    font-size: 0.75rem;
+
+    &::before,
+    &::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--color-gray-30);
+    }
+  }
+
+  &__input {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--color-gray-30);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: var(--input-bg-color, transparent);
+    color: var(--color-on-surface);
+    transition: border-color 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+    }
+
+    &::placeholder {
+      color: var(--color-gray-40);
+    }
+  }
+
+  &__error {
+    font-size: 0.75rem;
+    color: var(--color-danger);
+    margin-top: -0.5rem;
+  }
 
   &__inputGroup {
     display: flex;
@@ -15,56 +103,18 @@
     font-size: 0.875rem;
   }
 
-  &__input {
-    padding: 0.75rem 1rem;
-    border: 1px solid var(--color-gray-30);
-    border-radius: 8px;
-    font-size: 0.875rem;
-    transition: border-color 0.2s;
-
-    &:focus {
-      outline: none;
-      border-color: var(--color-primary);
-    }
-  }
-
   &__hint {
     font-size: 0.75rem;
     color: var(--color-gray-60);
   }
 
-  &__error {
-    font-size: 0.75rem;
-    color: var(--color-danger);
-  }
-
-  &__divider {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    color: var(--color-gray-50);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-
-    &::before,
-    &::after {
-      content: "";
-      flex: 1;
-      height: 1px;
-      background: var(--color-gray-30);
-    }
-  }
-
-  &__fileSection {
-    display: flex;
-    justify-content: center;
-  }
-
   &__actions {
     display: flex;
-    justify-content: flex-end;
     gap: 0.75rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--color-gray-20);
+    padding-top: 0.25rem;
+
+    .ExcButton {
+      flex: 1;
+    }
   }
 }
