@@ -101,7 +101,6 @@ export const AppMainMenu: React.FC<{
           penDetected: app.state.penDetected,
           exportBackground: app.state.exportBackground,
           exportEmbedScene: app.state.exportEmbedScene,
-          objectsSnapModeEnabled: app.state.objectsSnapModeEnabled,
           viewBackgroundColor: app.state.viewBackgroundColor,
           name: app.state.name,
         },
@@ -120,7 +119,6 @@ export const AppMainMenu: React.FC<{
             appState: {
               viewBackgroundColor: app.state.viewBackgroundColor,
               name: app.state.name,
-              objectsSnapModeEnabled: app.state.objectsSnapModeEnabled,
             },
             files: {},
           }),

@@ -1412,6 +1412,15 @@ export const ProjectManager: React.FC = () => {
             zoom: defaults.zoom,
             scrollX: 0,
             scrollY: 0,
+            // Reset grid settings to defaults for new project
+            gridModeEnabled: defaults.gridModeEnabled,
+            gridStep: defaults.gridStep,
+            gridType: defaults.gridType,
+            gridOpacity: defaults.gridOpacity,
+            gridMinorOpacity: defaults.gridMinorOpacity,
+            majorGridEnabled: defaults.majorGridEnabled,
+            minorGridEnabled: defaults.minorGridEnabled,
+            objectsSnapModeEnabled: false,
           },
           captureUpdate: CaptureUpdateAction.IMMEDIATELY,
         });
