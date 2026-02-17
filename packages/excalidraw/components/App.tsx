@@ -1526,7 +1526,7 @@ class App extends React.Component<AppProps, AppState> {
                 ),
                 ["--embeddable-radius" as string]: `${Math.min(
                   getCornerRadius(Math.min(el.width, el.height), el),
-                  8,
+                  10,
                 )}px`,
               }}
             >
@@ -4101,9 +4101,11 @@ class App extends React.Component<AppProps, AppState> {
         const elements = this.scene.getElementsFromId(id);
 
         if (elements?.length) {
+          const defaults = getDefaultAppState();
           this.scrollToContent(elements, {
             fitToContent: opts?.fitToContent ?? true,
             animate: opts?.animate ?? true,
+            minZoom: opts?.minZoom ?? defaults.zoom.value,
           });
         } else if (isElementLink(target)) {
           this.setState({
@@ -8772,7 +8774,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
       roundness: this.state.currentItemRoundness === "round"
-        ? { type: ROUNDNESS.ADAPTIVE_RADIUS, value: 8 }
+        ? { type: ROUNDNESS.ADAPTIVE_RADIUS, value: 10 }
         : null,
       opacity: this.state.currentItemOpacity,
       locked: false,
