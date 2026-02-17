@@ -797,6 +797,10 @@
         color: var(--pm-star);
       }
 
+      &.ProjectCard__favoriteBtn--active {
+        color: var(--pm-star);
+      }
+
       &.ProjectCard__favoriteBtn--active:hover {
         color: var(--color-primary-hover);
       }
