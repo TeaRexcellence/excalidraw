@@ -36,6 +36,7 @@ import type {
 
 import { atom, useAtom } from "../editor-jotai";
 
+import { getDefaultAppState } from "../appState";
 import { useStable } from "../hooks/useStable";
 import { useCreatePortalContainer } from "../hooks/useCreatePortalContainer";
 import { t } from "../i18n";
@@ -230,6 +231,7 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
               animate: true,
               duration: 300,
               fitToContent: true,
+              minZoom: getDefaultAppState().zoom.value,
               canvasOffsets: app.getEditorUIOffsets(),
             });
           }
@@ -291,6 +293,7 @@ export const SearchMenu = ({ onClose }: { onClose: () => void }) => {
               animate: true,
               duration: 300,
               ...zoomOptions,
+              minZoom: getDefaultAppState().zoom.value,
               canvasOffsets: app.getEditorUIOffsets(),
             });
           }
