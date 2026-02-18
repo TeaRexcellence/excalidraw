@@ -4,7 +4,15 @@ import { getCommonBoundingBox } from "@excalidraw/element";
 import { newElementWith } from "@excalidraw/element";
 import { deepCopyElement } from "@excalidraw/element";
 import { resizeMultipleElements } from "@excalidraw/element";
-import { isArrowElement, isElbowArrow } from "@excalidraw/element";
+import {
+  isArrowElement,
+  isElbowArrow,
+  isTableElement,
+  isCodeBlockElement,
+  isIframeLikeElement,
+  isProjectLinkElement,
+  isDocumentElement,
+} from "@excalidraw/element";
 import { updateFrameMembershipOfSelectedElements } from "@excalidraw/element";
 import { CODES, KEYS, arrayToMap } from "@excalidraw/common";
 
@@ -26,11 +34,25 @@ import { register } from "./register";
 
 import type { AppClassProperties, AppState } from "../types";
 
+const isNonFlippableElement = (element: ExcalidrawElement) =>
+  isTableElement(element) ||
+  isCodeBlockElement(element) ||
+  isIframeLikeElement(element) ||
+  isProjectLinkElement(element) ||
+  isDocumentElement(element);
+
 export const actionFlipHorizontal = register({
   name: "flipHorizontal",
   label: "labels.flipHorizontal",
   icon: flipHorizontal,
   trackEvent: { category: "element" },
+  predicate: (elements, appState, _, app) => {
+    const selectedElements = app.scene.getSelectedElements(appState);
+    return (
+      selectedElements.length > 0 &&
+      !selectedElements.some(isNonFlippableElement)
+    );
+  },
   perform: (elements, appState, _, app) => {
     return {
       elements: updateFrameMembershipOfSelectedElements(
@@ -56,6 +78,13 @@ export const actionFlipVertical = register({
   label: "labels.flipVertical",
   icon: flipVertical,
   trackEvent: { category: "element" },
+  predicate: (elements, appState, _, app) => {
+    const selectedElements = app.scene.getSelectedElements(appState);
+    return (
+      selectedElements.length > 0 &&
+      !selectedElements.some(isNonFlippableElement)
+    );
+  },
   perform: (elements, appState, _, app) => {
     return {
       elements: updateFrameMembershipOfSelectedElements(
