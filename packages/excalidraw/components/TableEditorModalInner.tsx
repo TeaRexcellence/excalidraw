@@ -302,44 +302,104 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
     }
   }, [frozenRows, frozenColumns]);
 
-  // Escape key to close (when not editing a cell).
-  // Uses capture phase so it fires before Handsontable's own Escape handler.
+  // ── Keyboard isolation ──────────────────────────────────────────────
+  // Capture-phase document listener intercepts ALL keyboard events.
+  // For events inside the modal we either handle them directly via
+  // Handsontable's API (Ctrl+A, Ctrl+Z, Ctrl+Y, Escape) or let them
+  // through to Handsontable by NOT stopping propagation.
+  // Events from outside the modal are ignored (not our concern).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) {
+        return;
+      }
+
+      // Only handle events that originate inside the table editor modal
+      if (!wrapper.contains(e.target as Node)) {
+        return;
+      }
+
+      const hot = hotRef.current?.hotInstance;
+      const ctrlOrCmd = e.ctrlKey || e.metaKey;
+
+      // ── Escape ──
       if (e.key === "Escape") {
-        const hot = hotRef.current?.hotInstance;
         if (hot) {
           const activeEditor = hot.getActiveEditor();
           if (activeEditor && activeEditor.isOpened()) {
-            // Let Handsontable handle Escape (close cell editor)
+            // Let Handsontable close the cell editor
             return;
           }
         }
         e.preventDefault();
         e.stopPropagation();
         handleDone();
+        return;
       }
+
+      // ── Ctrl+A  →  select all cells ──
+      if (ctrlOrCmd && e.key.toLowerCase() === "a" && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (hot) {
+          const rows = hot.countRows();
+          const cols = hot.countCols();
+          if (rows > 0 && cols > 0) {
+            hot.selectCell(0, 0, rows - 1, cols - 1, false);
+          }
+        }
+        return;
+      }
+
+      // ── Ctrl+Z  →  undo ──
+      if (ctrlOrCmd && e.key.toLowerCase() === "z" && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (hot && hot.isUndoAvailable()) {
+          hot.undo();
+        }
+        return;
+      }
+
+      // ── Ctrl+Shift+Z / Ctrl+Y  →  redo ──
+      if (
+        (ctrlOrCmd && e.key.toLowerCase() === "z" && e.shiftKey) ||
+        (ctrlOrCmd && e.key.toLowerCase() === "y")
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (hot && hot.isRedoAvailable()) {
+          hot.redo();
+        }
+        return;
+      }
+
+      // All other keys: let them propagate normally to Handsontable.
+      // App.onKeyDown already bails when the table editor dialog is open,
+      // so Excalidraw won't interfere with normal typing / navigation.
     };
     document.addEventListener("keydown", handler, true);
     return () => document.removeEventListener("keydown", handler, true);
   }, [handleDone]);
 
-  // Block keyboard events from reaching Excalidraw's native document listener.
-  // Uses bubble phase on the wrapper so Handsontable sees events first, then
-  // they get stopped here before reaching App's document-level handler.
+  // Block keyup, keydown (bubble), and clipboard events from reaching
+  // Excalidraw's native document listeners.
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) {
       return;
     }
     const stop = (e: Event) => e.stopPropagation();
-    wrapper.addEventListener("keydown", stop);
-    wrapper.addEventListener("keyup", stop);
+    const events = ["keydown", "keyup"];
+    events.forEach((evt) => wrapper.addEventListener(evt, stop));
     return () => {
-      wrapper.removeEventListener("keydown", stop);
-      wrapper.removeEventListener("keyup", stop);
+      events.forEach((evt) => wrapper.removeEventListener(evt, stop));
     };
   }, []);
+
+  // Track whether we've auto-focused the grid after first render
+  const didAutoFocus = useRef(false);
 
   // ── Freeze handle drag ──────────────────────────────────────────────
   const handleRowDragStart = useCallback(
@@ -582,11 +642,18 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
               setResizeTick((n) => n + 1);
             }}
             afterRender={() => {
-              if (headerMeasured.current) {
-                return;
-              }
               const hot = hotRef.current?.hotInstance;
               if (!hot) {
+                return;
+              }
+              // Focus Handsontable after first render so keyboard shortcuts
+              // (Ctrl+A, Ctrl+Z, arrows, etc.) work immediately.
+              if (!didAutoFocus.current) {
+                didAutoFocus.current = true;
+                hot.selectCell(0, 0);
+                hot.listen();
+              }
+              if (headerMeasured.current) {
                 return;
               }
               // Measure column header height from master thead (stable,

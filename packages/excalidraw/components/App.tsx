@@ -4498,6 +4498,16 @@ class App extends React.Component<AppProps, AppState> {
         });
       }
 
+      // Don't process keyboard events when a modal editor is open —
+      // these editors handle their own keyboard shortcuts internally
+      if (
+        this.state.openDialog?.name === "tableEditor" ||
+        this.state.openDialog?.name === "codeBlockEditor" ||
+        this.state.openDialog?.name === "elementLinkSelector"
+      ) {
+        return;
+      }
+
       if (!isInputLike(event.target)) {
         if (
           (event.key === KEYS.ESCAPE || event.key === KEYS.ENTER) &&
@@ -4749,14 +4759,6 @@ class App extends React.Component<AppProps, AppState> {
             scrollY: state.scrollY + offset,
           }));
         }
-      }
-
-      if (
-        this.state.openDialog?.name === "elementLinkSelector" ||
-        this.state.openDialog?.name === "tableEditor" ||
-        this.state.openDialog?.name === "codeBlockEditor"
-      ) {
-        return;
       }
 
       // Handle Alt key for bind mode
