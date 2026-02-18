@@ -315,15 +315,9 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
         return;
       }
 
-      // Only handle events that originate inside the table editor modal
-      if (!wrapper.contains(e.target as Node)) {
-        return;
-      }
-
       const hot = hotRef.current?.hotInstance;
-      const ctrlOrCmd = e.ctrlKey || e.metaKey;
 
-      // ── Escape ──
+      // ── Escape — always works while modal is open ──
       if (e.key === "Escape") {
         if (hot) {
           const activeEditor = hot.getActiveEditor();
@@ -337,6 +331,8 @@ const TableEditorModalInner: React.FC<TableEditorModalInnerProps> = ({
         handleDone();
         return;
       }
+
+      const ctrlOrCmd = e.ctrlKey || e.metaKey;
 
       // ── Ctrl+A  →  select all cells ──
       if (ctrlOrCmd && e.key.toLowerCase() === "a" && !e.shiftKey) {
