@@ -110,6 +110,8 @@ import {
   isSelectionLikeTool,
 } from "@excalidraw/common";
 
+import { getAdaptiveGridSteps } from "../renderer/staticScene";
+
 import {
   getObservedAppState,
   getCommonBounds,
@@ -1180,13 +1182,20 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   /**
-   * Returns gridSize taking into account `gridModeEnabled`.
-   * If disabled, returns null.
+   * Returns the effective snap grid size, adaptive to the current zoom level.
+   * Snaps to the finest visible grid lines so you snap to what you see.
+   * If grid mode is disabled, returns null.
    */
   public getEffectiveGridSize = () => {
-    return (
-      isGridModeEnabled(this) ? this.state.gridSize : null
-    ) as NullableGridSize;
+    if (!isGridModeEnabled(this)) {
+      return null as NullableGridSize;
+    }
+    const { minorStep } = getAdaptiveGridSteps(
+      this.state.gridSize,
+      this.state.gridStep,
+      this.state.zoom.value,
+    );
+    return minorStep as NullableGridSize;
   };
 
   private getHTMLIFrameElement(

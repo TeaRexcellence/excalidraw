@@ -64,11 +64,45 @@ const GridDotColor = {
   },
 } as const;
 
+/**
+ * Compute adaptive grid steps for the current zoom level.
+ *
+ * The grid shifts at discrete zoom thresholds (powers of gridStep).
+ * Between thresholds, it looks exactly like the static grid — just
+ * bigger/smaller cells. At each threshold the grid "resets": what were
+ * minor cells subdivide into a new minor/major pair that looks identical
+ * to the default view.
+ *
+ * level 0 = default (100% zoom).  Positive = zoomed in.  Negative = zoomed out.
+ *
+ * Returns scene-space pixel distances.
+ */
+export const getAdaptiveGridSteps = (
+  gridSize: number,
+  gridStep: number,
+  zoomValue: number,
+) => {
+  const base = gridStep;
+
+  // Level = how many times we've subdivided (positive) or consolidated (negative).
+  // At level 0: minorScreen = gridSize * zoom ≈ gridSize (comfortable).
+  // Shift up when minor cells grow to gridSize*base on screen (room to subdivide).
+  // Shift down when minor cells shrink below gridSize on screen.
+  const level = Math.floor(
+    Math.log(gridSize * zoomValue / gridSize) / Math.log(base),
+  );
+
+  const minorStep = gridSize / Math.pow(base, level);
+  const majorStep = minorStep * base;
+
+  return { minorStep, majorStep, level };
+};
+
 const strokeGrid = (
   context: CanvasRenderingContext2D,
   /** grid cell pixel size */
   gridSize: number,
-  /** setting to 1 will disble bold lines */
+  /** setting to 1 will disable bold lines */
   gridStep: number,
   scrollX: number,
   scrollY: number,
@@ -85,37 +119,46 @@ const strokeGrid = (
   majorGridEnabled: boolean = true,
   minorGridEnabled: boolean = true,
 ) => {
-  const offsetX = (scrollX % gridSize) - gridSize;
-  const offsetY = (scrollY % gridSize) - gridSize;
+  const { minorStep, majorStep } = getAdaptiveGridSteps(
+    gridSize,
+    gridStep,
+    zoom.value,
+  );
 
-  const actualGridSize = gridSize * zoom.value;
+  const actualMinorSize = minorStep * zoom.value;
+
+  const offsetX = (scrollX % minorStep) - minorStep;
+  const offsetY = (scrollY % minorStep) - minorStep;
 
   context.save();
 
+  // --- Helper: is this position on a major line? ---
+  const isOnMajor = (pos: number, scroll: number) =>
+    gridStep > 1 &&
+    Math.abs(
+      ((pos - scroll) % majorStep + majorStep) % majorStep,
+    ) < majorStep * 0.001;
+
   if (gridType === "dot") {
-    // Dot grid: draw circles at each grid intersection
-    for (let x = offsetX; x < offsetX + width + gridSize * 2; x += gridSize) {
+    for (
+      let x = offsetX;
+      x < offsetX + width + minorStep * 2;
+      x += minorStep
+    ) {
       for (
         let y = offsetY;
-        y < offsetY + height + gridSize * 2;
-        y += gridSize
+        y < offsetY + height + minorStep * 2;
+        y += minorStep
       ) {
-        const isBoldX =
-          gridStep > 1 &&
-          Math.round(x - scrollX) % (gridStep * gridSize) === 0;
-        const isBoldY =
-          gridStep > 1 &&
-          Math.round(y - scrollY) % (gridStep * gridSize) === 0;
+        const isBoldX = isOnMajor(x, scrollX);
+        const isBoldY = isOnMajor(y, scrollY);
         const isBold = isBoldX && isBoldY;
 
-        // skip minor dots when minor disabled or zoomed out
-        if (!isBold && (!minorGridEnabled || actualGridSize < 10)) {
+        if (!isBold && (!minorGridEnabled || actualMinorSize < 10)) {
           continue;
         }
 
-        // When major disabled, render major positions as minor style
         const renderAsBold = isBold && majorGridEnabled;
-
         context.globalAlpha = (renderAsBold ? opacity : minorOpacity) / 100;
 
         const radius = renderAsBold
@@ -134,29 +177,25 @@ const strokeGrid = (
     return;
   }
 
-  // Line grid (original behavior)
+  // Line grid
   const spaceWidth = 1 / zoom.value;
 
-  // Offset rendering by 0.5 to ensure that 1px wide lines are crisp.
-  // We only do this when zoomed to 100% because otherwise the offset is
-  // fractional, and also visibly offsets the elements.
-  // We also do this per-axis, as each axis may already be offset by 0.5.
   if (zoom.value === 1) {
     context.translate(offsetX % 1 ? 0 : 0.5, offsetY % 1 ? 0 : 0.5);
   }
 
-  // vertical lines
-  for (let x = offsetX; x < offsetX + width + gridSize * 2; x += gridSize) {
-    const isBold =
-      gridStep > 1 && Math.round(x - scrollX) % (gridStep * gridSize) === 0;
-    // skip minor lines when minor disabled or zoomed out
-    if (!isBold && (!minorGridEnabled || actualGridSize < 10)) {
+  // Vertical lines
+  for (
+    let x = offsetX;
+    x < offsetX + width + minorStep * 2;
+    x += minorStep
+  ) {
+    const isBold = isOnMajor(x, scrollX);
+    if (!isBold && (!minorGridEnabled || actualMinorSize < 10)) {
       continue;
     }
 
-    // When major disabled, render major positions as minor style
     const renderAsBold = isBold && majorGridEnabled;
-
     context.globalAlpha = (renderAsBold ? opacity : minorOpacity) / 100;
 
     const lineWidth = Math.min(1 / zoom.value, renderAsBold ? 4 : 1);
@@ -168,22 +207,23 @@ const strokeGrid = (
     context.strokeStyle = renderAsBold
       ? GridLineColor[theme].bold
       : GridLineColor[theme].regular;
-    context.moveTo(x, offsetY - gridSize);
-    context.lineTo(x, Math.ceil(offsetY + height + gridSize * 2));
+    context.moveTo(x, offsetY - minorStep);
+    context.lineTo(x, Math.ceil(offsetY + height + minorStep * 2));
     context.stroke();
   }
 
-  for (let y = offsetY; y < offsetY + height + gridSize * 2; y += gridSize) {
-    const isBold =
-      gridStep > 1 && Math.round(y - scrollY) % (gridStep * gridSize) === 0;
-    // skip minor lines when minor disabled or zoomed out
-    if (!isBold && (!minorGridEnabled || actualGridSize < 10)) {
+  // Horizontal lines
+  for (
+    let y = offsetY;
+    y < offsetY + height + minorStep * 2;
+    y += minorStep
+  ) {
+    const isBold = isOnMajor(y, scrollY);
+    if (!isBold && (!minorGridEnabled || actualMinorSize < 10)) {
       continue;
     }
 
-    // When major disabled, render major positions as minor style
     const renderAsBold = isBold && majorGridEnabled;
-
     context.globalAlpha = (renderAsBold ? opacity : minorOpacity) / 100;
 
     const lineWidth = Math.min(1 / zoom.value, renderAsBold ? 4 : 1);
@@ -195,8 +235,8 @@ const strokeGrid = (
     context.strokeStyle = renderAsBold
       ? GridLineColor[theme].bold
       : GridLineColor[theme].regular;
-    context.moveTo(offsetX - gridSize, y);
-    context.lineTo(Math.ceil(offsetX + width + gridSize * 2), y);
+    context.moveTo(offsetX - minorStep, y);
+    context.lineTo(Math.ceil(offsetX + width + minorStep * 2), y);
     context.stroke();
   }
   context.restore();
@@ -381,25 +421,37 @@ const _renderStaticScene = ({
     context.lineTo(appState.scrollX, h);
     context.stroke();
 
-    // Axis labels — each minor grid cell = 1 unit, labels count from origin
-    // gridStep is the base (e.g. 10 → base-10, 6 → base-6)
-    // Labels at every minor line when zoomed in, thin to major lines when zoomed out
+    // Axis labels — same discrete levels as the grid
+    const { minorStep: axisMinor, majorStep: axisMajor, level: axisLevel } =
+      getAdaptiveGridSteps(appState.gridSize, appState.gridStep, appState.zoom.value);
+
     const gs = appState.gridSize;
-    const minorScreenSize = gs * appState.zoom.value;
     const minScreenGap = 30;
-    let labelStep: number; // in minor-cell units
+
+    // Label at every minor cell when they're big enough, else at major positions
+    const minorScreenSize = axisMinor * appState.zoom.value;
+    let labelInterval: number;
     if (minorScreenSize >= minScreenGap) {
-      // Zoomed in enough: label every minor cell
-      labelStep = 1;
+      labelInterval = axisMinor;
     } else {
-      // Zoomed out: label at major lines (every gridStep cells)
-      const majorScreenSize = gs * appState.gridStep * appState.zoom.value;
+      // Major positions — these are the old minor positions from the
+      // previous level, so labels never disappear
+      const majorScreenSize = axisMajor * appState.zoom.value;
       const majorSkip = majorScreenSize >= minScreenGap
         ? 1
         : Math.ceil(minScreenGap / majorScreenSize);
-      labelStep = appState.gridStep * majorSkip;
+      labelInterval = axisMajor * majorSkip;
     }
-    const labelInterval = gs * labelStep;
+
+    // Decimal places = number of subdivision levels deep
+    const decimals = Math.max(0, axisLevel);
+
+    const formatLabel = (scenePos: number) => {
+      const cellValue = scenePos / gs;
+      return decimals > 0
+        ? cellValue.toFixed(decimals)
+        : String(Math.round(cellValue));
+    };
 
     // Switch to screen-space for text so font size stays constant
     context.save();
@@ -416,17 +468,16 @@ const _renderStaticScene = ({
     const sceneTop = -appState.scrollY;
     const sceneBottom = sceneTop + h;
 
-    // X-axis labels (cell count from origin)
+    // X-axis labels
     context.textAlign = "center";
     const xStart = Math.ceil(sceneLeft / labelInterval) * labelInterval;
     for (let x = xStart; x <= sceneRight; x += labelInterval) {
-      const cellCount = Math.round(x / gs);
-      if (cellCount === 0) {
+      if (Math.abs(x) < labelInterval * 0.01) {
         continue; // skip 0 (drawn at origin)
       }
       const screenX = (x + appState.scrollX) * appState.zoom.value;
       const screenY = appState.scrollY * appState.zoom.value + 4;
-      context.fillText(String(cellCount), screenX, screenY);
+      context.fillText(formatLabel(x), screenX, screenY);
     }
 
     // Y-axis labels (negated: canvas Y down → math Y up)
@@ -434,13 +485,12 @@ const _renderStaticScene = ({
     context.textBaseline = "middle";
     const yStart = Math.ceil(sceneTop / labelInterval) * labelInterval;
     for (let y = yStart; y <= sceneBottom; y += labelInterval) {
-      const cellCount = Math.round(y / gs);
-      if (cellCount === 0) {
+      if (Math.abs(y) < labelInterval * 0.01) {
         continue;
       }
       const screenX = appState.scrollX * appState.zoom.value - 4;
       const screenY = (y + appState.scrollY) * appState.zoom.value;
-      context.fillText(String(-cellCount), screenX, screenY);
+      context.fillText(formatLabel(-y), screenX, screenY);
     }
 
     // "0" at origin
