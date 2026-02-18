@@ -7,6 +7,7 @@ import {
   TOOL_TYPE,
   arrayToMap,
   capitalizeString,
+  easeToValuesRAF,
   isShallowEqual,
 } from "@excalidraw/common";
 
@@ -36,6 +37,7 @@ import { useAtom, useAtomValue } from "../editor-jotai";
 
 import { t } from "../i18n";
 import { calculateScrollCenter, getNormalizedGridStep } from "../scene";
+import { centerScrollOn } from "../scene/scroll";
 import { getDefaultAppState } from "../appState";
 
 import {
@@ -61,6 +63,7 @@ import {
   dotGridIcon,
   magnetIcon,
   searchIcon,
+  axesIcon,
 } from "./icons";
 import { DefaultSidebar } from "./DefaultSidebar";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
@@ -496,6 +499,7 @@ const GridTypeDropdown = ({
                 gridMinorOpacity: defaults.gridMinorOpacity,
                 majorGridEnabled: defaults.majorGridEnabled,
                 minorGridEnabled: defaults.minorGridEnabled,
+                axesEnabled: defaults.axesEnabled,
                 objectsSnapModeEnabled: false,
               });
             }}
@@ -534,6 +538,7 @@ const LayerUI = ({
   const stylesPanelMode = useStylesPanelMode();
   const isCompactStylesPanel = stylesPanelMode === "compact";
   const tunnels = useInitializeTunnels();
+  const cancelScrollAnimRef = React.useRef<(() => void) | null>(null);
 
   const spacing = isCompactStylesPanel
     ? {
@@ -731,6 +736,49 @@ const LayerUI = ({
                           })}
                         >
                           <Stack.Row gap={spacing.toolbarInnerRowGap}>
+                            <ToolButton
+                              className="Shape"
+                              type="button"
+                              icon={axesIcon}
+                              selected={appState.axesEnabled}
+                              title="Toggle coordinate axes"
+                              aria-label="Toggle coordinate axes"
+                              data-testid="toolbar-axes"
+                              onClick={() => {
+                                if (!appState.axesEnabled) {
+                                  setAppState({ axesEnabled: true });
+                                  const target = centerScrollOn({
+                                    scenePoint: { x: 0, y: 0 },
+                                    viewportDimensions: {
+                                      width: app.state.width,
+                                      height: app.state.height,
+                                    },
+                                    zoom: app.state.zoom,
+                                  });
+                                  cancelScrollAnimRef.current?.();
+                                  cancelScrollAnimRef.current =
+                                    easeToValuesRAF({
+                                      fromValues: {
+                                        scrollX: app.state.scrollX,
+                                        scrollY: app.state.scrollY,
+                                      },
+                                      toValues: target,
+                                      onStep: (values) => {
+                                        setAppState({
+                                          scrollX: values.scrollX,
+                                          scrollY: values.scrollY,
+                                        });
+                                      },
+                                      duration: 500,
+                                      onEnd: () => {
+                                        cancelScrollAnimRef.current = null;
+                                      },
+                                    });
+                                } else {
+                                  setAppState({ axesEnabled: false });
+                                }
+                              }}
+                            />
                             <GridTypeDropdown
                               appState={appState}
                               setAppState={setAppState}
@@ -1103,19 +1151,86 @@ const LayerUI = ({
               showExitZenModeBtn={showExitZenModeBtn}
               renderWelcomeScreen={renderWelcomeScreen}
             />
-            {appState.scrolledOutside && (
-              <button
-                type="button"
-                className="scroll-back-to-content"
-                onClick={() => {
-                  setAppState((appState) => ({
-                    ...calculateScrollCenter(elements, appState),
-                  }));
-                }}
-              >
-                {t("buttons.scrollBackToContent")}
-              </button>
-            )}
+            {(() => {
+              const showBackToContent = appState.scrolledOutside;
+              const showBackToCenter =
+                appState.axesEnabled && appState.originOutsideViewport;
+              if (!showBackToContent && !showBackToCenter) {
+                return null;
+              }
+              return (
+                <div className="scroll-back-buttons">
+                  {showBackToContent && (
+                    <button
+                      type="button"
+                      className="scroll-back-to-content"
+                      onClick={() => {
+                        const target = calculateScrollCenter(
+                          elements,
+                          app.state,
+                        );
+                        cancelScrollAnimRef.current?.();
+                        cancelScrollAnimRef.current = easeToValuesRAF({
+                          fromValues: {
+                            scrollX: app.state.scrollX,
+                            scrollY: app.state.scrollY,
+                          },
+                          toValues: target,
+                          onStep: (values) => {
+                            setAppState({
+                              scrollX: values.scrollX,
+                              scrollY: values.scrollY,
+                            });
+                          },
+                          duration: 500,
+                          onEnd: () => {
+                            cancelScrollAnimRef.current = null;
+                          },
+                        });
+                      }}
+                    >
+                      {t("buttons.scrollBackToContent")}
+                    </button>
+                  )}
+                  {showBackToCenter && (
+                    <button
+                      type="button"
+                      className="scroll-back-to-content"
+                      onClick={() => {
+                        const target = centerScrollOn({
+                          scenePoint: { x: 0, y: 0 },
+                          viewportDimensions: {
+                            width: app.state.width,
+                            height: app.state.height,
+                          },
+                          zoom: app.state.zoom,
+                        });
+                        cancelScrollAnimRef.current?.();
+                        cancelScrollAnimRef.current = easeToValuesRAF({
+                          fromValues: {
+                            scrollX: app.state.scrollX,
+                            scrollY: app.state.scrollY,
+                          },
+                          toValues: target,
+                          onStep: (values) => {
+                            setAppState({
+                              scrollX: values.scrollX,
+                              scrollY: values.scrollY,
+                            });
+                          },
+                          duration: 500,
+                          onEnd: () => {
+                            cancelScrollAnimRef.current = null;
+                          },
+                        });
+                      }}
+                    >
+                      Scroll back to center
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
           {renderSidebars()}
         </>

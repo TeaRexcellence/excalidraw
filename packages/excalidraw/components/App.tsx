@@ -2775,6 +2775,20 @@ class App extends React.Component<AppProps, AppState> {
       };
     }
 
+    // Center origin on fresh canvas (no elements, scroll at default 0,0)
+    if (
+      restoredElements.length === 0 &&
+      restoredAppState.scrollX === 0 &&
+      restoredAppState.scrollY === 0
+    ) {
+      const zoom = restoredAppState.zoom?.value || 1;
+      restoredAppState = {
+        ...restoredAppState,
+        scrollX: this.state.width / 2 / zoom,
+        scrollY: this.state.height / 2 / zoom,
+      };
+    }
+
     this.resetStore();
     this.resetHistory();
     this.syncActionResult({
@@ -3301,6 +3315,16 @@ class App extends React.Component<AppProps, AppState> {
         : !atLeastOneVisibleElement && elementsMap.size > 0;
     if (this.state.scrolledOutside !== scrolledOutside) {
       this.setState({ scrolledOutside });
+    }
+
+    const originOutsideViewport = !(
+      this.state.scrollX >= 0 &&
+      this.state.scrollX <= this.state.width / this.state.zoom.value &&
+      this.state.scrollY >= 0 &&
+      this.state.scrollY <= this.state.height / this.state.zoom.value
+    );
+    if (this.state.originOutsideViewport !== originOutsideViewport) {
+      this.setState({ originOutsideViewport });
     }
 
     this.scheduleImageRefresh();

@@ -464,6 +464,16 @@ body.excalidraw-cursor-resize * {
     }
   }
 
+  .scroll-back-buttons {
+    position: absolute;
+    left: 50%;
+    bottom: 1rem;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    pointer-events: var(--ui-pointerEvents);
+  }
+
   .scroll-back-to-content {
     border-radius: var(--border-radius-lg);
     background-color: var(--island-bg-color);
@@ -471,12 +481,9 @@ body.excalidraw-cursor-resize * {
 
     border: 1px solid var(--default-border-color);
     padding: 10px 20px;
-    position: absolute;
-    left: 50%;
-    bottom: 30px;
-    transform: translateX(-50%);
     pointer-events: var(--ui-pointerEvents);
     font-family: inherit;
+    white-space: nowrap;
 
     &:hover {
       background-color: var(--button-hover-bg);
@@ -526,7 +533,7 @@ body.excalidraw-cursor-resize * {
     aside {
       display: none;
     }
-    .scroll-back-to-content {
+    .scroll-back-buttons {
       bottom: calc(100px + var(--sab, 0));
       z-index: -1;
     }

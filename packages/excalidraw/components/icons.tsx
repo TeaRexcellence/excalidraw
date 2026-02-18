@@ -2507,3 +2507,18 @@ export const presentationIcon = createIcon(
   </g>,
   tablerIconProps,
 );
+
+export const axesIcon = createIcon(
+  <g strokeWidth={1.5}>
+    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+    {/* Y-axis */}
+    <path d="M4 20V4" />
+    <path d="M4 4l-2 3" />
+    <path d="M4 4l2 3" />
+    {/* X-axis */}
+    <path d="M4 20h16" />
+    <path d="M20 20l-3 -2" />
+    <path d="M20 20l-3 2" />
+  </g>,
+  tablerIconProps,
+);

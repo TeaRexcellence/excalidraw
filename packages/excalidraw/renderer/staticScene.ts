@@ -353,6 +353,109 @@ const _renderStaticScene = ({
     );
   }
 
+  // Axes
+  if (appState.axesEnabled) {
+    const w = normalizedWidth / appState.zoom.value;
+    const h = normalizedHeight / appState.zoom.value;
+    const axisColor =
+      appState.theme === THEME.LIGHT
+        ? "rgba(100, 100, 100, 0.5)"
+        : "rgba(180, 180, 180, 0.4)";
+    const labelColor =
+      appState.theme === THEME.LIGHT
+        ? "rgba(80, 80, 80, 0.7)"
+        : "rgba(200, 200, 200, 0.6)";
+
+    context.save();
+    context.strokeStyle = axisColor;
+    context.lineWidth = Math.min(1.5 / appState.zoom.value, 3);
+    context.setLineDash([]);
+    // X-axis (horizontal through scene y=0)
+    context.beginPath();
+    context.moveTo(0, appState.scrollY);
+    context.lineTo(w, appState.scrollY);
+    context.stroke();
+    // Y-axis (vertical through scene x=0)
+    context.beginPath();
+    context.moveTo(appState.scrollX, 0);
+    context.lineTo(appState.scrollX, h);
+    context.stroke();
+
+    // Axis labels — each minor grid cell = 1 unit, labels count from origin
+    // gridStep is the base (e.g. 10 → base-10, 6 → base-6)
+    // Labels at every minor line when zoomed in, thin to major lines when zoomed out
+    const gs = appState.gridSize;
+    const minorScreenSize = gs * appState.zoom.value;
+    const minScreenGap = 30;
+    let labelStep: number; // in minor-cell units
+    if (minorScreenSize >= minScreenGap) {
+      // Zoomed in enough: label every minor cell
+      labelStep = 1;
+    } else {
+      // Zoomed out: label at major lines (every gridStep cells)
+      const majorScreenSize = gs * appState.gridStep * appState.zoom.value;
+      const majorSkip = majorScreenSize >= minScreenGap
+        ? 1
+        : Math.ceil(minScreenGap / majorScreenSize);
+      labelStep = appState.gridStep * majorSkip;
+    }
+    const labelInterval = gs * labelStep;
+
+    // Switch to screen-space for text so font size stays constant
+    context.save();
+    context.scale(1 / appState.zoom.value, 1 / appState.zoom.value);
+
+    const fontSize = 11;
+    context.font = `${fontSize}px sans-serif`;
+    context.fillStyle = labelColor;
+    context.textBaseline = "top";
+
+    // Visible scene range
+    const sceneLeft = -appState.scrollX;
+    const sceneRight = sceneLeft + w;
+    const sceneTop = -appState.scrollY;
+    const sceneBottom = sceneTop + h;
+
+    // X-axis labels (cell count from origin)
+    context.textAlign = "center";
+    const xStart = Math.ceil(sceneLeft / labelInterval) * labelInterval;
+    for (let x = xStart; x <= sceneRight; x += labelInterval) {
+      const cellCount = Math.round(x / gs);
+      if (cellCount === 0) {
+        continue; // skip 0 (drawn at origin)
+      }
+      const screenX = (x + appState.scrollX) * appState.zoom.value;
+      const screenY = appState.scrollY * appState.zoom.value + 4;
+      context.fillText(String(cellCount), screenX, screenY);
+    }
+
+    // Y-axis labels (negated: canvas Y down → math Y up)
+    context.textAlign = "right";
+    context.textBaseline = "middle";
+    const yStart = Math.ceil(sceneTop / labelInterval) * labelInterval;
+    for (let y = yStart; y <= sceneBottom; y += labelInterval) {
+      const cellCount = Math.round(y / gs);
+      if (cellCount === 0) {
+        continue;
+      }
+      const screenX = appState.scrollX * appState.zoom.value - 4;
+      const screenY = (y + appState.scrollY) * appState.zoom.value;
+      context.fillText(String(-cellCount), screenX, screenY);
+    }
+
+    // "0" at origin
+    context.textAlign = "right";
+    context.textBaseline = "top";
+    context.fillText(
+      "0",
+      appState.scrollX * appState.zoom.value - 4,
+      appState.scrollY * appState.zoom.value + 4,
+    );
+
+    context.restore(); // back to zoom-scaled space
+    context.restore(); // back to original state
+  }
+
   const groupsToBeAddedToFrame = new Set<string>();
 
   visibleElements.forEach((element) => {

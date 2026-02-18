@@ -209,6 +209,7 @@ export type StaticCanvasAppState = Readonly<
     gridMinorOpacity: AppState["gridMinorOpacity"];
     majorGridEnabled: AppState["majorGridEnabled"];
     minorGridEnabled: AppState["minorGridEnabled"];
+    axesEnabled: AppState["axesEnabled"];
     frameRendering: AppState["frameRendering"];
     currentHoveredFontFamily: AppState["currentHoveredFontFamily"];
     hoveredElementIds: AppState["hoveredElementIds"];
@@ -365,6 +366,7 @@ export interface AppState {
   scrollY: number;
   cursorButton: "up" | "down";
   scrolledOutside: boolean;
+  originOutsideViewport: boolean;
   name: string | null;
   isResizing: boolean;
   isRotating: boolean;
@@ -435,6 +437,7 @@ export interface AppState {
   gridMinorOpacity: number;
   majorGridEnabled: boolean;
   minorGridEnabled: boolean;
+  axesEnabled: boolean;
   viewModeEnabled: boolean;
 
   /** top-most selected groups (i.e. does not include nested groups) */

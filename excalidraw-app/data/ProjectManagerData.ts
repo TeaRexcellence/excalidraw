@@ -175,6 +175,7 @@ export class ProjectManagerData {
             gridMinorOpacity: appState.gridMinorOpacity,
             majorGridEnabled: appState.majorGridEnabled,
             minorGridEnabled: appState.minorGridEnabled,
+            axesEnabled: appState.axesEnabled,
             objectsSnapModeEnabled: appState.objectsSnapModeEnabled,
             quickLinks: appState.quickLinks,
           },

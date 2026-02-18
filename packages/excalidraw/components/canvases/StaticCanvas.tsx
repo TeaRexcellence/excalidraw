@@ -98,6 +98,7 @@ const getRelevantAppStateProps = (appState: AppState): StaticCanvasAppState => {
     gridMinorOpacity: appState.gridMinorOpacity,
     majorGridEnabled: appState.majorGridEnabled,
     minorGridEnabled: appState.minorGridEnabled,
+    axesEnabled: appState.axesEnabled,
     frameRendering: appState.frameRendering,
     selectedElementIds: appState.selectedElementIds,
     frameToHighlight: appState.frameToHighlight,
