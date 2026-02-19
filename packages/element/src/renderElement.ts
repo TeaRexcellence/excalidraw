@@ -403,10 +403,10 @@ const drawElementOnCanvas = (
   renderConfig: StaticCanvasRenderConfig,
   zoomValue: number = 1,
 ) => {
-  // For constant stroke width, intercept lineWidth assignments from rough.js
-  // and divide by zoom so strokes appear the same size regardless of zoom.
-  const shouldCompensate = element.constantStrokeWidth && zoomValue !== 1;
-  if (shouldCompensate) {
+  // Zoom-invariant: intercept lineWidth so strokes stay constant screen
+  // size regardless of zoom (like axis lines in staticScene.ts).
+  const shouldCompensateZoom = element.zoomInvariant && zoomValue !== 1;
+  if (shouldCompensateZoom) {
     const desc = Object.getOwnPropertyDescriptor(
       CanvasRenderingContext2D.prototype,
       "lineWidth",
@@ -617,7 +617,17 @@ const drawElementOnCanvas = (
         }
         context.canvas.setAttribute("dir", rtl ? "rtl" : "ltr");
         context.save();
-        context.font = getFontString(element);
+
+        // Zoom-invariant text: compensate font size so it stays constant
+        // screen pixels regardless of zoom (like axis labels).
+        const effectiveFontSize = shouldCompensateZoom
+          ? element.fontSize / zoomValue
+          : element.fontSize;
+
+        context.font = getFontString({
+          fontSize: effectiveFontSize,
+          fontFamily: element.fontFamily,
+        });
         context.fillStyle =
           renderConfig.theme === THEME.DARK
             ? applyDarkModeFilter(element.strokeColor)
@@ -635,13 +645,13 @@ const drawElementOnCanvas = (
             : 0;
 
         const lineHeightPx = getLineHeightInPx(
-          element.fontSize,
+          effectiveFontSize,
           element.lineHeight,
         );
 
         const verticalOffset = getVerticalOffset(
           element.fontFamily,
-          element.fontSize,
+          effectiveFontSize,
           lineHeightPx,
         );
 
@@ -662,8 +672,8 @@ const drawElementOnCanvas = (
     }
   }
 
-  // Clean up the lineWidth proxy for constant stroke width
-  if (shouldCompensate) {
+  // Clean up the lineWidth proxy
+  if (shouldCompensateZoom) {
     delete (context as any).lineWidth;
   }
 };
@@ -927,6 +937,23 @@ export const renderElement = (
         context.translate(-shiftX, -shiftY);
         drawElementOnCanvas(element, rc, context, renderConfig);
         context.restore();
+      } else if (element.zoomInvariant) {
+        // Render directly (no cached bitmap) for crisp zoom-invariant strokes
+        const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
+        const cx = (x1 + x2) / 2 + appState.scrollX;
+        const cy = (y1 + y2) / 2 + appState.scrollY;
+        const shiftX = (x2 - x1) / 2 - (element.x - x1);
+        const shiftY = (y2 - y1) / 2 - (element.y - y1);
+        context.save();
+        context.translate(cx, cy);
+        context.rotate(element.angle);
+        context.translate(-shiftX, -shiftY);
+        // Create a RoughCanvas tied to the current canvas so rc.draw()
+        // targets this context (not the static canvas passed from App.tsx).
+        // Critical for NewElementCanvas which has its own separate canvas.
+        const localRc = rough.canvas(context.canvas);
+        drawElementOnCanvas(element, localRc, context, renderConfig, appState.zoom.value);
+        context.restore();
       } else {
         const elementWithCanvas = generateElementWithCanvas(
           element,
@@ -1059,6 +1086,44 @@ export const renderElement = (
         context.restore();
         // not exporting → optimized rendering (cache & render from element
         // canvases)
+      } else if (element.zoomInvariant) {
+        // Render directly (no cached bitmap) for crisp zoom-invariant strokes.
+        // Drawing on the main canvas avoids intermediate bitmap artifacts that
+        // make thin compensated strokes look pixelated.
+        const [x1, y1, x2, y2] = getElementAbsoluteCoords(element, elementsMap);
+        const cx = (x1 + x2) / 2 + appState.scrollX;
+        const cy = (y1 + y2) / 2 + appState.scrollY;
+        let shiftX = (x2 - x1) / 2 - (element.x - x1);
+        let shiftY = (y2 - y1) / 2 - (element.y - y1);
+        if (isTextElement(element)) {
+          const container = getContainerElement(element, elementsMap);
+          if (isArrowElement(container)) {
+            const boundTextCoords =
+              LinearElementEditor.getBoundTextElementPosition(
+                container,
+                element as ExcalidrawTextElementWithContainer,
+                elementsMap,
+              );
+            shiftX = (x2 - x1) / 2 - (boundTextCoords.x - x1);
+            shiftY = (y2 - y1) / 2 - (boundTextCoords.y - y1);
+          }
+        }
+        context.save();
+        context.translate(cx, cy);
+        context.rotate(element.angle);
+        if (element.type === "image") {
+          context.scale(
+            (element as ExcalidrawImageElement).scale[0],
+            (element as ExcalidrawImageElement).scale[1],
+          );
+        }
+        context.translate(-shiftX, -shiftY);
+        // Create a RoughCanvas tied to the current canvas so rc.draw()
+        // targets this context (not the static canvas passed from App.tsx).
+        // Critical for NewElementCanvas which has its own separate canvas.
+        const localRc = rough.canvas(context.canvas);
+        drawElementOnCanvas(element, localRc, context, renderConfig, appState.zoom.value);
+        context.restore();
       } else {
         const elementWithCanvas = generateElementWithCanvas(
           element,
