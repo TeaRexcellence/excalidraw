@@ -465,6 +465,7 @@ const _renderStaticScene = ({
 
     // X-axis labels (integer-indexed to avoid float drift at deep zoom)
     context.textAlign = "center";
+    const minusOffset = context.measureText("-").width / 2;
     const firstLabelKx = Math.ceil(sceneLeft / labelInterval);
     const lastLabelKx = Math.floor(sceneRight / labelInterval);
     for (let k = firstLabelKx; k <= lastLabelKx; k++) {
@@ -474,7 +475,9 @@ const _renderStaticScene = ({
       }
       const screenX = (x + appState.scrollX) * appState.zoom.value;
       const screenY = appState.scrollY * appState.zoom.value + 4;
-      context.fillText(formatLabel(x), screenX, screenY);
+      // Nudge negative labels left so the digits align with the grid line
+      const nudge = x < 0 ? -minusOffset : 0;
+      context.fillText(formatLabel(x), screenX + nudge, screenY);
     }
 
     // Y-axis labels (negated: canvas Y down → math Y up)
