@@ -489,32 +489,27 @@ body.excalidraw-cursor-resize * {
   }
 
   .scroll-back-buttons {
-    position: absolute;
-    left: 50%;
-    bottom: 1rem;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-auto-flow: column;
+    gap: 0.6em;
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-inline-start: 0.6em;
     pointer-events: var(--ui-pointerEvents);
   }
 
-  .scroll-back-to-content {
-    border-radius: var(--border-radius-lg);
-    background-color: var(--island-bg-color);
-    color: var(--icon-fill-color);
+  .scroll-back-button {
+    @include outlineButtonStyles;
+    @include filledButtonOnCanvas;
 
-    border: 1px solid var(--default-border-color);
-    padding: 10px 20px;
+    width: var(--lg-button-size);
+    height: var(--lg-button-size);
+    padding: 0;
     pointer-events: var(--ui-pointerEvents);
-    font-family: inherit;
-    white-space: nowrap;
 
-    &:hover {
-      background-color: var(--button-hover-bg);
-    }
-
-    &:active {
-      border: 1px solid var(--button-active-border);
+    svg {
+      width: 75%;
+      height: 75%;
     }
   }
 
@@ -558,8 +553,7 @@ body.excalidraw-cursor-resize * {
       display: none;
     }
     .scroll-back-buttons {
-      bottom: calc(100px + var(--sab, 0));
-      z-index: -1;
+      display: none;
     }
   }
 

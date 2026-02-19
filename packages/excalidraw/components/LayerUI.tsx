@@ -1150,87 +1150,63 @@ const LayerUI = ({
               actionManager={actionManager}
               showExitZenModeBtn={showExitZenModeBtn}
               renderWelcomeScreen={renderWelcomeScreen}
-            />
-            {(() => {
-              const showBackToContent = appState.scrolledOutside;
-              const showBackToCenter =
-                appState.axesEnabled && appState.originOutsideViewport;
-              if (!showBackToContent && !showBackToCenter) {
-                return null;
+              showBackToContent={appState.scrolledOutside}
+              showBackToCenter={
+                appState.axesEnabled && appState.originOutsideViewport
               }
-              return (
-                <div className="scroll-back-buttons">
-                  {showBackToContent && (
-                    <button
-                      type="button"
-                      className="scroll-back-to-content"
-                      onClick={() => {
-                        const target = calculateScrollCenter(
-                          elements,
-                          app.state,
-                        );
-                        cancelScrollAnimRef.current?.();
-                        cancelScrollAnimRef.current = easeToValuesRAF({
-                          fromValues: {
-                            scrollX: app.state.scrollX,
-                            scrollY: app.state.scrollY,
-                          },
-                          toValues: target,
-                          onStep: (values) => {
-                            setAppState({
-                              scrollX: values.scrollX,
-                              scrollY: values.scrollY,
-                            });
-                          },
-                          duration: 500,
-                          onEnd: () => {
-                            cancelScrollAnimRef.current = null;
-                          },
-                        });
-                      }}
-                    >
-                      {t("buttons.scrollBackToContent")}
-                    </button>
-                  )}
-                  {showBackToCenter && (
-                    <button
-                      type="button"
-                      className="scroll-back-to-content"
-                      onClick={() => {
-                        const target = centerScrollOn({
-                          scenePoint: { x: 0, y: 0 },
-                          viewportDimensions: {
-                            width: app.state.width,
-                            height: app.state.height,
-                          },
-                          zoom: app.state.zoom,
-                        });
-                        cancelScrollAnimRef.current?.();
-                        cancelScrollAnimRef.current = easeToValuesRAF({
-                          fromValues: {
-                            scrollX: app.state.scrollX,
-                            scrollY: app.state.scrollY,
-                          },
-                          toValues: target,
-                          onStep: (values) => {
-                            setAppState({
-                              scrollX: values.scrollX,
-                              scrollY: values.scrollY,
-                            });
-                          },
-                          duration: 500,
-                          onEnd: () => {
-                            cancelScrollAnimRef.current = null;
-                          },
-                        });
-                      }}
-                    >
-                      Scroll back to center
-                    </button>
-                  )}
-                </div>
-              );
-            })()}
+              onScrollBackToContent={() => {
+                const target = calculateScrollCenter(
+                  elements,
+                  app.state,
+                );
+                cancelScrollAnimRef.current?.();
+                cancelScrollAnimRef.current = easeToValuesRAF({
+                  fromValues: {
+                    scrollX: app.state.scrollX,
+                    scrollY: app.state.scrollY,
+                  },
+                  toValues: target,
+                  onStep: (values) => {
+                    setAppState({
+                      scrollX: values.scrollX,
+                      scrollY: values.scrollY,
+                    });
+                  },
+                  duration: 500,
+                  onEnd: () => {
+                    cancelScrollAnimRef.current = null;
+                  },
+                });
+              }}
+              onScrollBackToCenter={() => {
+                const target = centerScrollOn({
+                  scenePoint: { x: 0, y: 0 },
+                  viewportDimensions: {
+                    width: app.state.width,
+                    height: app.state.height,
+                  },
+                  zoom: app.state.zoom,
+                });
+                cancelScrollAnimRef.current?.();
+                cancelScrollAnimRef.current = easeToValuesRAF({
+                  fromValues: {
+                    scrollX: app.state.scrollX,
+                    scrollY: app.state.scrollY,
+                  },
+                  toValues: target,
+                  onStep: (values) => {
+                    setAppState({
+                      scrollX: values.scrollX,
+                      scrollY: values.scrollY,
+                    });
+                  },
+                  duration: 500,
+                  onEnd: () => {
+                    cancelScrollAnimRef.current = null;
+                  },
+                });
+              }}
+            />
           </div>
           {renderSidebars()}
         </>

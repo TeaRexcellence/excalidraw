@@ -115,6 +115,9 @@
     }
 
     .layer-ui__wrapper__footer-right {
+      display: flex;
+      align-items: center;
+      gap: 0.6em;
       margin-top: auto;
       margin-bottom: auto;
     }
