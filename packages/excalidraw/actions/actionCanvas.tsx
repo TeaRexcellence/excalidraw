@@ -143,7 +143,7 @@ export const actionZoomIn = register({
           {
             viewportX: appState.width / 2 + appState.offsetLeft,
             viewportY: appState.height / 2 + appState.offsetTop,
-            nextZoom: getNormalizedZoom(appState.zoom.value + ZOOM_STEP),
+            nextZoom: getNormalizedZoom(appState.zoom.value + Math.max(ZOOM_STEP, appState.zoom.value * ZOOM_STEP)),
           },
           appState,
         ),
@@ -184,7 +184,7 @@ export const actionZoomOut = register({
           {
             viewportX: appState.width / 2 + appState.offsetLeft,
             viewportY: appState.height / 2 + appState.offsetTop,
-            nextZoom: getNormalizedZoom(appState.zoom.value - ZOOM_STEP),
+            nextZoom: getNormalizedZoom(appState.zoom.value - Math.max(ZOOM_STEP, appState.zoom.value * ZOOM_STEP)),
           },
           appState,
         ),

@@ -12673,12 +12673,15 @@ class App extends React.Component<AppProps, AppState> {
         }
 
         let newZoom = this.state.zoom.value - delta / 100;
-        // increase zoom steps the more zoomed-in we are (applies to >100% only)
+        // Proportional zoom boost — scales with current zoom level so zooming
+        // feels equally fast at 100% and 50,000%. At zoom <= 1x, no boost
+        // (additive base is sufficient). Above 1x, each scroll step adds ~10%
+        // of the current zoom, keeping perceived speed consistent.
         newZoom +=
-          Math.log10(Math.max(1, this.state.zoom.value)) *
+          Math.max(0, this.state.zoom.value - 1) *
           -sign *
-          // reduced amplification for small deltas (small movements on a trackpad)
-          Math.min(1, absDelta / 20);
+          Math.min(1, absDelta / 100) *
+          0.1;
 
         this.translateCanvas((state) => ({
           ...getStateForZoom(

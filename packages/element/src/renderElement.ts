@@ -263,7 +263,7 @@ const generateElementCanvas = (
 
   const rc = rough.canvas(canvas);
 
-  drawElementOnCanvas(element, rc, context, renderConfig);
+  drawElementOnCanvas(element, rc, context, renderConfig, zoom.value);
 
   context.restore();
 
@@ -401,7 +401,27 @@ const drawElementOnCanvas = (
   rc: RoughCanvas,
   context: CanvasRenderingContext2D,
   renderConfig: StaticCanvasRenderConfig,
+  zoomValue: number = 1,
 ) => {
+  // For constant stroke width, intercept lineWidth assignments from rough.js
+  // and divide by zoom so strokes appear the same size regardless of zoom.
+  const shouldCompensate = element.constantStrokeWidth && zoomValue !== 1;
+  if (shouldCompensate) {
+    const desc = Object.getOwnPropertyDescriptor(
+      CanvasRenderingContext2D.prototype,
+      "lineWidth",
+    )!;
+    Object.defineProperty(context, "lineWidth", {
+      set(v: number) {
+        desc.set!.call(this, v / zoomValue);
+      },
+      get() {
+        return desc.get!.call(this);
+      },
+      configurable: true,
+    });
+  }
+
   switch (element.type) {
     case "rectangle":
     case "iframe":
@@ -640,6 +660,11 @@ const drawElementOnCanvas = (
         throw new Error(`Unimplemented type ${element.type}`);
       }
     }
+  }
+
+  // Clean up the lineWidth proxy for constant stroke width
+  if (shouldCompensate) {
+    delete (context as any).lineWidth;
   }
 };
 

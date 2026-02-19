@@ -553,12 +553,26 @@ export const actionChangeFillStyle = register<ExcalidrawElement["fillStyle"]>({
 });
 
 export const actionChangeStrokeWidth = register<
-  ExcalidrawElement["strokeWidth"]
+  ExcalidrawElement["strokeWidth"] | "toggleConstant"
 >({
   name: "changeStrokeWidth",
   label: "labels.strokeWidth",
   trackEvent: false,
   perform: (elements, appState, value) => {
+    if (value === "toggleConstant") {
+      return {
+        elements: changeProperty(elements, appState, (el) => {
+          if (!el.hasOwnProperty("strokeWidth")) {
+            return el;
+          }
+          return newElementWith(el, {
+            constantStrokeWidth: !el.constantStrokeWidth,
+          });
+        }),
+        appState,
+        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
+      };
+    }
     return {
       elements: changeProperty(elements, appState, (el) =>
         newElementWith(el, {
@@ -569,63 +583,84 @@ export const actionChangeStrokeWidth = register<
       captureUpdate: CaptureUpdateAction.IMMEDIATELY,
     };
   },
-  PanelComponent: ({ elements, appState, updateData, app, data }) => (
-    <fieldset>
-      <legend>{t("labels.strokeWidth")}</legend>
-      <div className="buttonList">
-        <RadioSelection
-          group="stroke-width"
-          options={[
-            {
-              value: STROKE_WIDTH.hairline,
-              text: t("labels.hairline"),
-              icon: StrokeWidthHairlineIcon,
-              testId: "strokeWidth-hairline",
-            },
-            {
-              value: STROKE_WIDTH.fine,
-              text: t("labels.fine"),
-              icon: StrokeWidthFineIcon,
-              testId: "strokeWidth-fine",
-            },
-            {
-              value: STROKE_WIDTH.light,
-              text: t("labels.light"),
-              icon: StrokeWidthLightIcon,
-              testId: "strokeWidth-light",
-            },
-            {
-              value: STROKE_WIDTH.thin,
-              text: t("labels.thin"),
-              icon: StrokeWidthBaseIcon,
-              testId: "strokeWidth-thin",
-            },
-            {
-              value: STROKE_WIDTH.bold,
-              text: t("labels.bold"),
-              icon: StrokeWidthBoldIcon,
-              testId: "strokeWidth-bold",
-            },
-            {
-              value: STROKE_WIDTH.extraBold,
-              text: t("labels.extraBold"),
-              icon: StrokeWidthExtraBoldIcon,
-              testId: "strokeWidth-extraBold",
-            },
-          ]}
-          value={getFormValue(
-            elements,
-            app,
-            (element) => element.strokeWidth,
-            (element) => element.hasOwnProperty("strokeWidth"),
-            (hasSelection) =>
-              hasSelection ? null : appState.currentItemStrokeWidth,
-          )}
-          onChange={(value) => updateData(value)}
-        />
-      </div>
-    </fieldset>
-  ),
+  PanelComponent: ({ elements, appState, updateData, app, data }) => {
+    const constantValue = getFormValue(
+      elements,
+      app,
+      (element) => element.constantStrokeWidth,
+      (element) => element.hasOwnProperty("strokeWidth"),
+      () => false,
+    );
+    return (
+      <fieldset>
+        <legend>{t("labels.strokeWidth")}</legend>
+        <div className="buttonList">
+          <RadioSelection
+            group="stroke-width"
+            options={[
+              {
+                value: STROKE_WIDTH.hairline,
+                text: t("labels.hairline"),
+                icon: StrokeWidthHairlineIcon,
+                testId: "strokeWidth-hairline",
+              },
+              {
+                value: STROKE_WIDTH.fine,
+                text: t("labels.fine"),
+                icon: StrokeWidthFineIcon,
+                testId: "strokeWidth-fine",
+              },
+              {
+                value: STROKE_WIDTH.light,
+                text: t("labels.light"),
+                icon: StrokeWidthLightIcon,
+                testId: "strokeWidth-light",
+              },
+              {
+                value: STROKE_WIDTH.thin,
+                text: t("labels.thin"),
+                icon: StrokeWidthBaseIcon,
+                testId: "strokeWidth-thin",
+              },
+              {
+                value: STROKE_WIDTH.bold,
+                text: t("labels.bold"),
+                icon: StrokeWidthBoldIcon,
+                testId: "strokeWidth-bold",
+              },
+              {
+                value: STROKE_WIDTH.extraBold,
+                text: t("labels.extraBold"),
+                icon: StrokeWidthExtraBoldIcon,
+                testId: "strokeWidth-extraBold",
+              },
+            ]}
+            value={getFormValue(
+              elements,
+              app,
+              (element) => element.strokeWidth,
+              (element) => element.hasOwnProperty("strokeWidth"),
+              (hasSelection) =>
+                hasSelection ? null : appState.currentItemStrokeWidth,
+            )}
+            onChange={(value) => updateData(value)}
+          />
+          <button
+            type="button"
+            className={`constant-stroke-toggle ${constantValue ? "active" : ""}`}
+            title="Constant stroke width (zoom-independent)"
+            data-testid="constantStrokeWidth"
+            onClick={() => updateData("toggleConstant")}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M2 12h20" />
+              {constantValue && <path d="M12 6v12" strokeWidth="1.5" strokeDasharray="2 2" />}
+            </svg>
+          </button>
+        </div>
+      </fieldset>
+    );
+  },
 });
 
 export const actionChangeSloppiness = register<ExcalidrawElement["roughness"]>({

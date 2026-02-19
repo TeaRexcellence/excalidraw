@@ -127,32 +127,27 @@ const strokeGrid = (
 
   const actualMinorSize = minorStep * zoom.value;
 
-  const offsetX = (scrollX % minorStep) - minorStep;
-  const offsetY = (scrollY % minorStep) - minorStep;
-
   context.save();
 
-  // --- Helper: is this position on a major line? ---
-  const isOnMajor = (pos: number, scroll: number) =>
+  // --- Integer-indexed grid to avoid floating-point accumulation ---
+  // Each position is computed as k * minorStep + scrollX (scene→canvas).
+  // Major check uses integer k, eliminating modulo drift at deep zoom.
+  const isOnMajor = (k: number) =>
     gridStep > 1 &&
-    Math.abs(
-      ((pos - scroll) % majorStep + majorStep) % majorStep,
-    ) < majorStep * 0.001;
+    Math.abs(k / gridStep - Math.round(k / gridStep)) < 0.001;
+
+  // Visible grid index ranges (k where k*minorStep + scroll is on screen)
+  const firstKx = Math.floor(-scrollX / minorStep) - 1;
+  const lastKx = Math.ceil((-scrollX + width) / minorStep) + 1;
+  const firstKy = Math.floor(-scrollY / minorStep) - 1;
+  const lastKy = Math.ceil((-scrollY + height) / minorStep) + 1;
 
   if (gridType === "dot") {
-    for (
-      let x = offsetX;
-      x < offsetX + width + minorStep * 2;
-      x += minorStep
-    ) {
-      for (
-        let y = offsetY;
-        y < offsetY + height + minorStep * 2;
-        y += minorStep
-      ) {
-        const isBoldX = isOnMajor(x, scrollX);
-        const isBoldY = isOnMajor(y, scrollY);
-        const isBold = isBoldX && isBoldY;
+    for (let kx = firstKx; kx <= lastKx; kx++) {
+      const x = kx * minorStep + scrollX;
+      for (let ky = firstKy; ky <= lastKy; ky++) {
+        const y = ky * minorStep + scrollY;
+        const isBold = isOnMajor(kx) && isOnMajor(ky);
 
         if (!isBold && (!minorGridEnabled || actualMinorSize < 10)) {
           continue;
@@ -181,16 +176,15 @@ const strokeGrid = (
   const spaceWidth = 1 / zoom.value;
 
   if (zoom.value === 1) {
+    const offsetX = (scrollX % minorStep) - minorStep;
+    const offsetY = (scrollY % minorStep) - minorStep;
     context.translate(offsetX % 1 ? 0 : 0.5, offsetY % 1 ? 0 : 0.5);
   }
 
   // Vertical lines
-  for (
-    let x = offsetX;
-    x < offsetX + width + minorStep * 2;
-    x += minorStep
-  ) {
-    const isBold = isOnMajor(x, scrollX);
+  for (let kx = firstKx; kx <= lastKx; kx++) {
+    const x = kx * minorStep + scrollX;
+    const isBold = isOnMajor(kx);
     if (!isBold && (!minorGridEnabled || actualMinorSize < 10)) {
       continue;
     }
@@ -207,18 +201,17 @@ const strokeGrid = (
     context.strokeStyle = renderAsBold
       ? GridLineColor[theme].bold
       : GridLineColor[theme].regular;
-    context.moveTo(x, offsetY - minorStep);
-    context.lineTo(x, Math.ceil(offsetY + height + minorStep * 2));
+    const yStart = firstKy * minorStep + scrollY;
+    const yEnd = lastKy * minorStep + scrollY;
+    context.moveTo(x, yStart);
+    context.lineTo(x, yEnd);
     context.stroke();
   }
 
   // Horizontal lines
-  for (
-    let y = offsetY;
-    y < offsetY + height + minorStep * 2;
-    y += minorStep
-  ) {
-    const isBold = isOnMajor(y, scrollY);
+  for (let ky = firstKy; ky <= lastKy; ky++) {
+    const y = ky * minorStep + scrollY;
+    const isBold = isOnMajor(ky);
     if (!isBold && (!minorGridEnabled || actualMinorSize < 10)) {
       continue;
     }
@@ -235,8 +228,10 @@ const strokeGrid = (
     context.strokeStyle = renderAsBold
       ? GridLineColor[theme].bold
       : GridLineColor[theme].regular;
-    context.moveTo(offsetX - minorStep, y);
-    context.lineTo(Math.ceil(offsetX + width + minorStep * 2), y);
+    const xStart = firstKx * minorStep + scrollX;
+    const xEnd = lastKx * minorStep + scrollX;
+    context.moveTo(xStart, y);
+    context.lineTo(xEnd, y);
     context.stroke();
   }
   context.restore();
@@ -399,12 +394,12 @@ const _renderStaticScene = ({
     const h = normalizedHeight / appState.zoom.value;
     const axisColor =
       appState.theme === THEME.LIGHT
-        ? "rgba(100, 100, 100, 0.5)"
-        : "rgba(180, 180, 180, 0.4)";
+        ? "rgba(140, 140, 140, 0.3)"
+        : "rgba(160, 160, 160, 0.2)";
     const labelColor =
       appState.theme === THEME.LIGHT
-        ? "rgba(80, 80, 80, 0.7)"
-        : "rgba(200, 200, 200, 0.6)";
+        ? "rgba(120, 120, 120, 0.5)"
+        : "rgba(180, 180, 180, 0.4)";
 
     context.save();
     context.strokeStyle = axisColor;
@@ -468,10 +463,12 @@ const _renderStaticScene = ({
     const sceneTop = -appState.scrollY;
     const sceneBottom = sceneTop + h;
 
-    // X-axis labels
+    // X-axis labels (integer-indexed to avoid float drift at deep zoom)
     context.textAlign = "center";
-    const xStart = Math.ceil(sceneLeft / labelInterval) * labelInterval;
-    for (let x = xStart; x <= sceneRight; x += labelInterval) {
+    const firstLabelKx = Math.ceil(sceneLeft / labelInterval);
+    const lastLabelKx = Math.floor(sceneRight / labelInterval);
+    for (let k = firstLabelKx; k <= lastLabelKx; k++) {
+      const x = k * labelInterval;
       if (Math.abs(x) < labelInterval * 0.01) {
         continue; // skip 0 (drawn at origin)
       }
@@ -483,8 +480,10 @@ const _renderStaticScene = ({
     // Y-axis labels (negated: canvas Y down → math Y up)
     context.textAlign = "right";
     context.textBaseline = "middle";
-    const yStart = Math.ceil(sceneTop / labelInterval) * labelInterval;
-    for (let y = yStart; y <= sceneBottom; y += labelInterval) {
+    const firstLabelKy = Math.ceil(sceneTop / labelInterval);
+    const lastLabelKy = Math.floor(sceneBottom / labelInterval);
+    for (let k = firstLabelKy; k <= lastLabelKy; k++) {
+      const y = k * labelInterval;
       if (Math.abs(y) < labelInterval * 0.01) {
         continue;
       }
