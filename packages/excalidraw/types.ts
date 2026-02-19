@@ -210,6 +210,10 @@ export type StaticCanvasAppState = Readonly<
     majorGridEnabled: AppState["majorGridEnabled"];
     minorGridEnabled: AppState["minorGridEnabled"];
     axesEnabled: AppState["axesEnabled"];
+    axisLineOpacity: AppState["axisLineOpacity"];
+    axisLabelOpacity: AppState["axisLabelOpacity"];
+    axisLineEnabled: AppState["axisLineEnabled"];
+    axisLabelEnabled: AppState["axisLabelEnabled"];
     frameRendering: AppState["frameRendering"];
     currentHoveredFontFamily: AppState["currentHoveredFontFamily"];
     hoveredElementIds: AppState["hoveredElementIds"];
@@ -438,6 +442,12 @@ export interface AppState {
   majorGridEnabled: boolean;
   minorGridEnabled: boolean;
   axesEnabled: boolean;
+  /** axis line opacity 0-100 */
+  axisLineOpacity: number;
+  /** axis label opacity 0-100 */
+  axisLabelOpacity: number;
+  axisLineEnabled: boolean;
+  axisLabelEnabled: boolean;
   viewModeEnabled: boolean;
 
   /** top-most selected groups (i.e. does not include nested groups) */

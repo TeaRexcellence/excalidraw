@@ -306,6 +306,146 @@ const GridStepDragInput = ({
   );
 };
 
+const AxesDropdown = ({
+  appState,
+  setAppState,
+  onToggleAxes,
+}: {
+  appState: UIAppState;
+  setAppState: React.Component<any, AppState>["setState"];
+  onToggleAxes: () => void;
+}) => {
+  const lineSliderRef = React.useRef<HTMLInputElement>(null);
+  const labelSliderRef = React.useRef<HTMLInputElement>(null);
+
+  const axisLineOpacity = appState.axisLineOpacity;
+  const axisLabelOpacity = appState.axisLabelOpacity;
+
+  React.useEffect(() => {
+    if (lineSliderRef.current) {
+      lineSliderRef.current.style.background = `linear-gradient(to top, var(--color-slider-track) 0%, var(--color-slider-track) ${axisLineOpacity}%, var(--button-bg, var(--color-surface-mid)) ${axisLineOpacity}%, var(--button-bg, var(--color-surface-mid)) 100%)`;
+    }
+  }, [axisLineOpacity]);
+
+  React.useEffect(() => {
+    if (labelSliderRef.current) {
+      labelSliderRef.current.style.background = `linear-gradient(to top, var(--color-slider-track) 0%, var(--color-slider-track) ${axisLabelOpacity}%, var(--button-bg, var(--color-surface-mid)) ${axisLabelOpacity}%, var(--button-bg, var(--color-surface-mid)) 100%)`;
+    }
+  }, [axisLabelOpacity]);
+
+  return (
+    <div className="tool-hover-dropdown">
+      <ToolButton
+        className="Shape"
+        type="button"
+        icon={axesIcon}
+        selected={appState.axesEnabled}
+        title="Toggle coordinate axes"
+        aria-label="Toggle coordinate axes"
+        data-testid="toolbar-axes"
+        onClick={onToggleAxes}
+      />
+      <div className="tool-hover-dropdown__panel">
+        <div className="tool-hover-dropdown__shapes">
+          <div className="grid-opacity-sliders-row">
+            <div
+              className={clsx("grid-slider-group", {
+                "grid-slider-group--disabled": !appState.axisLineEnabled,
+              })}
+            >
+              <div
+                className="grid-opacity-vertical-slider"
+                title={t("labels.axisLineOpacity")}
+              >
+                <input
+                  ref={lineSliderRef}
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="10"
+                  value={appState.axisLineOpacity}
+                  onChange={(e) => {
+                    setAppState({ axisLineOpacity: +e.target.value });
+                  }}
+                  className="range-input"
+                  data-testid="axis-line-opacity-slider"
+                />
+              </div>
+              <div className="grid-toggle-switch">
+                <Switch
+                  name="axisLineToggle"
+                  checked={appState.axisLineEnabled}
+                  title="Toggle axis lines"
+                  onChange={(checked) => {
+                    if (!checked && !appState.axisLabelEnabled) {
+                      setAppState({ axisLineEnabled: false, axisLabelEnabled: true });
+                    } else {
+                      setAppState({ axisLineEnabled: checked });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div
+              className={clsx("grid-slider-group", {
+                "grid-slider-group--disabled": !appState.axisLabelEnabled,
+              })}
+            >
+              <div
+                className="grid-opacity-vertical-slider"
+                title={t("labels.axisLabelOpacity")}
+              >
+                <input
+                  ref={labelSliderRef}
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="10"
+                  value={appState.axisLabelOpacity}
+                  onChange={(e) => {
+                    setAppState({ axisLabelOpacity: +e.target.value });
+                  }}
+                  className="range-input"
+                  data-testid="axis-label-opacity-slider"
+                />
+              </div>
+              <div className="grid-toggle-switch">
+                <Switch
+                  name="axisLabelToggle"
+                  checked={appState.axisLabelEnabled}
+                  title="Toggle axis labels"
+                  onChange={(checked) => {
+                    if (!checked && !appState.axisLineEnabled) {
+                      setAppState({ axisLabelEnabled: false, axisLineEnabled: true });
+                    } else {
+                      setAppState({ axisLabelEnabled: checked });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          <button
+            className="grid-reset-button"
+            title="Reset axes to default settings"
+            onClick={() => {
+              const defaults = getDefaultAppState();
+              setAppState({
+                axisLineOpacity: defaults.axisLineOpacity,
+                axisLabelOpacity: defaults.axisLabelOpacity,
+                axisLineEnabled: defaults.axisLineEnabled,
+                axisLabelEnabled: defaults.axisLabelEnabled,
+              });
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const GridTypeDropdown = ({
   appState,
   setAppState,
@@ -499,7 +639,6 @@ const GridTypeDropdown = ({
                 gridMinorOpacity: defaults.gridMinorOpacity,
                 majorGridEnabled: defaults.majorGridEnabled,
                 minorGridEnabled: defaults.minorGridEnabled,
-                axesEnabled: defaults.axesEnabled,
                 objectsSnapModeEnabled: false,
               });
             }}
@@ -561,6 +700,41 @@ const LayerUI = ({
   const TunnelsJotaiProvider = tunnels.tunnelsJotai.Provider;
 
   const [eyeDropperState, setEyeDropperState] = useAtom(activeEyeDropperAtom);
+
+  const handleToggleAxes = React.useCallback(() => {
+    if (!app.state.axesEnabled) {
+      setAppState({ axesEnabled: true });
+      const target = centerScrollOn({
+        scenePoint: { x: 0, y: 0 },
+        viewportDimensions: {
+          width: app.state.width,
+          height: app.state.height,
+        },
+        zoom: app.state.zoom,
+      });
+      cancelScrollAnimRef.current?.();
+      cancelScrollAnimRef.current =
+        easeToValuesRAF({
+          fromValues: {
+            scrollX: app.state.scrollX,
+            scrollY: app.state.scrollY,
+          },
+          toValues: target,
+          onStep: (values) => {
+            setAppState({
+              scrollX: values.scrollX,
+              scrollY: values.scrollY,
+            });
+          },
+          duration: 500,
+          onEnd: () => {
+            cancelScrollAnimRef.current = null;
+          },
+        });
+    } else {
+      setAppState({ axesEnabled: false });
+    }
+  }, [app, setAppState, cancelScrollAnimRef]);
 
   const renderJSONExportDialog = () => {
     if (!UIOptions.canvasActions.export) {
@@ -736,48 +910,10 @@ const LayerUI = ({
                           })}
                         >
                           <Stack.Row gap={spacing.toolbarInnerRowGap}>
-                            <ToolButton
-                              className="Shape"
-                              type="button"
-                              icon={axesIcon}
-                              selected={appState.axesEnabled}
-                              title="Toggle coordinate axes"
-                              aria-label="Toggle coordinate axes"
-                              data-testid="toolbar-axes"
-                              onClick={() => {
-                                if (!appState.axesEnabled) {
-                                  setAppState({ axesEnabled: true });
-                                  const target = centerScrollOn({
-                                    scenePoint: { x: 0, y: 0 },
-                                    viewportDimensions: {
-                                      width: app.state.width,
-                                      height: app.state.height,
-                                    },
-                                    zoom: app.state.zoom,
-                                  });
-                                  cancelScrollAnimRef.current?.();
-                                  cancelScrollAnimRef.current =
-                                    easeToValuesRAF({
-                                      fromValues: {
-                                        scrollX: app.state.scrollX,
-                                        scrollY: app.state.scrollY,
-                                      },
-                                      toValues: target,
-                                      onStep: (values) => {
-                                        setAppState({
-                                          scrollX: values.scrollX,
-                                          scrollY: values.scrollY,
-                                        });
-                                      },
-                                      duration: 500,
-                                      onEnd: () => {
-                                        cancelScrollAnimRef.current = null;
-                                      },
-                                    });
-                                } else {
-                                  setAppState({ axesEnabled: false });
-                                }
-                              }}
+                            <AxesDropdown
+                              appState={appState}
+                              setAppState={setAppState}
+                              onToggleAxes={handleToggleAxes}
                             />
                             <GridTypeDropdown
                               appState={appState}

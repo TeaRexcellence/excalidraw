@@ -82,18 +82,21 @@ export const getAdaptiveGridSteps = (
   gridStep: number,
   zoomValue: number,
 ) => {
-  const base = gridStep;
+  // Fixed base for adaptive zoom thresholds — subdivisions always kick in
+  // at the same zoom levels regardless of the user's gridStep setting.
+  // gridStep only controls the visual major/minor ratio.
+  const adaptiveBase = 5;
 
   // Level = how many times we've subdivided (positive) or consolidated (negative).
   // At level 0: minorScreen = gridSize * zoom ≈ gridSize (comfortable).
-  // Shift up when minor cells grow to gridSize*base on screen (room to subdivide).
+  // Shift up when minor cells grow to gridSize*adaptiveBase on screen.
   // Shift down when minor cells shrink below gridSize on screen.
   const level = Math.floor(
-    Math.log(gridSize * zoomValue / gridSize) / Math.log(base),
+    Math.log(zoomValue) / Math.log(adaptiveBase),
   );
 
-  const minorStep = gridSize / Math.pow(base, level);
-  const majorStep = minorStep * base;
+  const minorStep = gridSize / Math.pow(adaptiveBase, level);
+  const majorStep = minorStep * gridStep;
 
   return { minorStep, majorStep, level };
 };
@@ -392,119 +395,137 @@ const _renderStaticScene = ({
   if (appState.axesEnabled) {
     const w = normalizedWidth / appState.zoom.value;
     const h = normalizedHeight / appState.zoom.value;
-    const axisColor =
-      appState.theme === THEME.LIGHT
-        ? "rgba(140, 140, 140, 0.3)"
-        : "rgba(160, 160, 160, 0.2)";
-    const labelColor =
-      appState.theme === THEME.LIGHT
-        ? "rgba(120, 120, 120, 0.5)"
-        : "rgba(180, 180, 180, 0.4)";
 
     context.save();
-    context.strokeStyle = axisColor;
-    context.lineWidth = Math.min(1.5 / appState.zoom.value, 3);
-    context.setLineDash([]);
-    // X-axis (horizontal through scene y=0)
-    context.beginPath();
-    context.moveTo(0, appState.scrollY);
-    context.lineTo(w, appState.scrollY);
-    context.stroke();
-    // Y-axis (vertical through scene x=0)
-    context.beginPath();
-    context.moveTo(appState.scrollX, 0);
-    context.lineTo(appState.scrollX, h);
-    context.stroke();
 
-    // Axis labels — same discrete levels as the grid
-    const { minorStep: axisMinor, majorStep: axisMajor, level: axisLevel } =
-      getAdaptiveGridSteps(appState.gridSize, appState.gridStep, appState.zoom.value);
+    // Axis lines
+    if (appState.axisLineEnabled) {
+      const lineAlpha =
+        appState.theme === THEME.LIGHT
+          ? 0.3 * (appState.axisLineOpacity / 100)
+          : 0.2 * (appState.axisLineOpacity / 100);
+      const axisColor =
+        appState.theme === THEME.LIGHT
+          ? `rgba(140, 140, 140, ${lineAlpha})`
+          : `rgba(160, 160, 160, ${lineAlpha})`;
 
-    const gs = appState.gridSize;
-    const minScreenGap = 30;
-
-    // Label at every minor cell when they're big enough, else at major positions
-    const minorScreenSize = axisMinor * appState.zoom.value;
-    let labelInterval: number;
-    if (minorScreenSize >= minScreenGap) {
-      labelInterval = axisMinor;
-    } else {
-      // Major positions — these are the old minor positions from the
-      // previous level, so labels never disappear
-      const majorScreenSize = axisMajor * appState.zoom.value;
-      const majorSkip = majorScreenSize >= minScreenGap
-        ? 1
-        : Math.ceil(minScreenGap / majorScreenSize);
-      labelInterval = axisMajor * majorSkip;
+      context.strokeStyle = axisColor;
+      context.lineWidth = Math.min(1.5 / appState.zoom.value, 3);
+      context.setLineDash([]);
+      // X-axis (horizontal through scene y=0)
+      context.beginPath();
+      context.moveTo(0, appState.scrollY);
+      context.lineTo(w, appState.scrollY);
+      context.stroke();
+      // Y-axis (vertical through scene x=0)
+      context.beginPath();
+      context.moveTo(appState.scrollX, 0);
+      context.lineTo(appState.scrollX, h);
+      context.stroke();
     }
 
-    // Decimal places = number of subdivision levels deep
-    const decimals = Math.max(0, axisLevel);
+    // Axis labels
+    if (appState.axisLabelEnabled) {
+      const labelAlpha =
+        appState.theme === THEME.LIGHT
+          ? 0.5 * (appState.axisLabelOpacity / 100)
+          : 0.4 * (appState.axisLabelOpacity / 100);
+      const labelColor =
+        appState.theme === THEME.LIGHT
+          ? `rgba(120, 120, 120, ${labelAlpha})`
+          : `rgba(180, 180, 180, ${labelAlpha})`;
 
-    const formatLabel = (scenePos: number) => {
-      const cellValue = scenePos / gs;
-      return decimals > 0
-        ? cellValue.toFixed(decimals)
-        : String(Math.round(cellValue));
-    };
+      // Axis labels — same discrete levels as the grid
+      const { minorStep: axisMinor, majorStep: axisMajor, level: axisLevel } =
+        getAdaptiveGridSteps(appState.gridSize, appState.gridStep, appState.zoom.value);
 
-    // Switch to screen-space for text so font size stays constant
-    context.save();
-    context.scale(1 / appState.zoom.value, 1 / appState.zoom.value);
+      const gs = appState.gridSize;
+      const minScreenGap = 30;
 
-    const fontSize = 11;
-    context.font = `${fontSize}px sans-serif`;
-    context.fillStyle = labelColor;
-    context.textBaseline = "top";
-
-    // Visible scene range
-    const sceneLeft = -appState.scrollX;
-    const sceneRight = sceneLeft + w;
-    const sceneTop = -appState.scrollY;
-    const sceneBottom = sceneTop + h;
-
-    // X-axis labels (integer-indexed to avoid float drift at deep zoom)
-    context.textAlign = "center";
-    const minusOffset = context.measureText("-").width / 2;
-    const firstLabelKx = Math.ceil(sceneLeft / labelInterval);
-    const lastLabelKx = Math.floor(sceneRight / labelInterval);
-    for (let k = firstLabelKx; k <= lastLabelKx; k++) {
-      const x = k * labelInterval;
-      if (Math.abs(x) < labelInterval * 0.01) {
-        continue; // skip 0 (drawn at origin)
+      // Label at every minor cell when they're big enough, else at major positions
+      const minorScreenSize = axisMinor * appState.zoom.value;
+      let labelInterval: number;
+      if (minorScreenSize >= minScreenGap) {
+        labelInterval = axisMinor;
+      } else {
+        // Major positions — these are the old minor positions from the
+        // previous level, so labels never disappear
+        const majorScreenSize = axisMajor * appState.zoom.value;
+        const majorSkip = majorScreenSize >= minScreenGap
+          ? 1
+          : Math.ceil(minScreenGap / majorScreenSize);
+        labelInterval = axisMajor * majorSkip;
       }
-      const screenX = (x + appState.scrollX) * appState.zoom.value;
-      const screenY = appState.scrollY * appState.zoom.value + 4;
-      // Nudge negative labels left so the digits align with the grid line
-      const nudge = x < 0 ? -minusOffset : 0;
-      context.fillText(formatLabel(x), screenX + nudge, screenY);
-    }
 
-    // Y-axis labels (negated: canvas Y down → math Y up)
-    context.textAlign = "right";
-    context.textBaseline = "middle";
-    const firstLabelKy = Math.ceil(sceneTop / labelInterval);
-    const lastLabelKy = Math.floor(sceneBottom / labelInterval);
-    for (let k = firstLabelKy; k <= lastLabelKy; k++) {
-      const y = k * labelInterval;
-      if (Math.abs(y) < labelInterval * 0.01) {
-        continue;
+      // Decimal places = number of subdivision levels deep
+      const decimals = Math.max(0, axisLevel);
+
+      const formatLabel = (scenePos: number) => {
+        const cellValue = scenePos / gs;
+        return decimals > 0
+          ? cellValue.toFixed(decimals)
+          : String(Math.round(cellValue));
+      };
+
+      // Switch to screen-space for text so font size stays constant
+      context.save();
+      context.scale(1 / appState.zoom.value, 1 / appState.zoom.value);
+
+      const fontSize = 11;
+      context.font = `${fontSize}px sans-serif`;
+      context.fillStyle = labelColor;
+      context.textBaseline = "top";
+
+      // Visible scene range
+      const sceneLeft = -appState.scrollX;
+      const sceneRight = sceneLeft + w;
+      const sceneTop = -appState.scrollY;
+      const sceneBottom = sceneTop + h;
+
+      // X-axis labels (integer-indexed to avoid float drift at deep zoom)
+      context.textAlign = "center";
+      const minusOffset = context.measureText("-").width / 2;
+      const firstLabelKx = Math.ceil(sceneLeft / labelInterval);
+      const lastLabelKx = Math.floor(sceneRight / labelInterval);
+      for (let k = firstLabelKx; k <= lastLabelKx; k++) {
+        const x = k * labelInterval;
+        if (Math.abs(x) < labelInterval * 0.01) {
+          continue; // skip 0 (drawn at origin)
+        }
+        const screenX = (x + appState.scrollX) * appState.zoom.value;
+        const screenY = appState.scrollY * appState.zoom.value + 4;
+        // Nudge negative labels left so the digits align with the grid line
+        const nudge = x < 0 ? -minusOffset : 0;
+        context.fillText(formatLabel(x), screenX + nudge, screenY);
       }
-      const screenX = appState.scrollX * appState.zoom.value - 4;
-      const screenY = (y + appState.scrollY) * appState.zoom.value;
-      context.fillText(formatLabel(-y), screenX, screenY);
+
+      // Y-axis labels (negated: canvas Y down → math Y up)
+      context.textAlign = "right";
+      context.textBaseline = "middle";
+      const firstLabelKy = Math.ceil(sceneTop / labelInterval);
+      const lastLabelKy = Math.floor(sceneBottom / labelInterval);
+      for (let k = firstLabelKy; k <= lastLabelKy; k++) {
+        const y = k * labelInterval;
+        if (Math.abs(y) < labelInterval * 0.01) {
+          continue;
+        }
+        const screenX = appState.scrollX * appState.zoom.value - 4;
+        const screenY = (y + appState.scrollY) * appState.zoom.value;
+        context.fillText(formatLabel(-y), screenX, screenY);
+      }
+
+      // "0" at origin
+      context.textAlign = "right";
+      context.textBaseline = "top";
+      context.fillText(
+        "0",
+        appState.scrollX * appState.zoom.value - 4,
+        appState.scrollY * appState.zoom.value + 4,
+      );
+
+      context.restore(); // back to zoom-scaled space
     }
 
-    // "0" at origin
-    context.textAlign = "right";
-    context.textBaseline = "top";
-    context.fillText(
-      "0",
-      appState.scrollX * appState.zoom.value - 4,
-      appState.scrollY * appState.zoom.value + 4,
-    );
-
-    context.restore(); // back to zoom-scaled space
     context.restore(); // back to original state
   }
 

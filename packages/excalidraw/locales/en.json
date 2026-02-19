@@ -37,6 +37,8 @@
     "backgroundOpacity": "Background opacity",
     "gridOpacity": "Major grid opacity",
     "gridMinorOpacity": "Minor grid opacity",
+    "axisLineOpacity": "Axis line opacity",
+    "axisLabelOpacity": "Axis label opacity",
     "textAlign": "Text align",
     "edges": "Edges",
     "sharp": "Sharp",
