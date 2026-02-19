@@ -76,25 +76,25 @@ const Footer = ({
             />
             {(showBackToContent || showBackToCenter) && (
               <div className="scroll-back-buttons">
-                {showBackToContent && (
-                  <Tooltip label={t("buttons.scrollBackToContent")}>
-                    <button
-                      type="button"
-                      className="scroll-back-button"
-                      onClick={onScrollBackToContent}
-                    >
-                      {ScrollBackToObjectsIcon}
-                    </button>
-                  </Tooltip>
-                )}
                 {showBackToCenter && (
-                  <Tooltip label="Scroll back to center">
+                  <Tooltip label="Scroll to axis center">
                     <button
                       type="button"
                       className="scroll-back-button"
                       onClick={onScrollBackToCenter}
                     >
                       {ScrollBackToCenterIcon}
+                    </button>
+                  </Tooltip>
+                )}
+                {showBackToContent && (
+                  <Tooltip label="Scroll to content center">
+                    <button
+                      type="button"
+                      className="scroll-back-button"
+                      onClick={onScrollBackToContent}
+                    >
+                      {ScrollBackToObjectsIcon}
                     </button>
                   </Tooltip>
                 )}

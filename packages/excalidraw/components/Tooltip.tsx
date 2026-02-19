@@ -67,7 +67,8 @@ const updateTooltip = (
 ) => {
   tooltip.classList.add("excalidraw-tooltip--visible");
   tooltip.style.minWidth = long ? "50ch" : "10ch";
-  tooltip.style.maxWidth = long ? "50ch" : "15ch";
+  tooltip.style.maxWidth = long ? "50ch" : "";
+  tooltip.style.whiteSpace = long ? "" : "nowrap";
 
   tooltip.textContent = label;
 

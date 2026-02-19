@@ -3326,12 +3326,11 @@ class App extends React.Component<AppProps, AppState> {
       this.setState({ scrolledOutside });
     }
 
-    const originOutsideViewport = !(
-      this.state.scrollX >= 0 &&
-      this.state.scrollX <= this.state.width / this.state.zoom.value &&
-      this.state.scrollY >= 0 &&
-      this.state.scrollY <= this.state.height / this.state.zoom.value
-    );
+    const centeredScrollX = this.state.width / 2 / this.state.zoom.value;
+    const centeredScrollY = this.state.height / 2 / this.state.zoom.value;
+    const originOutsideViewport =
+      Math.abs(this.state.scrollX - centeredScrollX) > 1 ||
+      Math.abs(this.state.scrollY - centeredScrollY) > 1;
     if (this.state.originOutsideViewport !== originOutsideViewport) {
       this.setState({ originOutsideViewport });
     }
