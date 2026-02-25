@@ -142,7 +142,7 @@ const _newElementBase = <T extends ExcalidrawElement>(
     backgroundColor,
     fillStyle,
     strokeWidth,
-    zoomInvariant: rest.zoomInvariant ?? false,
+    constantStrokeWidth: rest.constantStrokeWidth ?? false,
     strokeStyle,
     roughness,
     opacity,

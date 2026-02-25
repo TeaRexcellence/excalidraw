@@ -159,8 +159,7 @@ export type ActionName =
   | "changeTableBackgroundColor"
   | "changeTableGridColor"
   | "changeTableHeaderColor"
-  | "changeSides"
-  | "toggleZoomInvariant";
+  | "changeSides";
 
 export type PanelComponentProps = {
   elements: readonly ExcalidrawElement[];
