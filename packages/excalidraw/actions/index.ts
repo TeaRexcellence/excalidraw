@@ -11,7 +11,6 @@ export {
   actionChangeStrokeColor,
   actionChangeBackgroundColor,
   actionChangeStrokeWidth,
-  actionToggleZoomInvariant,
   actionChangeFillStyle,
   actionChangeSloppiness,
   actionChangeOpacity,

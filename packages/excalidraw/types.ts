@@ -365,7 +365,6 @@ export interface AppState {
   currentItemRoundness: StrokeRoundness;
   currentItemSides: number;
   currentItemArrowType: "sharp" | "round" | "elbow";
-  currentItemZoomInvariant: boolean;
   viewBackgroundColor: string;
   scrollX: number;
   scrollY: number;

@@ -243,9 +243,9 @@ const repairBinding = <T extends ExcalidrawArrowElement>(
 };
 
 const restoreElementWithProperties = <
-  T extends Required<Omit<ExcalidrawElement, "customData" | "zoomInvariant">> & {
+  T extends Required<Omit<ExcalidrawElement, "customData" | "constantStrokeWidth">> & {
     customData?: ExcalidrawElement["customData"];
-    zoomInvariant?: ExcalidrawElement["zoomInvariant"];
+    constantStrokeWidth?: ExcalidrawElement["constantStrokeWidth"];
     /** @deprecated */
     boundElementIds?: readonly ExcalidrawElement["id"][];
     /** @deprecated */
@@ -273,7 +273,7 @@ const restoreElementWithProperties = <
     id: element.id || randomId(),
     fillStyle: element.fillStyle || DEFAULT_ELEMENT_PROPS.fillStyle,
     strokeWidth: element.strokeWidth || DEFAULT_ELEMENT_PROPS.strokeWidth,
-    zoomInvariant: (element as any).zoomInvariant ?? (element as any).constantStrokeWidth ?? false,
+    constantStrokeWidth: element.constantStrokeWidth ?? false,
     strokeStyle: element.strokeStyle ?? DEFAULT_ELEMENT_PROPS.strokeStyle,
     roughness: element.roughness ?? DEFAULT_ELEMENT_PROPS.roughness,
     opacity:

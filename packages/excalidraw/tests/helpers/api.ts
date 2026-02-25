@@ -184,7 +184,7 @@ export class API {
     backgroundColor?: ExcalidrawGenericElement["backgroundColor"];
     fillStyle?: ExcalidrawGenericElement["fillStyle"];
     strokeWidth?: ExcalidrawGenericElement["strokeWidth"];
-    zoomInvariant?: ExcalidrawGenericElement["zoomInvariant"];
+    constantStrokeWidth?: ExcalidrawGenericElement["constantStrokeWidth"];
     strokeStyle?: ExcalidrawGenericElement["strokeStyle"];
     roundness?: ExcalidrawGenericElement["roundness"];
     roughness?: ExcalidrawGenericElement["roughness"];
@@ -261,7 +261,7 @@ export class API {
         rest.backgroundColor ?? appState.currentItemBackgroundColor,
       fillStyle: rest.fillStyle ?? appState.currentItemFillStyle,
       strokeWidth: rest.strokeWidth ?? appState.currentItemStrokeWidth,
-      zoomInvariant: rest.zoomInvariant ?? false,
+      constantStrokeWidth: rest.constantStrokeWidth ?? false,
       strokeStyle: rest.strokeStyle ?? appState.currentItemStrokeStyle,
       roundness: (
         rest.roundness === undefined

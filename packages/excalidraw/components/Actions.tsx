@@ -252,8 +252,6 @@ export const SelectedShapeActions = ({
         </>
       )}
 
-      {renderAction("toggleZoomInvariant")}
-
       {targetElements.some(
         (el) => isTableElement(el) || isCodeBlockElement(el),
       ) && (
@@ -456,7 +454,6 @@ const CombinedShapeProperties = ({
                 )) &&
                 renderAction("changeRoundness")}
               {renderAction("changeOpacity")}
-              {renderAction("toggleZoomInvariant")}
             </div>
           </PropertiesPopover>
         )}
@@ -645,7 +642,6 @@ const CombinedTextProperties = ({
                 renderAction("changeTextAlign")}
               {shouldAllowVerticalAlign(targetElements, elementsMap) &&
                 renderAction("changeVerticalAlign")}
-              {renderAction("toggleZoomInvariant")}
             </div>
           </PropertiesPopover>
         )}
