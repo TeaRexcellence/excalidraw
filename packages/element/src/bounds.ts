@@ -289,6 +289,10 @@ export const getElementAbsoluteCoords = (
   ];
 };
 
+/**
+ * For zoom-invariant elements, scale the bounds by 1/zoom around the center
+ * so the selection border matches the constant-screen-size visual.
+ */
 /*
  * for a given element, `getElementLineSegments` returns line segments
  * that can be used for visual collision detection (useful for frames)

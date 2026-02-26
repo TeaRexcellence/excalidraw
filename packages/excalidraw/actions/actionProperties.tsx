@@ -553,26 +553,12 @@ export const actionChangeFillStyle = register<ExcalidrawElement["fillStyle"]>({
 });
 
 export const actionChangeStrokeWidth = register<
-  ExcalidrawElement["strokeWidth"] | "toggleConstant"
+  ExcalidrawElement["strokeWidth"]
 >({
   name: "changeStrokeWidth",
   label: "labels.strokeWidth",
   trackEvent: false,
   perform: (elements, appState, value) => {
-    if (value === "toggleConstant") {
-      return {
-        elements: changeProperty(elements, appState, (el) => {
-          if (!el.hasOwnProperty("strokeWidth")) {
-            return el;
-          }
-          return newElementWith(el, {
-            constantStrokeWidth: !el.constantStrokeWidth,
-          });
-        }),
-        appState,
-        captureUpdate: CaptureUpdateAction.IMMEDIATELY,
-      };
-    }
     return {
       elements: changeProperty(elements, appState, (el) =>
         newElementWith(el, {
@@ -584,13 +570,6 @@ export const actionChangeStrokeWidth = register<
     };
   },
   PanelComponent: ({ elements, appState, updateData, app, data }) => {
-    const constantValue = getFormValue(
-      elements,
-      app,
-      (element) => element.constantStrokeWidth,
-      (element) => element.hasOwnProperty("strokeWidth"),
-      () => false,
-    );
     return (
       <fieldset>
         <legend>{t("labels.strokeWidth")}</legend>
@@ -645,20 +624,59 @@ export const actionChangeStrokeWidth = register<
             )}
             onChange={(value) => updateData(value)}
           />
-          <button
-            type="button"
-            className={`constant-stroke-toggle ${constantValue ? "active" : ""}`}
-            title="Constant stroke width (zoom-independent)"
-            data-testid="constantStrokeWidth"
-            onClick={() => updateData("toggleConstant")}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M2 12h20" />
-              {constantValue && <path d="M12 6v12" strokeWidth="1.5" strokeDasharray="2 2" />}
-            </svg>
-          </button>
         </div>
       </fieldset>
+    );
+  },
+});
+
+export const actionToggleZoomInvariant = register({
+  name: "toggleZoomInvariant",
+  label: "labels.respectZoom",
+  trackEvent: false,
+  perform: (elements, appState) => {
+    const targetElements = getTargetElements(
+      getNonDeletedElements(elements),
+      appState,
+    );
+    const hasSelection = targetElements.length > 0;
+
+    // Current effective state: from selection if any, else from appState default
+    const currentValue = hasSelection
+      ? targetElements.some((el) => el.zoomInvariant)
+      : appState.currentItemZoomInvariant;
+    const nextValue = !currentValue;
+
+    return {
+      elements: hasSelection
+        ? changeProperty(elements, appState, (el) =>
+            newElementWith(el, { zoomInvariant: nextValue }),
+          )
+        : elements,
+      appState: { ...appState, currentItemZoomInvariant: nextValue },
+      captureUpdate: hasSelection
+        ? CaptureUpdateAction.IMMEDIATELY
+        : CaptureUpdateAction.EVENTUALLY,
+    };
+  },
+  PanelComponent: ({ elements, appState, app, updateData }) => {
+    const isActive = getFormValue(
+      elements,
+      app,
+      (element) => element.zoomInvariant,
+      () => true,
+      (hasSelection) =>
+        hasSelection ? null : appState.currentItemZoomInvariant,
+    );
+    return (
+      <button
+        type="button"
+        className={`zoom-invariant-toggle ${isActive ? "active" : ""}`}
+        data-testid="zoomInvariant"
+        onClick={() => updateData(null)}
+      >
+        {isActive ? t("labels.disrespectZoom") : t("labels.respectZoom")}
+      </button>
     );
   },
 });
